@@ -1,1 +1,0 @@
--   In Safari and chrome, the shortcut key to open and close the inspector and inspect elements on a web page is Option + Command + I.
