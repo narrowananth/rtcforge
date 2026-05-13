@@ -83,14 +83,19 @@ Developers never touch SDP, ICE candidates, mediasoup transports, or worker proc
 Rooms are created **on-demand** — automatically when the first client joins.
 The developer listens to `roomCreated` and configures each room there.
 
+Auth validation is built into `SignalingServer` via the `auth` option — no separate package needed.
+You pass your own async function that verifies the token using whichever JWT library you prefer.
+
 ```js
 import { SignalingServer } from '@rtcforge/signaling'
+import jwt from 'jsonwebtoken'   // bring your own JWT library
 
 const server = new SignalingServer({
   port: 3000,
   auth: async (token) => {
-    // your JWT verification logic
-    return verifyJWT(token) // returns { roomId, peerId, role }
+    // verify using your own JWT library and secret
+    return jwt.verify(token, process.env.JWT_SECRET)
+    // must return: { roomId, peerId, role }
   }
 })
 
@@ -198,6 +203,9 @@ const onlinePeers = presence.getOnline()
 
 ### Recording — `@rtcforge/recording`
 
+`start()` returns a **per-room recording handle**. Each room gets its own handle with its own `stop()`.
+This means multiple rooms can record simultaneously without interfering with each other.
+
 ```js
 import { RecordingService } from '@rtcforge/recording'
 
@@ -211,15 +219,17 @@ const recorder = new RecordingService({
   }
 })
 
-recorder.on('error',    (err)             => { console.error('Recording failed', err) })
-recorder.on('complete', ({ url, duration }) => { console.log('Saved at', url) })
-
-await recorder.start(room, {
+// start() returns a handle scoped to this room
+const rec = await recorder.start(room, {
   mode: 'composite',        // or 'stream' (record each peer separately)
   format: 'mp4'
 })
 
-await recorder.stop()
+rec.on('error',    (err)             => { console.error('Recording failed', err) })
+rec.on('complete', ({ url, duration }) => { console.log('Saved at', url) })
+
+// stop only this room's recording
+await rec.stop()
 ```
 
 **RTCForge handles internally:**
@@ -410,14 +420,14 @@ signaling.on('roomCreated', async (room) => {
     await peer.subscribeAll()
   })
 
-  // auto-record every room
-  await recorder.start(room, { mode: 'composite', format: 'mp4' })
-  recorder.on('complete', ({ url }) => saveRecordingUrl(url))
-  recorder.on('error',    (err) => console.error('Recording error', err))
+  // start() returns a handle scoped to this room only
+  const rec = await recorder.start(room, { mode: 'composite', format: 'mp4' })
+  rec.on('complete', ({ url }) => saveRecordingUrl(url))
+  rec.on('error',    (err) => console.error('Recording error', err))
 
-  // room closed when last peer leaves — clean up
+  // room closed when last peer leaves — stop only this room's recording
   room.on('closed', () => {
-    recorder.stop().catch(console.error)
+    rec.stop().catch(console.error)
   })
 })
 
@@ -448,13 +458,12 @@ RTCForge connects to these via config objects. Without any config it still works
 ### RTCForge Provides
 
 * High-level abstraction classes for every real-time feature
-* `@rtcforge/signaling` — `SignalingServer`, `Room`, `Peer`
+* `@rtcforge/signaling` — `SignalingServer`, `Room`, `Peer`, built-in auth hook
 * `@rtcforge/media` — `MediaService`, `MediaRouter`, `Producer`, `Consumer`
 * `@rtcforge/chat` — `ChatService`, `PresenceService`
-* `@rtcforge/recording` — `RecordingService`
+* `@rtcforge/recording` — `RecordingService` (per-room recording handles)
 * `@rtcforge/streaming` — `StreamingService`
 * `@rtcforge/whiteboard` — `WhiteboardService`
-* `@rtcforge/auth` — JWT validation helpers
 * `@rtcforge/sdk` — Browser + Node.js client SDK
 * Detailed documentation for implementing each feature
 
@@ -508,9 +517,8 @@ npm install @rtcforge/signaling @rtcforge/media @rtcforge/sdk
 
 | Package | Purpose | Phase |
 | ------- | ------- | ----- |
-| `@rtcforge/signaling` | SignalingServer, Room, Peer, session lifecycle | 1 |
+| `@rtcforge/signaling` | SignalingServer, Room, Peer, session lifecycle, auth hook | 1 |
 | `@rtcforge/sdk` | Browser + Node.js client SDK | 1 |
-| `@rtcforge/auth` | JWT validation helpers, token middleware | 1 |
 | `@rtcforge/media` | MediaService, MediaRouter, Worker Pool, Producer, Consumer | 2 |
 | `@rtcforge/chat` | ChatService, PresenceService, typing indicators | 4 |
 | `@rtcforge/recording` | RecordingService, S3/MinIO upload | 5 |
@@ -592,7 +600,7 @@ The signaling layer manages state in-memory. Scaling is an operator concern.
 * mediasoup (worker process pool — hidden inside `@rtcforge/media`)
 * WebRTC
 * ws (WebSocket — hidden inside `@rtcforge/signaling`)
-* JWT (pluggable issuer — hidden inside `@rtcforge/auth`)
+* JWT validation — built into `@rtcforge/signaling` auth hook (developer brings own JWT library)
 
 ### User's Infrastructure (they manage)
 
@@ -619,11 +627,12 @@ The developer never creates or manages workers. They only call `room.enableMedia
 
 ## Auth Design
 
+* Auth is built into `@rtcforge/signaling` — no separate auth package
 * RTCForge validates tokens — it does NOT issue them
-* Developers bring their own auth server (any JWT-compatible issuer)
-* Token carries: `roomId`, `peerId`, `role` (host/participant/viewer), `expiry`
+* Developers pass an `auth` async function to `SignalingServer` — use any JWT library they prefer
+* Token must return: `{ roomId, peerId, role }` — host / participant / viewer
 * Validation runs at WebSocket upgrade — rejected tokens never allocate room state
-* Auth hook is a plain async function — return the decoded payload or throw
+* Throw from the `auth` function to reject a connection
 
 ---
 
@@ -643,13 +652,12 @@ The developer never creates or manages workers. They only call `room.enableMedia
 ```
 rtcforge/                          ← monorepo (npm workspaces)
  ├── packages/
- │    ├── signaling/               # @rtcforge/signaling
+ │    ├── signaling/               # @rtcforge/signaling (includes auth hook)
  │    ├── media/                   # @rtcforge/media
  │    ├── chat/                    # @rtcforge/chat
  │    ├── recording/               # @rtcforge/recording
  │    ├── streaming/               # @rtcforge/streaming
  │    ├── whiteboard/              # @rtcforge/whiteboard
- │    ├── auth/                    # @rtcforge/auth
  │    └── sdk/                     # @rtcforge/sdk (browser + Node.js client)
  │
  ├── examples/                     ← sample apps (not published)
@@ -717,11 +725,11 @@ The client SDK (`@rtcforge/sdk`) handles reconnection automatically with exponen
 
 ### Phase 1 — Signaling + Client SDK
 
-* `@rtcforge/signaling` — `SignalingServer`, `Room`, `Peer`
-* `@rtcforge/auth` — JWT validation hook
+* `@rtcforge/signaling` — `SignalingServer`, `Room`, `Peer`, built-in auth hook
 * `@rtcforge/sdk` — Browser + Node.js client SDK
 * In-memory room & session lifecycle
 * Peer discovery and connection management
+* Auth validation via user-provided async function (no separate auth package)
 * Example app: basic signaling demo
 * Published to npm
 
