@@ -13,3 +13,14 @@
 # Claude
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Node
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local

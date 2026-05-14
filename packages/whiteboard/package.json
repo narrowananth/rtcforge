@@ -1,0 +1,26 @@
+{
+    "name": "@rtcforge/whiteboard",
+    "version": "0.1.0",
+    "description": "WhiteboardService — state sync, CRDT-compatible hooks",
+    "main": "dist/index.cjs",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": ["dist"],
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "typecheck": "tsc --noEmit"
+    },
+    "keywords": ["whiteboard", "collaboration", "crdt", "realtime", "rtcforge"],
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    }
+}

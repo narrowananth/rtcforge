@@ -1,0 +1,15 @@
+{
+    "name": "@rtcforge-examples/video-call-app",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Example: 1:1 and group video call using @rtcforge/signaling + @rtcforge/media",
+    "scripts": {
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts"
+    },
+    "dependencies": {
+        "@rtcforge/media": "*",
+        "@rtcforge/sdk": "*",
+        "@rtcforge/signaling": "*"
+    }
+}

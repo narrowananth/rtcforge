@@ -1,0 +1,15 @@
+{
+    "name": "@rtcforge-examples/whiteboard-app",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Example: collaborative whiteboard using @rtcforge/whiteboard",
+    "scripts": {
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts"
+    },
+    "dependencies": {
+        "@rtcforge/sdk": "*",
+        "@rtcforge/signaling": "*",
+        "@rtcforge/whiteboard": "*"
+    }
+}

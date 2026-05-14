@@ -1,0 +1,16 @@
+{
+    "name": "@rtcforge-examples/live-stream-app",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Example: WebRTC → HLS broadcast using @rtcforge/streaming",
+    "scripts": {
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts"
+    },
+    "dependencies": {
+        "@rtcforge/media": "*",
+        "@rtcforge/sdk": "*",
+        "@rtcforge/signaling": "*",
+        "@rtcforge/streaming": "*"
+    }
+}

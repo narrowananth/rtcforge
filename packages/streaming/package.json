@@ -1,0 +1,26 @@
+{
+    "name": "@rtcforge/streaming",
+    "version": "0.1.0",
+    "description": "StreamingService — HLS/RTMP egress pipeline",
+    "main": "dist/index.cjs",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": ["dist"],
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "typecheck": "tsc --noEmit"
+    },
+    "keywords": ["streaming", "hls", "rtmp", "webrtc", "rtcforge"],
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    }
+}
