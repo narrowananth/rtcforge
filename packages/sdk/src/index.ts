@@ -1,1 +1,6 @@
-export {}
+export { RTCForgeClient } from './RTCForgeClient.js'
+export { Room } from './Room.js'
+export { ClientEvent, RoomEvent } from './types.js'
+export { MessageType } from './protocol.js'
+export type { RTCForgeClientOptions, ConnectionState } from './types.js'
+export type { ServerMessage, ClientMessage } from './protocol.js'

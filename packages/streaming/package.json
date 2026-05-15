@@ -1,15 +1,15 @@
 {
     "name": "@rtcforge/streaming",
     "version": "0.1.0",
-    "description": "StreamingService — HLS/RTMP egress pipeline",
+    "description": "StreamingService \u2014 HLS/RTMP egress pipeline",
     "main": "dist/index.cjs",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
+            "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
-            "require": "./dist/index.cjs",
-            "types": "./dist/index.d.ts"
+            "require": "./dist/index.cjs"
         }
     },
     "files": ["dist"],

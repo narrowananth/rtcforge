@@ -8,8 +8,8 @@ Open-source npm library for building real-time communication systems on top of W
 
 | Dependency | Version |
 | ---------- | ------- |
-| Node.js | `>= 18` |
-| npm | `>= 9` |
+| Node.js    | `>= 18` |
+| npm        | `>= 9`  |
 
 ---
 
@@ -21,62 +21,30 @@ cd rtcforge
 npm install
 ```
 
-`npm install` will also initialize Husky git hooks automatically.
-
----
-
-## Managing Dependencies
-
-All dependencies for every package are installed from the root with a single command:
-
-```bash
-npm install
-```
-
-npm workspaces hoists all dependencies into the root `node_modules/`. You never need to run `npm install` inside individual packages.
-
-**Add a dependency to a specific package:**
-
-```bash
-# from the root (recommended)
-npm install ws --workspace packages/signaling
-
-# add a dev dependency
-npm install @types/ws --save-dev --workspace packages/signaling
-```
-
-**Add a shared dev dependency to the root (available to all packages):**
-
-```bash
-npm install some-tool --save-dev
-```
-
-**Remove a dependency from a specific package:**
-
-```bash
-npm uninstall ws --workspace packages/signaling
-```
+`npm install` installs all workspace dependencies and initialises Husky git hooks automatically.
 
 ---
 
 ## Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `npm install` | Install all dependencies across every package |
-| `npm run build` | Build all packages (tsup → CJS + ESM + types) |
-| `npm run dev` | Watch mode — rebuild packages on file change |
-| `npm run typecheck` | Type-check all packages without emitting |
-| `npm run check` | Lint and format check (Biome) |
-| `npm run check:fix` | Auto-fix lint and format issues |
-| `npm run clean` | Remove all `dist/` output directories |
-| `npm test` | Run tests (Vitest) |
+Run from the monorepo root — they apply to all packages:
 
-All commands run across the full monorepo. To target a single package:
+| Command            | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| `npm install`      | Install all dependencies across every package    |
+| `npm test`         | Run unit tests (Vitest)                          |
+| `npm run build`    | Build all packages (tsup → CJS + ESM + `.d.ts`) |
+| `npm run dev`      | Watch mode — rebuild packages on file change     |
+| `npm run typecheck`| Type-check all packages without emitting         |
+| `npm run check`    | Lint and format check (Biome)                    |
+| `npm run check:fix`| Auto-fix lint and format issues                  |
+| `npm run clean`    | Remove all `dist/` output directories            |
+
+To target a single package:
 
 ```bash
-cd packages/signaling
-npm run build
+npm run build --workspace=packages/signaling
+npm test --workspace=packages/sdk
 ```
 
 ---
@@ -120,27 +88,51 @@ packages/<name>/
 
 ## Packages
 
-| Package | Description |
-| ------- | ----------- |
-| `@rtcforge/signaling` | `SignalingServer`, `Room`, `Peer` — WebSocket signaling and session lifecycle |
-| `@rtcforge/sdk` | Browser + Node.js client SDK |
-| `@rtcforge/media` | `MediaService` — mediasoup SFU, Worker Pool, Producer, Consumer |
-| `@rtcforge/chat` | `ChatService`, `PresenceService`, typing indicators |
-| `@rtcforge/recording` | `RecordingService` — per-room recording, S3/MinIO upload |
-| `@rtcforge/streaming` | `StreamingService` — HLS and RTMP egress |
-| `@rtcforge/whiteboard` | `WhiteboardService` — state sync, CRDT-compatible hooks |
+| Package                   Description                                                  |
+| ------------------------  ------------------------------------------------------------ |
+| `@rtcforge/signaling`    | `SignalingServer`, `Room`, `Peer` — WebSocket signaling and session lifecycle |
+| `@rtcforge/sdk`          | `RTCForgeClient`, `Room` — browser + Node.js client SDK      |
+| `@rtcforge/media`        | `MediaService` — mediasoup SFU, Worker Pool, Producer, Consumer |
+| `@rtcforge/chat`         | `ChatService`, `PresenceService`, typing indicators          |
+| `@rtcforge/recording`    | `RecordingService` — per-room recording, S3/MinIO upload     |
+| `@rtcforge/streaming`    | `StreamingService` — HLS and RTMP egress                     |
+| `@rtcforge/whiteboard`   | `WhiteboardService` — state sync, CRDT-compatible hooks      |
+
+---
+
+### Integration — video-call-app example
+
+The `examples/video-call-app` app lets you test the full signaling + SDK flow in a real browser. It aliases both workspace packages directly to source so no pre-build is needed.
+
+**Terminal 1 — start the signaling server:**
+
+```bash
+cd examples/video-call-app
+npm run server
+# Signaling server running on ws://localhost:3001
+```
+
+**Terminal 2 — start the browser dev server:**
+
+```bash
+cd examples/video-call-app
+npm run dev
+# → http://localhost:5173
+```
+
+Open **two browser tabs** at `http://localhost:5173`. Enter different peer names (e.g. `alice` and `bob`), the same room ID, and click **Join Room**. Each tab will see the other peer join, and the **Ping / Ping all** buttons send signals between peers — verifying end-to-end relay through the signaling server.
 
 ---
 
 ## Tooling
 
-| Tool | Purpose |
-| ---- | ------- |
-| TypeScript 5 | Language |
-| tsup | Builds each package to CJS + ESM + `.d.ts` |
-| Vitest | Tests |
-| Biome | Lint + format (replaces ESLint + Prettier) |
-| Husky + lint-staged | Pre-commit: runs Biome on staged files |
+| Tool                  | Purpose                                               |
+| --------------------- | ----------------------------------------------------- |
+| TypeScript 5          | Language                                              |
+| tsup                  | Builds each package to CJS + ESM + `.d.ts`            |
+| Vitest                | Unit tests                                            |
+| Biome                 | Lint + format (replaces ESLint + Prettier)            |
+| Husky + lint-staged   | Pre-commit: runs Biome on staged files                |
 
 ---
 

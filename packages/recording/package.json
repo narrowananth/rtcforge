@@ -1,15 +1,15 @@
 {
     "name": "@rtcforge/recording",
     "version": "0.1.0",
-    "description": "RecordingService — per-room recording handles, S3/MinIO upload",
+    "description": "RecordingService \u2014 per-room recording handles, S3/MinIO upload",
     "main": "dist/index.cjs",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
+            "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
-            "require": "./dist/index.cjs",
-            "types": "./dist/index.d.ts"
+            "require": "./dist/index.cjs"
         }
     },
     "files": ["dist"],

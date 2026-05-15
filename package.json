@@ -2,6 +2,7 @@
     "name": "rtcforge",
     "version": "0.0.0",
     "private": true,
+    "type": "module",
     "description": "Build real-time applications without reinventing infrastructure",
     "workspaces": ["packages/*", "examples/*", "cli"],
     "scripts": {
@@ -9,7 +10,7 @@
         "dev": "npm run dev --workspaces --if-present",
         "typecheck": "tsc --noEmit",
         "check": "biome check .",
-        "check:fix": "biome check --apply .",
+        "check:fix": "biome check --write .",
         "clean": "rimraf packages/*/dist cli/dist",
         "test": "vitest run",
         "prepare": "husky"
@@ -25,7 +26,7 @@
         "vitest": "^2"
     },
     "lint-staged": {
-        "**/*.{ts,tsx,js,jsx,json,jsonc}": "biome check --apply --no-errors-on-unmatched"
+        "**/*.{ts,tsx,js,jsx,json,jsonc}": "biome check --write --no-errors-on-unmatched"
     },
     "engines": {
         "node": ">=18.0.0"
