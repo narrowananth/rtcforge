@@ -17,6 +17,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
     private readonly opts: RTCForgeClientOptions
     private transport: WebSocketTransport | null = null
     private room: Room | null = null
+    private messageHandler: ((msg: ServerMessage) => void) | null = null
 
     constructor(opts: RTCForgeClientOptions) {
         super()
@@ -72,6 +73,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
                 this.room._handleMessage(msg)
             }
 
+            this.messageHandler = handleMessage
             transport.on(TransportEvent.Message, handleMessage)
 
             transport.connect().catch((err: Error) => {
@@ -84,6 +86,10 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
     }
 
     async leave(): Promise<void> {
+        if (this.messageHandler && this.transport) {
+            this.transport.off(TransportEvent.Message, this.messageHandler)
+        }
+        this.messageHandler = null
         this.room?._close()
         this.room = null
         this.transport?.close()

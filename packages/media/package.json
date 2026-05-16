@@ -1,7 +1,7 @@
 {
     "name": "@rtcforge/media",
     "version": "0.1.0",
-    "description": "MediaService, MediaRouter, Worker Pool, Producer, Consumer",
+    "description": "WebRTC peer connections, media capture, and call management",
     "main": "dist/index.cjs",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -20,6 +20,15 @@
     },
     "keywords": ["webrtc", "mediasoup", "sfu", "realtime", "rtcforge"],
     "license": "MIT",
+    "dependencies": {
+        "zod": "^4.4.3"
+    },
+    "peerDependencies": {
+        "@rtcforge/sdk": "^0.1.0"
+    },
+    "devDependencies": {
+        "@rtcforge/sdk": "*"
+    },
     "publishConfig": {
         "access": "public"
     }

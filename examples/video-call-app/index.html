@@ -21,15 +21,43 @@
             background: #3b82f6; color: #fff; font-size: 0.95rem; cursor: pointer;
         }
         button:hover { background: #2563eb; }
+        button:disabled { opacity: 0.5; cursor: default; }
         button.danger { background: #dc2626; }
         button.danger:hover { background: #b91c1c; }
         button.secondary { background: #374151; }
         button.secondary:hover { background: #4b5563; }
+        button.active { background: #065f46; }
+        button.active:hover { background: #047857; }
 
         #room-view { display: none; }
         .room-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; }
         .room-header h1 { margin: 0; }
         .tag { font-size: 0.8rem; background: #1e3a5f; color: #60a5fa; padding: 0.2rem 0.6rem; border-radius: 4px; }
+
+        /* Video grid */
+        #video-grid {
+            display: flex; flex-wrap: wrap; gap: 0.75rem;
+            margin-bottom: 1.5rem; min-height: 140px;
+        }
+        .video-tile {
+            position: relative; width: 220px;
+            background: #111; border-radius: 8px; overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+        .video-tile video {
+            width: 100%; display: block;
+            aspect-ratio: 16/9; object-fit: cover; background: #0a0a0a;
+        }
+        .video-tile .video-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #fff;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+        }
+        .video-tile.local { border-color: #3b82f6; }
+        #no-video-hint {
+            color: #555; font-size: 0.85rem; font-style: italic;
+            align-self: center;
+        }
 
         .columns { display: flex; gap: 2rem; }
         .panel { flex: 1; }
@@ -53,7 +81,7 @@
         .log-entry.out { color: #60a5fa; }
         .log-entry.sys { color: #fbbf24; }
 
-        .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
     </style>
 </head>
 <body>
@@ -70,11 +98,18 @@
             <h1 id="room-title"></h1>
             <span class="tag" id="my-peer-tag"></span>
         </div>
+
+        <div id="video-grid">
+            <p id="no-video-hint">Camera not available</p>
+        </div>
+
         <div class="columns">
             <div class="panel">
                 <h2>Peers</h2>
                 <ul id="peers-list"><li class="empty">No other peers yet</li></ul>
                 <div class="actions">
+                    <button id="camera-btn" class="secondary" disabled>Camera</button>
+                    <button id="mic-btn" class="secondary" disabled>Mic</button>
                     <button id="ping-all-btn" class="secondary">Ping all</button>
                     <button id="leave-btn" class="danger">Leave</button>
                 </div>

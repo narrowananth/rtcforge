@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Peer } from '../src/Peer.js'
 import { MessageType } from '../src/protocol.js'
+import { PeerEvent } from '../src/types.js'
 
 class MockWs extends EventEmitter {
     readyState = 1
@@ -63,7 +64,7 @@ describe('Peer', () => {
 
     it('emits disconnected when WebSocket closes', () => {
         const listener = vi.fn()
-        peer.on('disconnected', listener)
+        peer.on(PeerEvent.Disconnected, listener)
         ws.emit('close', 1001, Buffer.from('Going away'))
         expect(listener).toHaveBeenCalledWith(1001, 'Going away')
     })

@@ -1,7 +1,12 @@
 {
     "extends": "./tsconfig.base.json",
     "compilerOptions": {
-        "noEmit": true
+        "noEmit": true,
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "paths": {
+            "@rtcforge/sdk": ["./packages/sdk/src/index.ts"],
+            "@rtcforge/signaling": ["./packages/signaling/src/index.ts"]
+        }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts", "cli/src/**/*.ts"]
 }

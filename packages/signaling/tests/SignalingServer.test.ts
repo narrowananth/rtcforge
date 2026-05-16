@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
 import { SignalingServer } from '../src/SignalingServer.js'
 import { MessageType } from '../src/protocol.js'
-import { PeerRole } from '../src/types.js'
+import { PeerRole, ServerEvent } from '../src/types.js'
 
 interface TestClient {
     ws: WebSocket
@@ -125,7 +125,7 @@ describe('SignalingServer', () => {
 
     it('emits roomCreated when first peer joins a room', async () => {
         const listener = vi.fn()
-        server.on('roomCreated', listener)
+        server.on(ServerEvent.RoomCreated, listener)
         const c = await connect(url('r2', 'p1'))
         openClients.push(c.ws)
         await c.nextMessage()

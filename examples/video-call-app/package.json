@@ -11,7 +11,8 @@
     },
     "dependencies": {
         "@rtcforge/sdk": "*",
-        "@rtcforge/signaling": "*"
+        "@rtcforge/signaling": "*",
+        "@rtcforge/media": "*"
     },
     "devDependencies": {
         "tsx": "^4",

@@ -1,3 +1,4 @@
+import { Call, MediaEvent, getUserMedia } from '@rtcforge/media'
 import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 
@@ -13,11 +14,17 @@ const roomTitle = document.getElementById('room-title') as HTMLElement
 const myPeerTag = document.getElementById('my-peer-tag') as HTMLElement
 const peersList = document.getElementById('peers-list') as HTMLElement
 const signalLogEl = document.getElementById('signal-log') as HTMLElement
+const videoGridEl = document.getElementById('video-grid') as HTMLElement
+const noVideoHint = document.getElementById('no-video-hint') as HTMLElement
 const pingAllBtn = document.getElementById('ping-all-btn') as HTMLButtonElement
 const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement
+const cameraBtn = document.getElementById('camera-btn') as HTMLButtonElement
+const micBtn = document.getElementById('mic-btn') as HTMLButtonElement
 
 let client: RTCForgeClient | null = null
 let currentRoom: Room | null = null
+let localStream: MediaStream | null = null
+let call: Call | null = null
 
 peersList.addEventListener('click', (e) => {
     const btn = (e.target as Element).closest('button[data-peer-id]')
@@ -35,7 +42,28 @@ joinBtn.addEventListener('click', async () => {
     joinBtn.disabled = true
     joinBtn.textContent = 'Connecting…'
 
+    // Stop any stream left over from a previous failed join attempt
+    if (localStream && !currentRoom) {
+        for (const track of localStream.getTracks()) track.stop()
+        localStream = null
+        clearVideoGrid()
+        cameraBtn.disabled = true
+        micBtn.disabled = true
+    }
+
     try {
+        // Try to get camera + mic; proceed without if denied
+        try {
+            localStream = await getUserMedia({ video: true, audio: true })
+            addVideoTile('local', peerId, localStream, true)
+            noVideoHint.style.display = 'none'
+            cameraBtn.disabled = false
+            micBtn.disabled = false
+            updateMediaButtons()
+        } catch {
+            log('sys', 'Camera/mic unavailable — joining without media')
+        }
+
         client = new RTCForgeClient({
             serverUrl: `${SIGNALING_URL}?peerId=${encodeURIComponent(peerId)}`,
             reconnect: false,
@@ -52,6 +80,23 @@ joinBtn.addEventListener('click', async () => {
         renderPeers()
         log('sys', `Joined room "${room.id}" as ${room.localPeerId}`)
 
+        // Start WebRTC call if we have media
+        if (localStream) {
+            call = new Call(room, { stream: localStream })
+
+            call.on(MediaEvent.RemoteStream, (remotePeerId, stream) => {
+                addVideoTile(remotePeerId, remotePeerId, stream, false)
+                log('sys', `Video stream from ${remotePeerId}`)
+            })
+
+            call.on(MediaEvent.RemoteStreamRemoved, (remotePeerId) => {
+                removeVideoTile(remotePeerId)
+                log('sys', `Video stream ended: ${remotePeerId}`)
+            })
+
+            call.start()
+        }
+
         room.on(MessageType.PeerJoined, (id) => {
             log('sys', `${id} joined`)
             renderPeers()
@@ -63,7 +108,11 @@ joinBtn.addEventListener('click', async () => {
         })
 
         room.on(MessageType.Signal, (from, data) => {
-            log('in', `signal from ${from}: ${JSON.stringify(data)}`)
+            // Only log non-media signals to avoid cluttering the log with WebRTC internals
+            const d = data as Record<string, unknown>
+            if (d?.kind !== 'media') {
+                log('in', `signal from ${from}: ${JSON.stringify(data)}`)
+            }
         })
 
         room.on(RoomEvent.Closed, () => {
@@ -95,12 +144,42 @@ pingAllBtn.addEventListener('click', () => {
     }
 })
 
+cameraBtn.addEventListener('click', () => {
+    if (!localStream) return
+    const tracks = localStream.getVideoTracks()
+    const nowEnabled = !(tracks[0]?.enabled ?? false)
+    for (const t of tracks) t.enabled = nowEnabled
+    updateMediaButtons()
+})
+
+micBtn.addEventListener('click', () => {
+    if (!localStream) return
+    const tracks = localStream.getAudioTracks()
+    const nowEnabled = !(tracks[0]?.enabled ?? false)
+    for (const t of tracks) t.enabled = nowEnabled
+    updateMediaButtons()
+})
+
 leaveBtn.addEventListener('click', async () => {
+    call?.close()
+    call = null
+
+    if (localStream) {
+        for (const track of localStream.getTracks()) track.stop()
+        localStream = null
+    }
+
+    clearVideoGrid()
+
     currentRoom?.removeAllListeners()
     client?.removeAllListeners()
     await client?.leave()
     client = null
     currentRoom = null
+
+    cameraBtn.disabled = true
+    micBtn.disabled = true
+
     joinFormEl.style.display = 'block'
     roomViewEl.style.display = 'none'
     renderPeers()
@@ -113,6 +192,51 @@ function sendPingTo(peerId: string, ts = Date.now()): void {
     const payload = { type: 'ping', from: room.localPeerId, ts }
     room.sendSignal(peerId, payload)
     log('out', `signal to ${peerId}: ${JSON.stringify(payload)}`)
+}
+
+function addVideoTile(id: string, label: string, stream: MediaStream, muted: boolean): void {
+    removeVideoTile(id)
+
+    const tile = document.createElement('div')
+    tile.id = `video-${id}`
+    tile.className = `video-tile${id === 'local' ? ' local' : ''}`
+
+    const video = document.createElement('video')
+    video.autoplay = true
+    video.muted = muted
+    video.playsInline = true
+    video.srcObject = stream
+
+    const labelEl = document.createElement('span')
+    labelEl.className = 'video-label'
+    labelEl.textContent = id === 'local' ? `You (${label})` : label
+
+    tile.appendChild(video)
+    tile.appendChild(labelEl)
+    videoGridEl.appendChild(tile)
+}
+
+function removeVideoTile(id: string): void {
+    document.getElementById(`video-${id}`)?.remove()
+}
+
+function clearVideoGrid(): void {
+    videoGridEl.innerHTML = ''
+    const hint = document.createElement('p')
+    hint.id = 'no-video-hint'
+    hint.textContent = 'Camera not available'
+    videoGridEl.appendChild(hint)
+    noVideoHint.style.display = ''
+}
+
+function updateMediaButtons(): void {
+    if (!localStream) return
+    const camOn = localStream.getVideoTracks()[0]?.enabled ?? false
+    const micOn = localStream.getAudioTracks()[0]?.enabled ?? false
+    cameraBtn.textContent = camOn ? 'Camera: On' : 'Camera: Off'
+    cameraBtn.className = camOn ? 'active' : 'secondary'
+    micBtn.textContent = micOn ? 'Mic: On' : 'Mic: Off'
+    micBtn.className = micOn ? 'active' : 'secondary'
 }
 
 function renderPeers(): void {

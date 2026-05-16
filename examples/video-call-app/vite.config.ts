@@ -7,6 +7,7 @@ export default defineConfig({
         alias: {
             '@rtcforge/sdk': path.resolve('../../packages/sdk/src/index.ts'),
             '@rtcforge/signaling': path.resolve('../../packages/signaling/src/index.ts'),
+            '@rtcforge/media': path.resolve('../../packages/media/src/index.ts'),
         },
     },
 })

@@ -104,7 +104,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                 if (onError) {
                     onError(err)
                 } else {
-                    this.emit('error', err)
+                    this.emit(TransportEvent.Error, err)
                 }
             })
     }
