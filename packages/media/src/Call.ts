@@ -1,5 +1,5 @@
-import { EventEmitter, MessageType } from '@rtcforge/sdk'
-import type { Room } from '@rtcforge/sdk'
+import { EventEmitter, MessageType, noopLogger } from '@rtcforge/sdk'
+import type { Logger, Room } from '@rtcforge/sdk'
 import { PeerConnection } from './PeerConnection.js'
 import { SignalKind, SignalType, isMediaSignal } from './protocol.js'
 import type { MediaSignal } from './protocol.js'
@@ -14,6 +14,7 @@ type CallEvents = {
 export class Call extends EventEmitter<CallEvents> {
     private readonly room: Room
     private readonly opts: CallOptions
+    private readonly logger: Logger
     private readonly connections = new Map<string, PeerConnection>()
     private readonly localTracks: Array<{ track: MediaStreamTrack; stream: MediaStream }> = []
     private started = false
@@ -23,6 +24,7 @@ export class Call extends EventEmitter<CallEvents> {
         super()
         this.room = room
         this.opts = opts
+        this.logger = opts.logger ?? noopLogger
         if (opts.stream) {
             for (const track of opts.stream.getTracks()) {
                 this.localTracks.push({ track, stream: opts.stream })
@@ -33,6 +35,7 @@ export class Call extends EventEmitter<CallEvents> {
     start(): void {
         if (this.started || this.closed) return
         this.started = true
+        this.logger.info('Call started', { localPeerId: this.room.localPeerId })
 
         for (const peerId of this.room.peers) {
             if (peerId !== this.room.localPeerId) {
@@ -55,6 +58,7 @@ export class Call extends EventEmitter<CallEvents> {
     close(): void {
         if (!this.started || this.closed) return
         this.closed = true
+        this.logger.info('Call closed', { localPeerId: this.room.localPeerId })
         this.room.off(MessageType.PeerJoined, this.handlePeerJoined)
         this.room.off(MessageType.PeerLeft, this.handlePeerLeft)
         this.room.off(MessageType.Signal, this.handleRoomSignal)
@@ -66,10 +70,12 @@ export class Call extends EventEmitter<CallEvents> {
     }
 
     private readonly handlePeerJoined = (peerId: string): void => {
+        this.logger.debug('Peer joined, creating connection', { peerId })
         this.getOrCreateConnection(peerId)
     }
 
     private readonly handlePeerLeft = (peerId: string): void => {
+        this.logger.debug('Peer left, closing connection', { peerId })
         const pc = this.connections.get(peerId)
         if (!pc) return
         pc.removeAllListeners()
@@ -84,6 +90,7 @@ export class Call extends EventEmitter<CallEvents> {
 
         switch (data.type) {
             case SignalType.Offer: {
+                this.logger.debug('Received offer', { from })
                 const answer = await pc.handleOffer(data.sdp)
                 if (answer?.sdp) {
                     const signal: MediaSignal = {
@@ -96,6 +103,7 @@ export class Call extends EventEmitter<CallEvents> {
                 break
             }
             case SignalType.Answer:
+                this.logger.debug('Received answer', { from })
                 await pc.handleAnswer(data.sdp)
                 break
             case SignalType.Ice:
@@ -135,7 +143,10 @@ export class Call extends EventEmitter<CallEvents> {
 
         pc.on(ConnectionEvent.Track, (_track, streams) => {
             const stream = streams[0]
-            if (stream) this.emit(MediaEvent.RemoteStream, peerId, stream)
+            if (stream) {
+                this.logger.debug('Remote stream received', { peerId })
+                this.emit(MediaEvent.RemoteStream, peerId, stream)
+            }
         })
 
         return pc

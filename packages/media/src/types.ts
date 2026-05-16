@@ -1,3 +1,5 @@
+import type { Logger } from '@rtcforge/sdk'
+
 export const MediaEvent = {
     RemoteStream: 'remote-stream',
     RemoteStreamRemoved: 'remote-stream-removed',
@@ -17,4 +19,5 @@ export type ConnectionEvent = (typeof ConnectionEvent)[keyof typeof ConnectionEv
 export interface CallOptions {
     stream?: MediaStream
     rtcConfig?: RTCConfiguration
+    logger?: Logger
 }

@@ -35,6 +35,10 @@ export class Room extends EventEmitter {
         return this._peers.values()
     }
 
+    getPeerCount(): number {
+        return this._peers.size
+    }
+
     getPeerIds(): string[] {
         return [...this._peers.keys()]
     }

@@ -30,6 +30,8 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
         const transport = new WebSocketTransport(url, {
             reconnect: this.opts.reconnect ?? true,
             maxReconnectDelay: this.opts.maxReconnectDelay ?? 32_000,
+            maxReconnectAttempts: this.opts.maxReconnectAttempts,
+            logger: this.opts.logger,
         })
         this.transport = transport
 

@@ -185,4 +185,69 @@ describe('RTCForgeClient', () => {
         expect(room.peers).toContain('p3')
         expect(room.peers).not.toContain('p2')
     })
+
+    it('stops reconnecting after maxReconnectAttempts', async () => {
+        vi.useFakeTimers()
+        const client = new RTCForgeClient({
+            serverUrl: 'ws://localhost:3000',
+            reconnect: true,
+            maxReconnectAttempts: 2,
+        })
+        const promise = client.joinRoom('r1')
+        await tick()
+
+        // Initial connection succeeds
+        const ws0 = latestWs()
+        ws0.open()
+        ws0.message({ type: MessageType.RoomJoined, roomId: 'r1', peerId: 'p1', peers: [] })
+        await promise
+
+        const countBefore = MockWS.instances.length
+
+        // ws0 drops → attempt 1: ws1 created (never opened → reconnectAttempt not reset)
+        ws0.closeWith(1006, 'dropped')
+        vi.runAllTimers()
+        await tick()
+
+        // ws1 fails immediately → attempt 2: ws2 created
+        latestWs().closeWith(1006, 'fail')
+        vi.runAllTimers()
+        await tick()
+
+        // ws2 fails → maxReconnectAttempts (2) reached → no ws3 created
+        latestWs().closeWith(1006, 'fail')
+        vi.runAllTimers()
+        await tick()
+
+        expect(MockWS.instances.length - countBefore).toBe(2)
+
+        vi.useRealTimers()
+    })
+
+    it('logger receives info on connect and disconnect', async () => {
+        const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+        const client = new RTCForgeClient({
+            serverUrl: 'ws://localhost:3000',
+            reconnect: false,
+            logger,
+        })
+        const promise = client.joinRoom('r1')
+        await tick()
+
+        const ws = latestWs()
+        ws.open()
+        ws.message({ type: MessageType.RoomJoined, roomId: 'r1', peerId: 'p1', peers: [] })
+        await promise
+
+        expect(logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('connected'),
+            expect.any(Object),
+        )
+
+        ws.closeWith(1000, 'normal')
+        expect(logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('closed'),
+            expect.any(Object),
+        )
+    })
 })

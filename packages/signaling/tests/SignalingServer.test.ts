@@ -4,6 +4,7 @@ import WebSocket from 'ws'
 import { SignalingServer } from '../src/SignalingServer.js'
 import { MessageType } from '../src/protocol.js'
 import { PeerRole, ServerEvent } from '../src/types.js'
+import type { Logger, MetricsCollector } from '../src/types.js'
 
 interface TestClient {
     ws: WebSocket
@@ -202,5 +203,143 @@ describe('SignalingServer', () => {
         })
         c.close()
         await authServer.stop()
+    })
+})
+
+describe('SignalingServer — Phase 3: observability & reliability', () => {
+    let server: SignalingServer
+    let port: number
+    const openClients: WebSocket[] = []
+
+    function makeLogger(): Logger {
+        return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    }
+
+    function makeMetrics(): MetricsCollector {
+        return { increment: vi.fn(), gauge: vi.fn() }
+    }
+
+    function url(roomId: string, peerId: string): string {
+        return `ws://localhost:${port}?roomId=${roomId}&peerId=${peerId}`
+    }
+
+    afterEach(async () => {
+        for (const ws of openClients) {
+            if (ws.readyState === WebSocket.OPEN) ws.close()
+        }
+        openClients.length = 0
+        if (server) await server.stop()
+    })
+
+    it('getStats returns correct room and peer counts', async () => {
+        server = new SignalingServer({ port: 0 })
+        await server.start()
+        port = (server as never as { ownServer: { address(): AddressInfo } }).ownServer.address()
+            .port
+
+        expect(server.getStats()).toMatchObject({ rooms: 0, peers: 0 })
+
+        const c1 = await connect(url('r1', 'p1'))
+        openClients.push(c1.ws)
+        await c1.nextMessage()
+
+        const c2 = await connect(url('r1', 'p2'))
+        openClients.push(c2.ws)
+        await c2.nextMessage()
+
+        const stats = server.getStats()
+        expect(stats.rooms).toBe(1)
+        expect(stats.peers).toBe(2)
+        expect(stats.uptime).toBeGreaterThan(0)
+
+        c1.close()
+        c2.close()
+    })
+
+    it('getStats uptime is 0 before start', () => {
+        server = new SignalingServer({ port: 0 })
+        expect(server.getStats().uptime).toBe(0)
+    })
+
+    it('logger receives info calls on peer join and room creation', async () => {
+        const logger = makeLogger()
+        server = new SignalingServer({ port: 0, logger })
+        await server.start()
+        port = (server as never as { ownServer: { address(): AddressInfo } }).ownServer.address()
+            .port
+
+        const c = await connect(url('r2', 'p1'))
+        openClients.push(c.ws)
+        await c.nextMessage()
+
+        expect(logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Room created'),
+            expect.objectContaining({ roomId: 'r2' }),
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Peer joined'),
+            expect.objectContaining({ peerId: 'p1' }),
+        )
+        c.close()
+    })
+
+    it('logger.warn called on auth failure', async () => {
+        const logger = makeLogger()
+        const authServer = new SignalingServer({
+            port: 0,
+            logger,
+            auth: async () => {
+                throw new Error('bad token')
+            },
+        })
+        await authServer.start()
+        const authPort = (
+            authServer as never as { ownServer: { address(): AddressInfo } }
+        ).ownServer.address().port
+
+        const ws = new WebSocket(`ws://localhost:${authPort}?token=bad`)
+        await waitClose(ws)
+        await authServer.stop()
+
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Auth failed'),
+            expect.any(Object),
+        )
+    })
+
+    it('metrics increments rooms_created and peers_connected', async () => {
+        const metrics = makeMetrics()
+        server = new SignalingServer({ port: 0, metrics })
+        await server.start()
+        port = (server as never as { ownServer: { address(): AddressInfo } }).ownServer.address()
+            .port
+
+        const c = await connect(url('r3', 'p1'))
+        openClients.push(c.ws)
+        await c.nextMessage()
+
+        expect(metrics.increment).toHaveBeenCalledWith('rooms_created')
+        expect(metrics.increment).toHaveBeenCalledWith('peers_connected', expect.any(Object))
+        expect(metrics.gauge).toHaveBeenCalledWith('active_rooms', 1)
+        c.close()
+    })
+
+    it('stop() closes all connected peers gracefully', async () => {
+        server = new SignalingServer({ port: 0 })
+        await server.start()
+        port = (server as never as { ownServer: { address(): AddressInfo } }).ownServer.address()
+            .port
+
+        const c1 = await connect(url('r1', 'p1'))
+        const c2 = await connect(url('r1', 'p2'))
+        openClients.push(c1.ws, c2.ws)
+        await c1.nextMessage()
+        await c2.nextMessage()
+
+        const [close1, close2] = [waitClose(c1.ws), waitClose(c2.ws)]
+        await server.stop()
+        const [r1, r2] = await Promise.all([close1, close2])
+        expect(r1.code).toBe(1000)
+        expect(r2.code).toBe(1000)
     })
 })

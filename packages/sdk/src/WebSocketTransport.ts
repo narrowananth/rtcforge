@@ -1,7 +1,8 @@
 import { EventEmitter } from './EventEmitter.js'
 import { MessageType, ServerMessageSchema } from './protocol.js'
 import type { ClientMessage, ServerMessage } from './protocol.js'
-import { CloseCode, CloseReason, TransportEvent } from './types.js'
+import { CloseCode, CloseReason, TransportEvent, noopLogger } from './types.js'
+import type { Logger } from './types.js'
 
 type TransportEvents = {
     [TransportEvent.Open]: []
@@ -16,16 +17,29 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     private reconnectAttempt = 0
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null
     private _closed = false
+    private _connecting = false
 
     private readonly url: string
     private readonly shouldReconnect: boolean
     private readonly maxReconnectDelay: number
+    private readonly maxReconnectAttempts: number | undefined
+    private readonly logger: Logger
 
-    constructor(url: string, options: { reconnect?: boolean; maxReconnectDelay?: number } = {}) {
+    constructor(
+        url: string,
+        options: {
+            reconnect?: boolean
+            maxReconnectDelay?: number
+            maxReconnectAttempts?: number
+            logger?: Logger
+        } = {},
+    ) {
         super()
         this.url = url
         this.shouldReconnect = options.reconnect ?? true
         this.maxReconnectDelay = options.maxReconnectDelay ?? 32_000
+        this.maxReconnectAttempts = options.maxReconnectAttempts
+        this.logger = options.logger ?? noopLogger
     }
 
     connect(): Promise<void> {
@@ -52,8 +66,11 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     }
 
     private initSocket(onOpen?: () => void, onError?: (err: Error) => void): void {
+        if (this._connecting) return
+        this._connecting = true
         void this.getWsClass()
             .then((WS) => {
+                this._connecting = false
                 const ws = new WS(this.url)
                 this.ws = ws
 
@@ -61,6 +78,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
 
                 ws.onopen = () => {
                     this.reconnectAttempt = 0
+                    this.logger.info('WebSocket connected', { url: this.url })
                     this.emit(TransportEvent.Open)
                     if (!settled) {
                         settled = true
@@ -69,8 +87,20 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                 }
 
                 ws.onclose = (ev) => {
-                    this.emit(TransportEvent.Close, ev.code ?? 1006, String(ev.reason ?? ''))
+                    const code = ev.code ?? 1006
+                    const reason = String(ev.reason ?? '')
+                    this.logger.info('WebSocket closed', { code, reason })
+                    this.emit(TransportEvent.Close, code, reason)
                     if (!this._closed && this.shouldReconnect) {
+                        if (
+                            this.maxReconnectAttempts !== undefined &&
+                            this.reconnectAttempt >= this.maxReconnectAttempts
+                        ) {
+                            this.logger.warn('Max reconnect attempts reached', {
+                                attempts: this.reconnectAttempt,
+                            })
+                            return
+                        }
                         this.scheduleReconnect()
                     }
                 }
@@ -93,6 +123,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
 
                 ws.onerror = () => {
                     const err = new Error('WebSocket error')
+                    this.logger.error('WebSocket error', { url: this.url })
                     this.emit(TransportEvent.Error, err)
                     if (!settled) {
                         settled = true
@@ -101,6 +132,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                 }
             })
             .catch((err: Error) => {
+                this._connecting = false
                 if (onError) {
                     onError(err)
                 } else {
@@ -115,6 +147,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         }
         const delay = Math.min(1000 * 2 ** this.reconnectAttempt, this.maxReconnectDelay)
         this.reconnectAttempt++
+        this.logger.info('Reconnecting', { attempt: this.reconnectAttempt, delay })
         this.emit(TransportEvent.Reconnecting, this.reconnectAttempt)
         this.reconnectTimer = setTimeout(() => {
             this.initSocket()
