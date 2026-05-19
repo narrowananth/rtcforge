@@ -2,7 +2,7 @@ import { Call, MediaEvent, getUserMedia } from '@rtcforge/media'
 import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 
-const SIGNALING_URL = 'ws://localhost:3001'
+const SIGNALING_URL = 'ws://localhost:3003'
 const MAX_LOG_ENTRIES = 100
 
 const AppSignalType = {

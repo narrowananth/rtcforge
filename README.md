@@ -63,9 +63,10 @@ rtcforge/
  │    └── whiteboard/      # @rtcforge/whiteboard
  │
  ├── examples/             # Sample apps (not published to npm)
- │    ├── video-call-app/
- │    ├── live-stream-app/
- │    └── whiteboard-app/
+ │    ├── chat-app/         # Multi-user chat + presence
+ │    ├── video-call-app/   # P2P video call
+ │    ├── live-stream-app/  # WebRTC → HLS broadcast (planned)
+ │    └── whiteboard-app/   # Collaborative whiteboard (planned)
  │
  ├── cli/                  # @rtcforge/cli
  ├── docs/
@@ -100,27 +101,30 @@ packages/<name>/
 
 ---
 
-### Integration — video-call-app example
+### Running the example apps
 
-The `examples/video-call-app` app lets you test the full signaling + SDK flow in a real browser. It aliases both workspace packages directly to source so no pre-build is needed.
+Each example has its own README with full instructions. Port assignments at a glance:
 
-**Terminal 1 — start the signaling server:**
+| App               | Signaling server          | Browser dev server         |
+| ----------------- | ------------------------- | -------------------------- |
+| `chat-app`        | `ws://localhost:3001`     | `http://localhost:5173`    |
+| `live-stream-app` | `http://localhost:3002`   | `http://localhost:5174`    |
+| `video-call-app`  | `ws://localhost:3003`     | `http://localhost:5175`    |
+| `whiteboard-app`  | `ws://localhost:3004`     | `http://localhost:5176`    |
+
+Every active example follows the same two-terminal pattern:
 
 ```bash
-cd examples/video-call-app
+# Terminal 1 — signaling server
+cd examples/<app-name>
 npm run server
-# Signaling server running on ws://localhost:3001
-```
 
-**Terminal 2 — start the browser dev server:**
-
-```bash
-cd examples/video-call-app
+# Terminal 2 — browser dev server
+cd examples/<app-name>
 npm run dev
-# → http://localhost:5173
 ```
 
-Open **two browser tabs** at `http://localhost:5173`. Enter different peer names (e.g. `alice` and `bob`), the same room ID, and click **Join Room**. Each tab will see the other peer join, and the **Ping / Ping all** buttons send signals between peers — verifying end-to-end relay through the signaling server.
+See each app's `README.md` for detailed steps.
 
 ---
 

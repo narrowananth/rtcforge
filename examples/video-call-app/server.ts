@@ -1,6 +1,6 @@
 import { RoomEvent, ServerEvent, SignalingServer } from '@rtcforge/signaling'
 
-const PORT = 3001
+const PORT = 3003
 
 const server = new SignalingServer({ port: PORT })
 
