@@ -1,7 +1,10 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "noEmit": true
+        "noEmit": true,
+        "paths": {
+            "@rtcforge/signaling": ["../signaling/src/index.ts"]
+        }
     },
     "include": ["src"]
 }

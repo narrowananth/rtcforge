@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RTCForgeClient } from '../src/RTCForgeClient.js'
 import { MessageType } from '../src/protocol.js'
+import { ClientEvent, RoomEvent } from '../src/types.js'
 
 type WsEventMap = {
     onopen: (() => void) | null
@@ -122,7 +123,7 @@ describe('RTCForgeClient', () => {
     it('emits connected after room-joined', async () => {
         const client = new RTCForgeClient({ serverUrl: 'ws://localhost:3000' })
         const connectedListener = vi.fn()
-        client.on('connected', connectedListener)
+        client.on(ClientEvent.Connected, connectedListener)
 
         const promise = client.joinRoom('r1')
         await tick()
@@ -138,7 +139,7 @@ describe('RTCForgeClient', () => {
     it('emits disconnected on WebSocket close', async () => {
         const client = new RTCForgeClient({ serverUrl: 'ws://localhost:3000', reconnect: false })
         const listener = vi.fn()
-        client.on('disconnected', listener)
+        client.on(ClientEvent.Disconnected, listener)
 
         const promise = client.joinRoom('r1')
         await tick()
@@ -163,7 +164,7 @@ describe('RTCForgeClient', () => {
         const room = await promise
 
         const closedListener = vi.fn()
-        room.on('closed', closedListener)
+        room.on(RoomEvent.Closed, closedListener)
 
         await client.leave()
         expect(closedListener).toHaveBeenCalled()

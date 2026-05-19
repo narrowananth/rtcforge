@@ -32,6 +32,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
             maxReconnectDelay: this.opts.maxReconnectDelay ?? 32_000,
             maxReconnectAttempts: this.opts.maxReconnectAttempts,
             logger: this.opts.logger,
+            tokenRefresh: this.opts.tokenRefresh,
         })
         this.transport = transport
 

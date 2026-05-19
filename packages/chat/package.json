@@ -16,11 +16,15 @@
     "scripts": {
         "build": "tsup src/index.ts --format cjs,esm --dts --clean",
         "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run"
     },
     "keywords": ["chat", "presence", "realtime", "rtcforge"],
     "license": "MIT",
     "publishConfig": {
         "access": "public"
+    },
+    "peerDependencies": {
+        "@rtcforge/signaling": ">=0.1.0"
     }
 }

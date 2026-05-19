@@ -44,7 +44,6 @@ export class SignalingServer extends EventEmitter {
     private readonly rooms = new Map<string, Room>()
     private startedAt = 0
     private _stopped = false
-    private _peerCount = 0
 
     private readonly PING_INTERVAL: number
     private readonly PONG_TIMEOUT: number
@@ -123,15 +122,28 @@ export class SignalingServer extends EventEmitter {
     }
 
     getStats(): ServerStats {
-        let peers = 0
-        for (const room of this.rooms.values()) {
-            peers += room.getPeerCount()
-        }
         return {
             rooms: this.rooms.size,
-            peers,
+            peers: this.activePeerCount(),
             uptime: this.startedAt > 0 ? Date.now() - this.startedAt : 0,
         }
+    }
+
+    attachHealthEndpoint(server: http.Server, path = '/health'): void {
+        server.on('request', (req, res) => {
+            if (req.method === 'GET' && req.url?.split('?')[0] === path) {
+                const stats = this.getStats()
+                const body = JSON.stringify({ status: 'ok', ...stats })
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end(body)
+            }
+        })
+    }
+
+    private activePeerCount(): number {
+        let count = 0
+        for (const room of this.rooms.values()) count += room.getPeerCount()
+        return count
     }
 
     private async handleConnection(ws: WebSocket, req: http.IncomingMessage): Promise<void> {
@@ -176,7 +188,7 @@ export class SignalingServer extends EventEmitter {
         const isNewRoom = !room
 
         if (!room) {
-            room = new Room(roomId)
+            room = new Room(roomId, { maxPeers: this.opts.maxPeersPerRoom })
             this.rooms.set(roomId, room)
             room.on(RoomEvent.Closed, () => {
                 this.rooms.delete(roomId)
@@ -193,19 +205,17 @@ export class SignalingServer extends EventEmitter {
         }
         const peer = new Peer(peerId, role, ws, onSignal)
 
+        room.addPeer(peer)
+
         peer.once(PeerEvent.Disconnected, () => {
             this.logger.info('Peer left', { peerId, roomId })
             this.metrics.increment(Metric.PeersDisconnected)
-            this._peerCount = Math.max(0, this._peerCount - 1)
-            this.metrics.gauge(Metric.ActivePeers, this._peerCount)
+            this.metrics.gauge(Metric.ActivePeers, this.activePeerCount())
         })
-
-        room.addPeer(peer)
-        this._peerCount++
 
         this.logger.info('Peer joined', { peerId, roomId, role })
         this.metrics.increment(Metric.PeersConnected, { role })
-        this.metrics.gauge(Metric.ActivePeers, this._peerCount)
+        this.metrics.gauge(Metric.ActivePeers, this.activePeerCount())
 
         if (isNewRoom) {
             this.logger.info('Room created', { roomId })

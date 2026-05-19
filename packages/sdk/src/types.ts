@@ -15,6 +15,7 @@ export const noopLogger: Logger = {
 export interface RTCForgeClientOptions {
     serverUrl: string
     token?: string
+    tokenRefresh?: () => Promise<string>
     reconnect?: boolean
     maxReconnectDelay?: number
     maxReconnectAttempts?: number
@@ -29,6 +30,14 @@ export const ConnectionState = {
 } as const
 
 export type ConnectionState = (typeof ConnectionState)[keyof typeof ConnectionState]
+
+export interface CallInterface {
+    addTrack(track: MediaStreamTrack, stream: MediaStream): void
+    on(event: 'remote-stream', handler: (peerId: string, stream: MediaStream) => void): void
+    on(event: 'remote-stream-removed', handler: (peerId: string) => void): void
+    start(): void
+    close(): void
+}
 
 export const RoomEvent = {
     Closed: 'closed',

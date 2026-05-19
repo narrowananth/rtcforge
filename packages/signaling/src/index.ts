@@ -21,4 +21,5 @@ export type {
     MetricsCollector,
 } from './types.js'
 export type { ServerStats } from './SignalingServer.js'
-export type { ServerMessage, ClientMessage } from './protocol.js'
+export { MessageType } from './protocol.js'
+export type { ServerMessage, ClientMessage, MediaAttachment } from './protocol.js'

@@ -5,7 +5,8 @@
         "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "paths": {
             "@rtcforge/sdk": ["./packages/sdk/src/index.ts"],
-            "@rtcforge/signaling": ["./packages/signaling/src/index.ts"]
+            "@rtcforge/signaling": ["./packages/signaling/src/index.ts"],
+            "@rtcforge/chat": ["./packages/chat/src/index.ts"]
         }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts", "cli/src/**/*.ts"]

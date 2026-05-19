@@ -1,19 +1,10 @@
 import type { Server } from 'node:http'
+import { noopLogger } from '@rtcforge/sdk'
+import type { Logger } from '@rtcforge/sdk'
 import { z } from 'zod'
 
-export interface Logger {
-    debug(msg: string, ctx?: Record<string, unknown>): void
-    info(msg: string, ctx?: Record<string, unknown>): void
-    warn(msg: string, ctx?: Record<string, unknown>): void
-    error(msg: string, ctx?: Record<string, unknown>): void
-}
-
-export const noopLogger: Logger = {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-}
+export type { Logger }
+export { noopLogger }
 
 export interface MetricsCollector {
     increment(metric: string, labels?: Record<string, string>): void
@@ -83,6 +74,13 @@ export type ServerEvent = (typeof ServerEvent)[keyof typeof ServerEvent]
 
 export const PeerEvent = {
     Disconnected: 'disconnected',
+    Signal: 'signal',
+    Chat: 'chat',
+    Typing: 'typing',
+    Edit: 'edit',
+    Delete: 'delete',
+    Reaction: 'reaction',
+    Read: 'read',
 } as const
 
 export type PeerEvent = (typeof PeerEvent)[keyof typeof PeerEvent]
@@ -102,6 +100,8 @@ export const CloseReason = {
     InvalidAuthPayload: 'Invalid auth payload',
     AuthFailed: 'Auth failed',
     ServerStopping: 'Server stopping',
+    Kicked: 'Kicked from room',
+    RoomFull: 'Room is full',
 } as const
 
 export type CloseReason = (typeof CloseReason)[keyof typeof CloseReason]
@@ -110,6 +110,7 @@ export interface SignalingServerOptions {
     port?: number
     server?: Server
     auth?: AuthFunction
+    maxPeersPerRoom?: number
     pingInterval?: number
     pongTimeout?: number
     logger?: Logger

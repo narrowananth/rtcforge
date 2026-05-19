@@ -5,6 +5,11 @@ import type { Room } from '@rtcforge/sdk'
 const SIGNALING_URL = 'ws://localhost:3001'
 const MAX_LOG_ENTRIES = 100
 
+const AppSignalType = {
+    Ping: 'ping',
+    Pong: 'pong',
+} as const
+
 const joinFormEl = document.getElementById('join-form') as HTMLElement
 const roomViewEl = document.getElementById('room-view') as HTMLElement
 const peerIdInput = document.getElementById('peer-id') as HTMLInputElement
@@ -189,7 +194,7 @@ leaveBtn.addEventListener('click', async () => {
 function sendPingTo(peerId: string, ts = Date.now()): void {
     const room = currentRoom
     if (!room) return
-    const payload = { type: 'ping', from: room.localPeerId, ts }
+    const payload = { type: AppSignalType.Ping, from: room.localPeerId, ts }
     room.sendSignal(peerId, payload)
     log('out', `signal to ${peerId}: ${JSON.stringify(payload)}`)
 }

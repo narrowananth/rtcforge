@@ -1,3 +1,4 @@
+import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
@@ -341,5 +342,139 @@ describe('SignalingServer — Phase 3: observability & reliability', () => {
         const [r1, r2] = await Promise.all([close1, close2])
         expect(r1.code).toBe(1000)
         expect(r2.code).toBe(1000)
+    })
+})
+
+describe('SignalingServer — presence & moderation', () => {
+    let server: SignalingServer
+    let port: number
+    const openClients: WebSocket[] = []
+
+    function url(roomId: string, peerId: string): string {
+        return `ws://localhost:${port}?roomId=${roomId}&peerId=${peerId}`
+    }
+
+    beforeEach(async () => {
+        server = new SignalingServer({ port: 0 })
+        await server.start()
+        port = (server as never as { ownServer: { address(): AddressInfo } }).ownServer.address()
+            .port
+    })
+
+    afterEach(async () => {
+        for (const ws of openClients) {
+            if (ws.readyState === WebSocket.OPEN) ws.close()
+        }
+        openClients.length = 0
+        await server.stop()
+    })
+
+    it('broadcasts presence-online when a peer joins', async () => {
+        const c1 = await connect(url('r1', 'p1'))
+        openClients.push(c1.ws)
+        await c1.nextMessage() // room-joined
+
+        const c2 = await connect(url('r1', 'p2'))
+        openClients.push(c2.ws)
+        await c2.nextMessage() // room-joined for p2
+
+        // c1 should receive peer-joined then presence-online
+        await c1.nextMessage() // peer-joined
+        const presence = await c1.nextMessage()
+        expect(presence).toMatchObject({ type: MessageType.PresenceOnline, peerId: 'p2' })
+
+        c1.close()
+        c2.close()
+    })
+
+    it('broadcasts presence-offline when a peer disconnects', async () => {
+        const c1 = await connect(url('r1', 'p1'))
+        const c2 = await connect(url('r1', 'p2'))
+        openClients.push(c1.ws, c2.ws)
+        await c1.nextMessage() // room-joined p1
+        await c2.nextMessage() // room-joined p2
+        await c1.nextMessage() // peer-joined p2
+        await c1.nextMessage() // presence-online p2
+
+        c2.close()
+        await c1.nextMessage() // peer-left
+        const presenceOffline = await c1.nextMessage()
+        expect(presenceOffline).toMatchObject({ type: MessageType.PresenceOffline, peerId: 'p2' })
+
+        c1.close()
+    })
+
+    it('kicks peer when kickPeer is called on Room', async () => {
+        const c1 = await connect(url('r1', 'p1'))
+        openClients.push(c1.ws)
+        await c1.nextMessage() // room-joined
+
+        let capturedRoom: import('../src/Room.js').Room | undefined
+        server.on(ServerEvent.RoomCreated, (room) => {
+            capturedRoom = room
+        })
+
+        // Second peer triggers room creation listener... re-use with another room
+        const kickServer = new SignalingServer({ port: 0 })
+        await kickServer.start()
+        const kickPort = (
+            kickServer as never as { ownServer: { address(): AddressInfo } }
+        ).ownServer.address().port
+        kickServer.on(ServerEvent.RoomCreated, (room) => {
+            capturedRoom = room
+        })
+
+        const target = await connect(`ws://localhost:${kickPort}?roomId=kr&peerId=victim`)
+        await target.nextMessage()
+
+        const closePromise = waitClose(target.ws)
+        if (!capturedRoom) throw new Error('capturedRoom not set')
+        capturedRoom.kickPeer('victim', 'testing kick')
+        const { code } = await closePromise
+        expect(code).toBe(1008)
+
+        target.close()
+        await kickServer.stop()
+        c1.close()
+    })
+})
+
+describe('SignalingServer — maxPeersPerRoom', () => {
+    it('rejects the (N+1)th peer with close code 1008', async () => {
+        const limitServer = new SignalingServer({ port: 0, maxPeersPerRoom: 1 })
+        await limitServer.start()
+        const limitPort = (
+            limitServer as never as { ownServer: { address(): AddressInfo } }
+        ).ownServer.address().port
+
+        const c1 = await connect(`ws://localhost:${limitPort}?roomId=r1&peerId=p1`)
+        await c1.nextMessage()
+
+        const c2ws = new WebSocket(`ws://localhost:${limitPort}?roomId=r1&peerId=p2`)
+        const { code } = await waitClose(c2ws)
+        expect(code).toBe(1008)
+
+        c1.close()
+        await limitServer.stop()
+    })
+})
+
+describe('SignalingServer — health endpoint', () => {
+    it('GET /health returns JSON stats', async () => {
+        const httpServer = http.createServer()
+        const sigServer = new SignalingServer({ server: httpServer })
+        sigServer.attachHealthEndpoint(httpServer)
+        await sigServer.start()
+        await new Promise<void>((resolve) => httpServer.listen(0, resolve))
+
+        const addr = httpServer.address() as AddressInfo
+        const res = await fetch(`http://localhost:${addr.port}/health`)
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as Record<string, unknown>
+        expect(body).toMatchObject({ status: 'ok', rooms: 0, peers: 0 })
+        expect(typeof body.uptime).toBe('number')
+
+        await sigServer.stop()
+        await new Promise<void>((resolve) => httpServer.close(() => resolve()))
     })
 })

@@ -9,6 +9,7 @@ import type { CallOptions } from './types.js'
 type CallEvents = {
     [MediaEvent.RemoteStream]: [peerId: string, stream: MediaStream]
     [MediaEvent.RemoteStreamRemoved]: [peerId: string]
+    [MediaEvent.TrackPublished]: [track: MediaStreamTrack, stream: MediaStream]
 }
 
 export class Call extends EventEmitter<CallEvents> {
@@ -51,9 +52,13 @@ export class Call extends EventEmitter<CallEvents> {
     addTrack(track: MediaStreamTrack, stream: MediaStream): void {
         this.localTracks.push({ track, stream })
         for (const pc of this.connections.values()) {
-            pc.addTrack(track, stream)
+            pc.addTrack(track, stream, this.opts.maxBitrate)
         }
+        this.emit(MediaEvent.TrackPublished, track, stream)
     }
+
+    // Compatibility shim for future SFU mode; mesh receives tracks automatically.
+    subscribeAll(): void {}
 
     close(): void {
         if (!this.started || this.closed) return
@@ -118,11 +123,11 @@ export class Call extends EventEmitter<CallEvents> {
 
         // Lexicographically smaller peer ID yields on offer collision
         const polite = this.room.localPeerId < peerId
-        const pc = new PeerConnection(polite, this.opts.rtcConfig)
+        const pc = new PeerConnection(polite, this.opts)
         this.connections.set(peerId, pc)
 
         for (const { track, stream } of this.localTracks) {
-            pc.addTrack(track, stream)
+            pc.addTrack(track, stream, this.opts.maxBitrate)
         }
 
         pc.on(ConnectionEvent.IceCandidate, (candidate) => {

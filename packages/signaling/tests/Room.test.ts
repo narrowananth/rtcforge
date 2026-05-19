@@ -176,4 +176,100 @@ describe('Room', () => {
             expect(peers).toContain(p1)
         })
     })
+
+    describe('presence broadcasting', () => {
+        it('broadcasts presence-online to existing peers when a new peer joins', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
+            room.addPeer(p1)
+            ws1.send.mockClear()
+            room.addPeer(p2)
+            expect(ws1.send).toHaveBeenCalledWith(
+                JSON.stringify({ type: MessageType.PresenceOnline, peerId: 'p2' }),
+            )
+        })
+
+        it('broadcasts presence-offline to remaining peers on disconnect', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            const { peer: p2, ws: ws2 } = makePeer('p2')
+            room.addPeer(p1)
+            room.addPeer(p2)
+            ws2.send.mockClear()
+            simulateDisconnect(ws1)
+            expect(ws2.send).toHaveBeenCalledWith(
+                JSON.stringify({ type: MessageType.PresenceOffline, peerId: 'p1' }),
+            )
+        })
+
+        it('does not broadcast presence-online on reconnection', () => {
+            const { peer: p2, ws: ws2 } = makePeer('p2')
+            const { peer: p1old } = makePeer('p1')
+            const { peer: p1new } = makePeer('p1')
+            room.addPeer(p2)
+            room.addPeer(p1old)
+            ws2.send.mockClear()
+            room.addPeer(p1new)
+            expect(ws2.send).not.toHaveBeenCalledWith(
+                JSON.stringify({ type: MessageType.PresenceOnline, peerId: 'p1' }),
+            )
+        })
+    })
+
+    describe('kickPeer', () => {
+        it('sends kicked message and disconnects the peer', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            room.addPeer(p1)
+            const result = room.kickPeer('p1', 'spam')
+            expect(result).toBe(true)
+            expect(ws1.send).toHaveBeenCalledWith(
+                JSON.stringify({ type: MessageType.Kicked, peerId: 'p1', reason: 'spam' }),
+            )
+            expect(ws1.close).toHaveBeenCalledWith(1008, 'spam')
+        })
+
+        it('returns false when peer is not found', () => {
+            expect(room.kickPeer('nonexistent')).toBe(false)
+        })
+    })
+
+    describe('maxPeers', () => {
+        it('rejects new peers when room is full', () => {
+            const fullRoom = new Room('full', { maxPeers: 1 })
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2, ws: ws2 } = makePeer('p2')
+            fullRoom.addPeer(p1)
+            const added = fullRoom.addPeer(p2)
+            expect(added).toBe(false)
+            expect(ws2.close).toHaveBeenCalledWith(1008, 'Room is full')
+        })
+
+        it('allows reconnection even when room is at capacity', () => {
+            const fullRoom = new Room('full', { maxPeers: 1 })
+            const { peer: p1old } = makePeer('p1')
+            const { peer: p1new } = makePeer('p1')
+            fullRoom.addPeer(p1old)
+            const added = fullRoom.addPeer(p1new)
+            expect(added).toBe(true)
+        })
+    })
+
+    describe('enableMedia', () => {
+        it('registers onPeerJoined handler', () => {
+            const onJoined = vi.fn()
+            room.enableMedia(onJoined)
+            const { peer: p1 } = makePeer('p1')
+            room.addPeer(p1)
+            expect(onJoined).toHaveBeenCalledWith(p1)
+        })
+
+        it('registers onPeerLeft handler when provided', () => {
+            const onJoined = vi.fn()
+            const onLeft = vi.fn()
+            room.enableMedia(onJoined, onLeft)
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            room.addPeer(p1)
+            simulateDisconnect(ws1)
+            expect(onLeft).toHaveBeenCalledWith(p1)
+        })
+    })
 })

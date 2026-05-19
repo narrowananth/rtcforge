@@ -21,10 +21,12 @@ export class Room extends EventEmitter {
     readonly id: string
     private _state: RoomState = RoomState.Active
     private readonly _peers = new Map<string, Peer>()
+    private readonly maxPeers: number | undefined
 
-    constructor(id: string) {
+    constructor(id: string, opts: { maxPeers?: number } = {}) {
         super()
         this.id = id
+        this.maxPeers = opts.maxPeers
     }
 
     get state(): RoomState {
@@ -43,8 +45,19 @@ export class Room extends EventEmitter {
         return [...this._peers.keys()]
     }
 
-    addPeer(peer: Peer): void {
+    getPeer(id: string): Peer | undefined {
+        return this._peers.get(id)
+    }
+
+    addPeer(peer: Peer): boolean {
         const existing = this._peers.get(peer.id)
+
+        // Reconnecting peers replace their own slot — don't count against capacity
+        if (!existing && this.maxPeers !== undefined && this._peers.size >= this.maxPeers) {
+            peer.disconnect(CloseCode.PolicyViolation, CloseReason.RoomFull)
+            return false
+        }
+
         if (existing) {
             existing.disconnect(CloseCode.Normal, CloseReason.ReplacedByReconnection)
         }
@@ -61,6 +74,7 @@ export class Room extends EventEmitter {
 
         if (!existing) {
             this.broadcastExcept(peer.id, { type: MessageType.PeerJoined, peerId: peer.id })
+            this.broadcastExcept(peer.id, { type: MessageType.PresenceOnline, peerId: peer.id })
         }
 
         peer.once(PeerEvent.Disconnected, () => {
@@ -70,15 +84,40 @@ export class Room extends EventEmitter {
         })
 
         this.emit(RoomEvent.PeerJoined, peer)
+        return true
+    }
+
+    kickPeer(peerId: string, reason?: string): boolean {
+        const peer = this._peers.get(peerId)
+        if (!peer) return false
+        peer.send({ type: MessageType.Kicked, peerId, reason })
+        peer.disconnect(CloseCode.PolicyViolation, reason ?? CloseReason.Kicked)
+        return true
+    }
+
+    enableMedia(onPeerJoined: (peer: Peer) => void, onPeerLeft?: (peer: Peer) => void): void {
+        this.on(RoomEvent.PeerJoined, onPeerJoined)
+        if (onPeerLeft) this.on(RoomEvent.PeerLeft, onPeerLeft)
     }
 
     relay(fromId: string, toId: string, data: unknown): void {
         this._peers.get(toId)?.send({ type: MessageType.Signal, from: fromId, data })
     }
 
-    private broadcastExcept(excludeId: string, msg: ServerMessage): void {
+    broadcast(msg: ServerMessage): void {
+        for (const peer of this._peers.values()) {
+            try {
+                peer.send(msg)
+            } catch {}
+        }
+    }
+
+    broadcastExcept(excludeId: string, msg: ServerMessage): void {
         for (const [id, peer] of this._peers) {
-            if (id !== excludeId) peer.send(msg)
+            if (id !== excludeId)
+                try {
+                    peer.send(msg)
+                } catch {}
         }
     }
 
@@ -87,6 +126,7 @@ export class Room extends EventEmitter {
         if (!peer) return
         this._peers.delete(peerId)
         this.broadcastExcept(peerId, { type: MessageType.PeerLeft, peerId })
+        this.broadcastExcept(peerId, { type: MessageType.PresenceOffline, peerId })
         this.emit(RoomEvent.PeerLeft, peer)
 
         if (this._peers.size === 0) {

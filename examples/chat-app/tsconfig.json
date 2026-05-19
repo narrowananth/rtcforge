@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "lib": ["ES2020", "DOM"],
+        "skipLibCheck": true,
+        "paths": {
+            "@rtcforge/sdk": ["../../packages/sdk/src/index.ts"],
+            "@rtcforge/signaling": ["../../packages/signaling/src/index.ts"],
+            "@rtcforge/chat": ["../../packages/chat/src/index.ts"]
+        }
+    },
+    "include": ["src", "server.ts", "vite.config.ts"]
+}

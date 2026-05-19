@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Room } from '../src/Room.js'
 import type { WebSocketTransport } from '../src/WebSocketTransport.js'
 import { MessageType } from '../src/protocol.js'
+import { RoomEvent } from '../src/types.js'
 
 function makeTransport(): WebSocketTransport {
     return { send: vi.fn() } as unknown as WebSocketTransport
@@ -72,7 +73,7 @@ describe('Room', () => {
         it('emits closed event', () => {
             const room = new Room('r1', 'local', [], makeTransport())
             const listener = vi.fn()
-            room.on('closed', listener)
+            room.on(RoomEvent.Closed, listener)
             room._close()
             expect(listener).toHaveBeenCalled()
         })

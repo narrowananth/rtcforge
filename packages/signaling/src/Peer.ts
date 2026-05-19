@@ -1,17 +1,57 @@
 import { EventEmitter } from 'node:events'
 import { WebSocket } from 'ws'
 import { ClientMessageSchema, MessageType } from './protocol.js'
-import type { ServerMessage } from './protocol.js'
+import type { MediaAttachment, ServerMessage } from './protocol.js'
 import { PeerEvent } from './types.js'
 import type { PeerRole } from './types.js'
 
 export declare interface Peer {
     on(event: typeof PeerEvent.Disconnected, listener: (code: number, reason: string) => void): this
+    on(
+        event: typeof PeerEvent.Chat,
+        listener: (
+            text: string | undefined,
+            to?: string | string[],
+            replyTo?: string,
+            attachments?: MediaAttachment[],
+        ) => void,
+    ): this
+    on(event: typeof PeerEvent.Typing, listener: () => void): this
+    on(event: typeof PeerEvent.Edit, listener: (id: string, text: string) => void): this
+    on(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
+    on(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
+    on(event: typeof PeerEvent.Read, listener: (id: string) => void): this
     once(
         event: typeof PeerEvent.Disconnected,
         listener: (code: number, reason: string) => void,
     ): this
+    once(
+        event: typeof PeerEvent.Chat,
+        listener: (
+            text: string | undefined,
+            to?: string | string[],
+            replyTo?: string,
+            attachments?: MediaAttachment[],
+        ) => void,
+    ): this
+    once(event: typeof PeerEvent.Typing, listener: () => void): this
+    once(event: typeof PeerEvent.Edit, listener: (id: string, text: string) => void): this
+    once(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
+    once(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
+    once(event: typeof PeerEvent.Read, listener: (id: string) => void): this
     emit(event: typeof PeerEvent.Disconnected, code: number, reason: string): boolean
+    emit(
+        event: typeof PeerEvent.Chat,
+        text: string | undefined,
+        to?: string | string[],
+        replyTo?: string,
+        attachments?: MediaAttachment[],
+    ): boolean
+    emit(event: typeof PeerEvent.Typing): boolean
+    emit(event: typeof PeerEvent.Edit, id: string, text: string): boolean
+    emit(event: typeof PeerEvent.Delete, id: string): boolean
+    emit(event: typeof PeerEvent.Reaction, msgId: string, emoji: string): boolean
+    emit(event: typeof PeerEvent.Read, id: string): boolean
 }
 
 // biome-ignore lint/suspicious/noUnsafeDeclarationMerging: typed EventEmitter overload pattern
@@ -72,6 +112,24 @@ export class Peer extends EventEmitter {
                 break
             case MessageType.Pong:
                 this.lastPong = Date.now()
+                break
+            case MessageType.Chat:
+                this.emit(PeerEvent.Chat, msg.text, msg.to, msg.replyTo, msg.attachments)
+                break
+            case MessageType.Typing:
+                this.emit(PeerEvent.Typing)
+                break
+            case MessageType.Edit:
+                this.emit(PeerEvent.Edit, msg.id, msg.text)
+                break
+            case MessageType.Delete:
+                this.emit(PeerEvent.Delete, msg.id)
+                break
+            case MessageType.Reaction:
+                this.emit(PeerEvent.Reaction, msg.msgId, msg.emoji)
+                break
+            case MessageType.Read:
+                this.emit(PeerEvent.Read, msg.id)
                 break
         }
     }

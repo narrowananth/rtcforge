@@ -19,11 +19,12 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     private _closed = false
     private _connecting = false
 
-    private readonly url: string
+    private url: string
     private readonly shouldReconnect: boolean
     private readonly maxReconnectDelay: number
     private readonly maxReconnectAttempts: number | undefined
     private readonly logger: Logger
+    private readonly tokenRefresh: (() => Promise<string>) | undefined
 
     constructor(
         url: string,
@@ -32,6 +33,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
             maxReconnectDelay?: number
             maxReconnectAttempts?: number
             logger?: Logger
+            tokenRefresh?: () => Promise<string>
         } = {},
     ) {
         super()
@@ -40,6 +42,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         this.maxReconnectDelay = options.maxReconnectDelay ?? 32_000
         this.maxReconnectAttempts = options.maxReconnectAttempts
         this.logger = options.logger ?? noopLogger
+        this.tokenRefresh = options.tokenRefresh
     }
 
     connect(): Promise<void> {
@@ -150,7 +153,21 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         this.logger.info('Reconnecting', { attempt: this.reconnectAttempt, delay })
         this.emit(TransportEvent.Reconnecting, this.reconnectAttempt)
         this.reconnectTimer = setTimeout(() => {
-            this.initSocket()
+            if (this.tokenRefresh) {
+                this.tokenRefresh()
+                    .then((newToken) => {
+                        const u = new URL(this.url)
+                        u.searchParams.set('token', newToken)
+                        this.url = u.toString()
+                        this.initSocket()
+                    })
+                    .catch((err: Error) => {
+                        this.logger.warn('Token refresh failed', { err: err.message })
+                        this.initSocket()
+                    })
+            } else {
+                this.initSocket()
+            }
         }, delay)
     }
 
