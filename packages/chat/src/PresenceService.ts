@@ -19,25 +19,34 @@ export class PresenceService extends EventEmitter {
     private readonly logger: Logger
     private readonly onLastSeen?: (peerId: string, ts: number) => void
 
+    private readonly handlePeerJoined = (peer: Peer): void => {
+        this.logger.debug('Peer came online', { peerId: peer.id })
+        this.emit(PresenceEvent.Online, peer)
+    }
+
+    private readonly handlePeerLeft = (peer: Peer): void => {
+        this.logger.debug('Peer went offline', { peerId: peer.id })
+        this.onLastSeen?.(peer.id, Date.now())
+        this.emit(PresenceEvent.Offline, peer)
+    }
+
     constructor(room: Room, opts: PresenceServiceOptions = {}) {
         super()
         this.room = room
         this.logger = opts.logger ?? noopLogger
         this.onLastSeen = opts.onLastSeen
 
-        room.on(RoomEvent.PeerJoined, (peer) => {
-            this.logger.debug('Peer came online', { peerId: peer.id })
-            this.emit(PresenceEvent.Online, peer)
-        })
-
-        room.on(RoomEvent.PeerLeft, (peer) => {
-            this.logger.debug('Peer went offline', { peerId: peer.id })
-            this.onLastSeen?.(peer.id, Date.now())
-            this.emit(PresenceEvent.Offline, peer)
-        })
+        room.on(RoomEvent.PeerJoined, this.handlePeerJoined)
+        room.on(RoomEvent.PeerLeft, this.handlePeerLeft)
     }
 
     getOnline(): Peer[] {
         return [...this.room.getPeers()]
+    }
+
+    stop(): void {
+        this.room.off(RoomEvent.PeerJoined, this.handlePeerJoined)
+        this.room.off(RoomEvent.PeerLeft, this.handlePeerLeft)
+        this.removeAllListeners()
     }
 }

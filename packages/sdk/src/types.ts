@@ -1,16 +1,7 @@
-export interface Logger {
-    debug(msg: string, ctx?: Record<string, unknown>): void
-    info(msg: string, ctx?: Record<string, unknown>): void
-    warn(msg: string, ctx?: Record<string, unknown>): void
-    error(msg: string, ctx?: Record<string, unknown>): void
-}
+import type { Logger } from '@rtcforge/core'
 
-export const noopLogger: Logger = {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-}
+export { noopLogger } from '@rtcforge/core'
+export type { Logger }
 
 export interface RTCForgeClientOptions {
     serverUrl: string

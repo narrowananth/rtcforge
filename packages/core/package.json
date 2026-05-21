@@ -1,7 +1,7 @@
 {
-    "name": "@rtcforge/recording",
+    "name": "@rtcforge/core",
     "version": "0.1.0",
-    "description": "RecordingService \u2014 per-room recording handles, S3/MinIO upload",
+    "description": "Shared primitives — EventEmitter, Logger",
     "main": "dist/index.cjs",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -14,15 +14,12 @@
     },
     "files": ["dist"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch --target es2020",
         "typecheck": "tsc --noEmit"
     },
-    "keywords": ["recording", "ffmpeg", "s3", "realtime", "rtcforge"],
+    "keywords": ["rtcforge"],
     "license": "MIT",
-    "dependencies": {
-        "@rtcforge/core": "*"
-    },
     "publishConfig": {
         "access": "public"
     }

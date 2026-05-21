@@ -1,4 +1,6 @@
 import { Call, MediaEvent, getUserMedia } from '@rtcforge/media'
+import { RecordingEvent, RecordingService } from '@rtcforge/recording'
+import type { RecordingHandle } from '@rtcforge/recording'
 import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 
@@ -25,11 +27,19 @@ const pingAllBtn = document.getElementById('ping-all-btn') as HTMLButtonElement
 const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement
 const cameraBtn = document.getElementById('camera-btn') as HTMLButtonElement
 const micBtn = document.getElementById('mic-btn') as HTMLButtonElement
+const recordBtn = document.getElementById('record-btn') as HTMLButtonElement
+const recordingStatusEl = document.getElementById('recording-status') as HTMLElement
+const recTimerEl = document.getElementById('rec-timer') as HTMLElement
 
 let client: RTCForgeClient | null = null
 let currentRoom: Room | null = null
 let localStream: MediaStream | null = null
 let call: Call | null = null
+
+const recorder = new RecordingService()
+let activeRecording: RecordingHandle | null = null
+let recTimerInterval: ReturnType<typeof setInterval> | null = null
+let recStartTime = 0
 
 peersList.addEventListener('click', (e) => {
     const btn = (e.target as Element).closest('button[data-peer-id]')
@@ -64,6 +74,7 @@ joinBtn.addEventListener('click', async () => {
             noVideoHint.style.display = 'none'
             cameraBtn.disabled = false
             micBtn.disabled = false
+            recordBtn.disabled = false
             updateMediaButtons()
         } catch {
             log('sys', 'Camera/mic unavailable — joining without media')
@@ -165,7 +176,21 @@ micBtn.addEventListener('click', () => {
     updateMediaButtons()
 })
 
+recordBtn.addEventListener('click', async () => {
+    if (activeRecording) {
+        await activeRecording.stop()
+    } else {
+        startRecording()
+    }
+})
+
 leaveBtn.addEventListener('click', async () => {
+    if (activeRecording) {
+        await activeRecording
+            .stop()
+            .catch((err: Error) => log('sys', `Recording stop error: ${err.message}`))
+        activeRecording = null
+    }
     call?.close()
     call = null
 
@@ -184,6 +209,7 @@ leaveBtn.addEventListener('click', async () => {
 
     cameraBtn.disabled = true
     micBtn.disabled = true
+    recordBtn.disabled = true
 
     joinFormEl.style.display = 'block'
     roomViewEl.style.display = 'none'
@@ -266,6 +292,63 @@ function renderPeers(): void {
         li.appendChild(btn)
         peersList.appendChild(li)
     }
+}
+
+function startRecording(): void {
+    if (!localStream) return
+
+    const mimeType =
+        RecordingService.getSupportedMimeTypes().find((t) => t.startsWith('video/')) ?? ''
+
+    activeRecording = recorder.start(localStream, mimeType ? { mimeType } : {})
+
+    recStartTime = Date.now()
+    recTimerInterval = setInterval(() => {
+        recTimerEl.textContent = formatDuration(Date.now() - recStartTime)
+    }, 1000)
+
+    recordBtn.textContent = 'Stop Rec'
+    recordBtn.className = 'recording'
+    recordingStatusEl.classList.add('active')
+    recTimerEl.textContent = '0:00'
+    log('sys', 'Recording started')
+
+    activeRecording.on(RecordingEvent.Complete, ({ blob, duration, mimeType: type }) => {
+        resetRecordingUI()
+
+        const ext = type.includes('mp4') ? 'mp4' : 'webm'
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `recording-${Date.now()}.${ext}`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 60_000)
+
+        log(
+            'sys',
+            `Recording saved (${formatDuration(duration)}, ${(blob.size / 1024).toFixed(0)} KB)`,
+        )
+    })
+
+    activeRecording.on(RecordingEvent.Error, (err) => {
+        resetRecordingUI()
+        log('sys', `Recording error: ${err.message}`)
+    })
+}
+
+function resetRecordingUI(): void {
+    clearInterval(recTimerInterval ?? undefined)
+    recTimerInterval = null
+    activeRecording = null
+    recordBtn.textContent = 'Record'
+    recordBtn.className = 'secondary'
+    recordingStatusEl.classList.remove('active')
+}
+
+function formatDuration(ms: number): string {
+    const s = Math.floor(ms / 1000)
+    const m = Math.floor(s / 60)
+    return `${m}:${String(s % 60).padStart(2, '0')}`
 }
 
 function log(kind: 'in' | 'out' | 'sys', msg: string): void {

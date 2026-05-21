@@ -3,6 +3,7 @@
     "compilerOptions": {
         "noEmit": true,
         "paths": {
+            "@rtcforge/core": ["../core/src/index.ts"],
             "@rtcforge/signaling": ["../signaling/src/index.ts"]
         }
     },

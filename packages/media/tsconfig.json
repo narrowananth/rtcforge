@@ -5,6 +5,7 @@
         "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "noEmit": true,
         "paths": {
+            "@rtcforge/core": ["../core/src/index.ts"],
             "@rtcforge/sdk": ["../sdk/src/index.ts"]
         }
     },

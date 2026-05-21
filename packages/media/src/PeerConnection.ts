@@ -1,4 +1,4 @@
-import { EventEmitter } from '@rtcforge/sdk'
+import { EventEmitter } from '@rtcforge/core'
 import { ConnectionEvent } from './types.js'
 import type { CallOptions } from './types.js'
 

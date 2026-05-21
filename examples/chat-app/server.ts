@@ -29,12 +29,12 @@ server.on(ServerEvent.RoomCreated, (room) => {
         console.log(`[room:${room.id}] ${by} deleted message ${id}`)
     })
 
-    presence.on(PresenceEvent.Online, (peerId) => {
-        console.log(`[room:${room.id}] ${peerId} is online (${presence.getOnline().length} total)`)
+    presence.on(PresenceEvent.Online, (peer) => {
+        console.log(`[room:${room.id}] ${peer.id} is online (${presence.getOnline().length} total)`)
     })
 
-    presence.on(PresenceEvent.Offline, (peerId) => {
-        console.log(`[room:${room.id}] ${peerId} went offline`)
+    presence.on(PresenceEvent.Offline, (peer) => {
+        console.log(`[room:${room.id}] ${peer.id} went offline`)
     })
 
     room.on(RoomEvent.PeerJoined, (peer) => {
@@ -47,6 +47,8 @@ server.on(ServerEvent.RoomCreated, (room) => {
 
     room.on(RoomEvent.Closed, () => {
         console.log(`[room:${room.id}] closed`)
+        chat.stop()
+        presence.stop()
     })
 })
 
@@ -57,3 +59,11 @@ server.on(ServerEvent.Error, (err) => {
 await server.start()
 console.log(`Signaling server running on ws://localhost:${PORT}`)
 console.log('Press Ctrl+C to stop.\n')
+
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(sig, async () => {
+        console.log(`\n[server] ${sig} received — shutting down`)
+        await server.stop()
+        process.exit(0)
+    })
+}

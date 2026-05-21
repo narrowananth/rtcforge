@@ -1,5 +1,5 @@
-import { EventEmitter } from '@rtcforge/core'
 import { describe, expect, it, vi } from 'vitest'
+import { EventEmitter } from '../src/EventEmitter.js'
 
 type TestEvents = {
     data: [value: string]

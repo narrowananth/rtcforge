@@ -1,4 +1,4 @@
-import type { Logger } from '@rtcforge/sdk'
+import type { Logger, MetricsCollector } from '@rtcforge/core'
 
 export const MediaEvent = {
     RemoteStream: 'remote-stream',
@@ -24,4 +24,5 @@ export interface CallOptions {
     codec?: string
     maxBitrate?: number
     logger?: Logger
+    metrics?: MetricsCollector
 }

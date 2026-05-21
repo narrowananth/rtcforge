@@ -24,6 +24,7 @@
         "access": "public"
     },
     "dependencies": {
+        "@rtcforge/core": "*",
         "zod": "^4.4.3"
     }
 }

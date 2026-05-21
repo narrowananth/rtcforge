@@ -9,4 +9,5 @@ export type {
     ChatServiceOptions,
     PresenceServiceOptions,
     Logger,
+    MetricsCollector,
 } from './types.js'

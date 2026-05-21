@@ -1,6 +1,7 @@
-import type { Logger, MediaAttachment, PeerRole } from '@rtcforge/signaling'
-export type { Logger, MediaAttachment, PeerRole }
-export { noopLogger } from '@rtcforge/signaling'
+import type { Logger, MetricsCollector } from '@rtcforge/core'
+import type { MediaAttachment, PeerRole } from '@rtcforge/signaling'
+export type { Logger, MetricsCollector, MediaAttachment, PeerRole }
+export { noopLogger } from '@rtcforge/core'
 
 export interface ChatMessage {
     id: string
@@ -45,6 +46,7 @@ export type PresenceEvent = (typeof PresenceEvent)[keyof typeof PresenceEvent]
 
 export interface ChatServiceOptions {
     logger?: Logger
+    metrics?: MetricsCollector
     typingDebounceMs?: number
     store?: MessageStore
     sendRoles?: PeerRole[]
@@ -53,5 +55,6 @@ export interface ChatServiceOptions {
 
 export interface PresenceServiceOptions {
     logger?: Logger
+    metrics?: MetricsCollector
     onLastSeen?: (peerId: string, ts: number) => void
 }

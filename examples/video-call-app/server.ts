@@ -27,3 +27,11 @@ server.on(ServerEvent.Error, (err) => {
 await server.start()
 console.log(`Signaling server running on ws://localhost:${PORT}`)
 console.log('Press Ctrl+C to stop.\n')
+
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(sig, async () => {
+        console.log(`\n[server] ${sig} received — shutting down`)
+        await server.stop()
+        process.exit(0)
+    })
+}

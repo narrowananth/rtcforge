@@ -1,33 +1,10 @@
 import type { Server } from 'node:http'
-import { noopLogger } from '@rtcforge/sdk'
-import type { Logger } from '@rtcforge/sdk'
+import { Metric, noopLogger, noopMetrics } from '@rtcforge/core'
+import type { Logger, MetricsCollector } from '@rtcforge/core'
 import { z } from 'zod'
 
-export type { Logger }
-export { noopLogger }
-
-export interface MetricsCollector {
-    increment(metric: string, labels?: Record<string, string>): void
-    gauge(metric: string, value: number, labels?: Record<string, string>): void
-}
-
-export const noopMetrics: MetricsCollector = {
-    increment: () => {},
-    gauge: () => {},
-}
-
-export const Metric = {
-    RoomsCreated: 'rooms_created',
-    RoomsClosed: 'rooms_closed',
-    PeersConnected: 'peers_connected',
-    PeersDisconnected: 'peers_disconnected',
-    SignalsRelayed: 'signals_relayed',
-    AuthErrors: 'auth_errors',
-    ActiveRooms: 'active_rooms',
-    ActivePeers: 'active_peers',
-} as const
-
-export type Metric = (typeof Metric)[keyof typeof Metric]
+export type { Logger, MetricsCollector }
+export { noopLogger, noopMetrics, Metric }
 
 export const PeerRole = {
     Host: 'host',

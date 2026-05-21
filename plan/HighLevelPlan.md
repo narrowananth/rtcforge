@@ -61,11 +61,15 @@ RTCForge is built in layers. Developers only interact with Layer 3 (High-Level A
 │  WebSocket protocol, SDP/ICE handling               │
 │  mediasoup Worker Pool, Transport management        │
 │  JWT validation, Room state machine                 │
+│                                                     │
+│  @rtcforge/core — cross-cutting primitive           │
+│  (EventEmitter, Logger, MetricsCollector)           │
+│  used by every package; zero external dependencies  │
 └─────────────────────────────────────────────────────┘
                         ↕
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1 — Raw Internals (hidden from developer)    │
-│  mediasoup, WebRTC, ws, FFmpeg                      │
+│  mediasoup, WebRTC, ws                              │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -139,13 +143,10 @@ media.on('error', (err) => { console.error('Media error', err) })
 
 await room.enableMedia(media)
 
-room.on('peerJoined', async (peer) => {
-  peer.on('trackPublished', (track) => {
-    console.log(peer.id, 'is publishing', track.kind)
-  })
-
-  await peer.subscribeAll()  // subscribe this peer to all room tracks
-})
+// TBD (Phase 2 SFU API): per-peer track events and subscription will be
+// exposed via a MediaPeer wrapper, not the signaling Peer directly.
+// peer.on('trackPublished', ...) and peer.subscribeAll() are SFU concerns
+// and will be designed as part of MediaService implementation.
 ```
 
 **RTCForge handles internally:**
@@ -203,77 +204,80 @@ const onlinePeers = presence.getOnline()
 
 ### Recording — `@rtcforge/recording`
 
-`start()` returns a **per-room recording handle**. Each room gets its own handle with its own `stop()`.
-This means multiple rooms can record simultaneously without interfering with each other.
+`start()` returns a recording handle. Each recording session gets its own handle with its own `stop()`.
+Multiple streams can record simultaneously without interfering.
+
+RTCForge delivers raw recorded data — what you do with it (upload to S3, save to disk, stream to a server) is your application's responsibility. RTCForge does not own your storage.
 
 ```js
 import { RecordingService } from '@rtcforge/recording'
 
-const recorder = new RecordingService({
-  storage: {
-    type: 's3',             // or 'minio' or 'local'
-    bucket: 'my-recordings',
-    region: 'us-east-1',
-    accessKeyId: '...',
-    secretAccessKey: '...'
-  }
+const recorder = new RecordingService()
+
+// record any MediaStream — camera, microphone, screen, remote peer stream
+const rec = recorder.start(stream, {
+  mimeType: 'video/webm',         // optional — browser default if omitted
+  videoBitsPerSecond: 2_500_000,  // optional
+  audioBitsPerSecond: 128_000,    // optional
+  bitsPerSecond: 128_000,         // combined — use for audio-only recordings
+  timeslice: 1000,                // optional — emit data chunks every N ms
 })
 
-// start() returns a handle scoped to this room
-const rec = await recorder.start(room, {
-  mode: 'composite',        // or 'stream' (record each peer separately)
-  format: 'mp4'
+rec.on('data',     (chunk)              => uploadChunk(chunk))           // streaming upload
+rec.on('error',    (err)               => console.error('Recording failed', err))
+rec.on('complete', ({ blob, duration, mimeType }) => {
+  // RTCForge gives you the raw Blob — upload it however you choose
+  uploadToS3(blob)
+  console.log(`Recorded ${duration}ms of ${mimeType}`)
 })
 
-rec.on('error',    (err)             => { console.error('Recording failed', err) })
-rec.on('complete', ({ url, duration }) => { console.log('Saved at', url) })
+rec.pause()   // pause mid-recording
+rec.resume()  // resume
 
-// stop only this room's recording
-await rec.stop()
+// stop and get the final blob via Promise or 'complete' event
+const { blob, duration, mimeType } = await rec.stop()
 ```
 
 **RTCForge handles internally:**
-- mediasoup pipe transport to recording worker
-- FFmpeg/GStreamer composite or stream muxing
-- File chunking and reassembly
-- Upload to configured storage (S3/MinIO/local)
+- MediaRecorder lifecycle (start, pause, resume, stop)
+- Chunk buffering and final Blob assembly
+- Accurate duration tracking (paused time excluded)
+- MIME type support validation before recording starts
 
 ---
 
 ### Streaming — `@rtcforge/streaming`
+
+RTCForge streaming is a **host/audience WebRTC model**. A host publishes their stream; viewers subscribe via WebRTC SFU fan-out. RTCForge knows the exact viewer count because every viewer is a connected WebRTC peer.
+
+RTCForge does **not** manage HLS, RTMP, or FFmpeg. If you need CDN broadcast, capture the raw MediaStream from the SFU and pipe it to your own FFmpeg/RTMP pipeline. RTCForge delivers the stream — you own the egress.
 
 ```js
 import { StreamingService } from '@rtcforge/streaming'
 
 const streaming = new StreamingService()
 
-// WebRTC → HLS (broadcast)
-// HLS viewer count is NOT available here — viewers fetch segments from your
-// CDN/web server. That count lives in your infrastructure, not in RTCForge.
-await streaming.startHLS(room, {
-  outputPath: '/var/hls/room-123',
-  segmentDuration: 4
+// Host starts broadcasting their stream into the room
+const session = await streaming.startSession(room, {
+  hostPeerId: 'host-peer-id',
+  maxViewers: 500         // optional cap
 })
 
-// WebRTC → RTMP
-await streaming.startRTMP(room, {
-  url: 'rtmp://live.twitch.tv/app/YOUR_STREAM_KEY'
-})
+// Viewers are WebRTC peers — RTCForge knows the exact count
+session.on('viewerJoined',  (peerId) => { console.log(peerId, 'started watching') })
+session.on('viewerLeft',    (peerId) => { console.log(peerId, 'stopped watching') })
+session.on('viewerCount',   (count)  => { console.log(count, 'live viewers') })
+session.on('error',         (err)    => { console.error('Stream error', err) })
 
-// WebRTC SFU streaming — consumerCount is known (connected WebRTC peers)
-streaming.on('consumerCount', (count) => { console.log(count, 'live viewers') })
-
-streaming.on('error', (err) => { console.error('Stream error', err) })
-
-await streaming.stop()
+// Stop the session — all viewer connections are torn down
+await session.stop()
 ```
 
 **RTCForge handles internally:**
-- mediasoup → FFmpeg pipeline
-- HLS segmenting and playlist generation
-- RTMP push to external endpoints
-- Stream health monitoring
-- Consumer count tracking for WebRTC-based streaming (not HLS)
+- SFU fan-out from host to all viewer WebRTC connections
+- Viewer connection lifecycle (join, leave, drop)
+- Viewer count events (exact — every viewer is a connected WebRTC peer)
+- Graceful session teardown (host leaves → all viewers disconnected)
 
 ---
 
@@ -356,9 +360,8 @@ Without config, they work with sensible in-process defaults.
 | Service | Where Config Goes | What RTCForge Does With It |
 | ------- | ----------------- | -------------------------- |
 | TURN server | `MediaService({ turn: ... })` | passed to WebRTC ICE config |
-| S3 / MinIO | `RecordingService({ storage: ... })` | uploads recordings after mux |
-| RTMP endpoint | `streaming.startRTMP({ url })` | FFmpeg pushes stream to URL |
-| HLS output | `streaming.startHLS({ outputPath })` | FFmpeg writes segments to path |
+| S3 / MinIO | your application code | you own the upload — RTCForge gives you the raw Blob |
+| RTMP / HLS | your application code | RTCForge does not manage stream egress — capture the raw MediaStream and pipe it to your own FFmpeg pipeline |
 
 ---
 
@@ -386,7 +389,6 @@ import http from 'http'
 import { SignalingServer } from '@rtcforge/signaling'
 import { MediaService }    from '@rtcforge/media'
 import { ChatService }     from '@rtcforge/chat'
-import { RecordingService } from '@rtcforge/recording'
 
 const httpServer = http.createServer(myExpressApp)
 
@@ -402,12 +404,7 @@ const media = new MediaService({
   turn: { urls: 'turn:turn.myapp.com:3478', username: 'u', credential: 'p' }
 })
 
-// 3. Recording — configure S3
-const recorder = new RecordingService({
-  storage: { type: 's3', bucket: 'recordings', region: 'us-east-1', ... }
-})
-
-// 4. Wire it all together — room is auto-created when first peer joins
+// 3. Wire it all together — room is auto-created when first peer joins
 signaling.on('roomCreated', async (room) => {
 
   await room.enableMedia(media)
@@ -416,22 +413,26 @@ signaling.on('roomCreated', async (room) => {
   chat.on('message', (msg) => saveToDatabase(msg))
   chat.on('error',   (err) => console.error('Chat error', err))
 
-  room.on('peerJoined', async (peer) => {
-    await peer.subscribeAll()
-  })
-
-  // start() returns a handle scoped to this room only
-  const rec = await recorder.start(room, { mode: 'composite', format: 'mp4' })
-  rec.on('complete', ({ url }) => saveRecordingUrl(url))
-  rec.on('error',    (err) => console.error('Recording error', err))
-
-  // room closed when last peer leaves — stop only this room's recording
-  room.on('closed', () => {
-    rec.stop().catch(console.error)
-  })
+  room.on('closed', () => chat.stop())
 })
 
 httpServer.listen(3000)
+```
+
+> **Recording is browser-side only.** `RecordingService` uses the browser `MediaRecorder` API — it cannot run in Node.js. Wire it in your client app:
+
+```js
+// In the browser (client app using @rtcforge/sdk + @rtcforge/recording)
+import { RecordingService } from '@rtcforge/recording'
+
+const recorder = new RecordingService()
+const rec = recorder.start(localStream, { mimeType: 'video/webm' })
+
+rec.on('complete', ({ blob, duration }) => uploadToStorage(blob, duration))
+rec.on('error',    (err) => console.error('Recording error', err))
+
+// stop when call ends
+const { blob } = await rec.stop()
 ```
 
 ---
@@ -447,9 +448,10 @@ Infrastructure is externally managed by the developer:
 * STUN/TURN servers (coturn)
 * Redis (optional — for operator-level scale-out only)
 * Messaging system (NATS/Kafka)
-* Storage (S3/MinIO)
+* Storage (S3/MinIO/local) — RTCForge delivers raw Blob; your app handles upload
+* RTMP/HLS egress — RTCForge delivers the raw WebRTC stream; your app owns the FFmpeg pipeline
 
-RTCForge connects to these via config objects. Without any config it still works — in-memory, single instance.
+RTCForge connects to TURN and Redis via config objects. Without any config it still works — in-memory, single instance.
 
 ---
 
@@ -461,8 +463,9 @@ RTCForge connects to these via config objects. Without any config it still works
 * `@rtcforge/signaling` — `SignalingServer`, `Room`, `Peer`, built-in auth hook
 * `@rtcforge/media` — `MediaService`, `MediaRouter`, `Producer`, `Consumer`
 * `@rtcforge/chat` — `ChatService`, `PresenceService`
+* `@rtcforge/core` — shared primitives (EventEmitter, Logger, noopLogger)
 * `@rtcforge/recording` — `RecordingService` (per-room recording handles)
-* `@rtcforge/streaming` — `StreamingService`
+* `@rtcforge/streaming` — `StreamingService`, `StreamingSession` (host/audience WebRTC model)
 * `@rtcforge/whiteboard` — `WhiteboardService`
 * `@rtcforge/sdk` — Browser + Node.js client SDK
 * Detailed documentation for implementing each feature
@@ -517,12 +520,13 @@ npm install @rtcforge/signaling @rtcforge/media @rtcforge/sdk
 
 | Package | Purpose | Phase |
 | ------- | ------- | ----- |
+| `@rtcforge/core` | Shared primitives: EventEmitter, Logger, noopLogger — zero dependencies | 0 |
 | `@rtcforge/signaling` | SignalingServer, Room, Peer, session lifecycle, auth hook | 1 |
 | `@rtcforge/sdk` | Browser + Node.js client SDK | 1 |
 | `@rtcforge/media` | MediaService, MediaRouter, Worker Pool, Producer, Consumer | 2 |
 | `@rtcforge/chat` | ChatService, PresenceService, typing indicators | 4 |
-| `@rtcforge/recording` | RecordingService, S3/MinIO upload | 5 |
-| `@rtcforge/streaming` | StreamingService, HLS/RTMP pipeline | 6 |
+| `@rtcforge/recording` | RecordingService, raw Blob delivery, pause/resume | 5 |
+| `@rtcforge/streaming` | StreamingService, host/audience WebRTC model, live viewer count | 6 |
 | `@rtcforge/whiteboard` | WhiteboardService, state sync, CRDT hooks | 7 |
 
 ---
@@ -542,8 +546,10 @@ Your Node.js Application
   │         ↕
   ├── @rtcforge/media  (MediaService → mediasoup Workers)
   │         │
-  │         ├── Recording Worker  → Storage (S3/MinIO)   ← you manage
-  │         └── Stream Egress     → HLS files / RTMP     ← you manage
+  │         └── Recording Worker  → Storage (S3/MinIO)   ← you manage
+  │                                  (raw Blob delivered; upload is your code)
+  │
+  │         Stream egress (RTMP/HLS) ← your infrastructure, not RTCForge
   │
   └── Config only (no internal dependency):
         TURN server   ← you manage, passed via MediaService config
@@ -586,8 +592,8 @@ The signaling layer manages state in-memory. Scaling is an operator concern.
 | Chat | WebSocket | `@rtcforge/chat` |
 | Presence | WebSocket | `@rtcforge/chat` |
 | Recording | SFU + Worker | `@rtcforge/recording` |
-| Interactive Live Streaming | SFU | `@rtcforge/streaming` |
-| Broadcast Streaming | Cascading SFU + HLS | `@rtcforge/streaming` |
+| Interactive Live Streaming | SFU (host/audience WebRTC) | `@rtcforge/streaming` |
+| Broadcast Streaming (HLS/RTMP) | your FFmpeg pipeline — RTCForge delivers the stream | application code |
 | Whiteboard | WebSocket + CRDT | `@rtcforge/whiteboard` |
 
 ---
@@ -633,6 +639,7 @@ The developer never creates or manages workers. They only call `room.enableMedia
 * Token must return: `{ roomId, peerId, role }` — host / participant / viewer
 * Validation runs at WebSocket upgrade — rejected tokens never allocate room state
 * Throw from the `auth` function to reject a connection
+* `PeerRole.Viewer` is defined in signaling but media enforcement (blocking viewers from publishing tracks) is a Phase 2 (SFU/MediaService) concern — not enforced in the current mesh implementation
 
 ---
 
@@ -652,6 +659,7 @@ The developer never creates or manages workers. They only call `room.enableMedia
 ```
 rtcforge/                          ← monorepo (npm workspaces)
  ├── packages/
+ │    ├── core/                    # @rtcforge/core (shared primitives — zero deps)
  │    ├── signaling/               # @rtcforge/signaling (includes auth hook)
  │    ├── media/                   # @rtcforge/media
  │    ├── chat/                    # @rtcforge/chat
@@ -699,8 +707,8 @@ Every RTCForge service emits an `error` event for failures. Always listen to it.
 | ------- | --------------------- |
 | `SignalingServer` | WebSocket server failure, unhandled auth exception |
 | `MediaService` | Worker crash (after recovery attempt fails) |
-| `RecordingService` | FFmpeg failure, storage upload failure |
-| `StreamingService` | FFmpeg pipeline failure, RTMP disconnect |
+| `RecordingService` | MediaRecorder codec failure, unsupported MIME type |
+| `StreamingService` | WebRTC transport failure, host disconnect, viewer limit exceeded |
 | `ChatService` | Message delivery failure |
 
 If you do not listen to `error`, Node.js will throw an unhandled exception and crash your process.
@@ -737,12 +745,18 @@ The client SDK (`@rtcforge/sdk`) handles reconnection automatically with exponen
 
 ### Phase 2 — Media Package
 
+**Mesh (done):** `Call` and `PeerConnection` in `@rtcforge/media` implement direct peer-to-peer WebRTC. Used by the video-call example. No mediasoup required.
+
+**SFU (current target):** `MediaService` with mediasoup Worker Pool — the main implementation work of Phase 2.
+
 * `@rtcforge/media` — `MediaService`, `MediaRouter`, `Producer`, `Consumer`
-* Worker pool management (spawn, balance, recover)
-* 1:1 and group video/audio calls
+* mediasoup Worker Pool management (spawn, balance, recover crashes)
+* WebRTC Transport creation (DTLS, SRTP)
+* Producer and Consumer lifecycle
+* 1:1 and group video/audio calls via SFU
 * Screen sharing
 * TURN server wiring via config
-* Example app: group video call
+* Example app: group video call (SFU)
 
 ---
 
@@ -766,19 +780,24 @@ The client SDK (`@rtcforge/sdk`) handles reconnection automatically with exponen
 
 ### Phase 5 — Recording Package
 
-* `@rtcforge/recording` — `RecordingService`
-* Stream-based and composite recording
-* S3/MinIO upload pipeline
-* Recording lifecycle API (start/stop/status/complete)
+* `@rtcforge/recording` — `RecordingService`, `RecordingHandle`
+* Browser-side recording via MediaRecorder API
+* Full lifecycle: start, pause, resume, stop
+* Accurate duration tracking (excludes paused time)
+* MIME type validation before recording starts
+* Raw Blob delivery on complete — application owns storage
 
 ---
 
 ### Phase 6 — Streaming Package
 
-* `@rtcforge/streaming` — `StreamingService`
-* WebRTC → HLS pipeline
-* RTMP egress
-* Host/audience role model
+* `@rtcforge/streaming` — `StreamingService`, `StreamingSession`
+* Host/audience WebRTC model — host publishes, viewers subscribe via SFU fan-out
+* Live viewer count (exact — every viewer is a connected WebRTC peer)
+* Session lifecycle: start, stop, graceful teardown on host disconnect
+* Viewer join/leave events
+* Optional max-viewer cap
+* Example app: live-stream-app
 
 ---
 

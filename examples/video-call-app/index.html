@@ -28,6 +28,19 @@
         button.secondary:hover { background: #4b5563; }
         button.active { background: #065f46; }
         button.active:hover { background: #047857; }
+        button.recording { background: #dc2626; animation: pulse 1.4s ease-in-out infinite; }
+        button.recording:hover { background: #b91c1c; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+        #recording-status {
+            display: none; align-items: center; gap: 0.5rem;
+            font-size: 0.85rem; color: #f87171; margin-top: 0.5rem;
+        }
+        #recording-status.active { display: flex; }
+        .rec-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #dc2626;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
 
         #room-view { display: none; }
         .room-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; }
@@ -110,8 +123,14 @@
                 <div class="actions">
                     <button id="camera-btn" class="secondary" disabled>Camera</button>
                     <button id="mic-btn" class="secondary" disabled>Mic</button>
+                    <button id="record-btn" class="secondary" disabled>Record</button>
                     <button id="ping-all-btn" class="secondary">Ping all</button>
                     <button id="leave-btn" class="danger">Leave</button>
+                </div>
+                <div id="recording-status">
+                    <span class="rec-dot"></span>
+                    <span>Recording</span>
+                    <span id="rec-timer">0:00</span>
                 </div>
             </div>
             <div class="panel">

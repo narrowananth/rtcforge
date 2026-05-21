@@ -24,6 +24,9 @@
     "publishConfig": {
         "access": "public"
     },
+    "dependencies": {
+        "@rtcforge/core": "*"
+    },
     "peerDependencies": {
         "@rtcforge/signaling": ">=0.1.0"
     }

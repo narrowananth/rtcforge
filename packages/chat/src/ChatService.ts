@@ -62,6 +62,8 @@ export class ChatService extends EventEmitter {
     private readonly onOfflineMessage?: (peerId: string, msg: ChatMessage) => void
     private readonly typingTimers = new Map<string, ReturnType<typeof setTimeout>>()
     private readonly wiredPeers = new Set<string>()
+    private readonly onPeerJoined = (peer: Peer) => this.wirePeer(peer)
+    private readonly onPeerLeft = (peer: Peer) => this.cleanupPeer(peer.id)
 
     constructor(room: Room, opts: ChatServiceOptions = {}) {
         super()
@@ -76,8 +78,16 @@ export class ChatService extends EventEmitter {
             this.wirePeer(peer)
         }
 
-        room.on(RoomEvent.PeerJoined, (peer) => this.wirePeer(peer))
-        room.on(RoomEvent.PeerLeft, (peer) => this.cleanupPeer(peer.id))
+        room.on(RoomEvent.PeerJoined, this.onPeerJoined)
+        room.on(RoomEvent.PeerLeft, this.onPeerLeft)
+    }
+
+    stop(): void {
+        this.room.off(RoomEvent.PeerJoined, this.onPeerJoined)
+        this.room.off(RoomEvent.PeerLeft, this.onPeerLeft)
+        for (const timer of this.typingTimers.values()) clearTimeout(timer)
+        this.typingTimers.clear()
+        this.wiredPeers.clear()
     }
 
     send(msg: {

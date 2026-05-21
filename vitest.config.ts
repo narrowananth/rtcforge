@@ -7,6 +7,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
+            '@rtcforge/core': new URL('./packages/core/src/index.ts', import.meta.url).pathname,
             '@rtcforge/signaling': new URL('./packages/signaling/src/index.ts', import.meta.url)
                 .pathname,
             '@rtcforge/sdk': new URL('./packages/sdk/src/index.ts', import.meta.url).pathname,
