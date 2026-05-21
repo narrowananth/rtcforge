@@ -58,6 +58,7 @@ export const PeerEvent = {
     Delete: 'delete',
     Reaction: 'reaction',
     Read: 'read',
+    WhiteboardEvent: 'whiteboard-event',
 } as const
 
 export type PeerEvent = (typeof PeerEvent)[keyof typeof PeerEvent]

@@ -21,6 +21,8 @@ export const MessageType = {
     Deleted: 'deleted',
     Reaction: 'reaction',
     Kicked: 'kicked',
+    WhiteboardEvent: 'whiteboard-event',
+    WhiteboardSync: 'whiteboard-sync',
 } as const
 
 export type MessageType = (typeof MessageType)[keyof typeof MessageType]
@@ -73,6 +75,11 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
         emoji: z.string().min(1).max(8),
     }),
     z.object({ type: z.literal(MessageType.Read), id: z.string() }),
+    z.object({
+        type: z.literal(MessageType.WhiteboardEvent),
+        eventType: z.string().min(1).max(64),
+        data: z.unknown().optional(),
+    }),
 ])
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>
@@ -125,6 +132,15 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
         emoji: z.string(),
         by: z.string(),
     }),
+    z.object({
+        type: z.literal(MessageType.WhiteboardEvent),
+        from: z.string(),
+        eventType: z.string(),
+        data: z.unknown().optional(),
+        seq: z.number(),
+        ts: z.number(),
+    }),
+    z.object({ type: z.literal(MessageType.WhiteboardSync), state: z.unknown() }),
 ])
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>

@@ -1,7 +1,7 @@
 {
     "name": "@rtcforge/streaming",
     "version": "0.1.0",
-    "description": "StreamingService \u2014 HLS/RTMP egress pipeline",
+    "description": "StreamingService \u2014 host/audience WebRTC model, live viewer count",
     "main": "dist/index.cjs",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -18,8 +18,14 @@
         "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
         "typecheck": "tsc --noEmit"
     },
-    "keywords": ["streaming", "hls", "rtmp", "webrtc", "rtcforge"],
+    "keywords": ["streaming", "webrtc", "live", "rtcforge"],
     "license": "MIT",
+    "dependencies": {
+        "@rtcforge/core": "*"
+    },
+    "peerDependencies": {
+        "@rtcforge/signaling": ">=0.1.0"
+    },
     "publishConfig": {
         "access": "public"
     }

@@ -21,6 +21,10 @@ export declare interface Peer {
     on(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
     on(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
     on(event: typeof PeerEvent.Read, listener: (id: string) => void): this
+    on(
+        event: typeof PeerEvent.WhiteboardEvent,
+        listener: (eventType: string, data: unknown) => void,
+    ): this
     once(
         event: typeof PeerEvent.Disconnected,
         listener: (code: number, reason: string) => void,
@@ -39,6 +43,10 @@ export declare interface Peer {
     once(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
     once(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
     once(event: typeof PeerEvent.Read, listener: (id: string) => void): this
+    once(
+        event: typeof PeerEvent.WhiteboardEvent,
+        listener: (eventType: string, data: unknown) => void,
+    ): this
     emit(event: typeof PeerEvent.Disconnected, code: number, reason: string): boolean
     emit(
         event: typeof PeerEvent.Chat,
@@ -52,6 +60,7 @@ export declare interface Peer {
     emit(event: typeof PeerEvent.Delete, id: string): boolean
     emit(event: typeof PeerEvent.Reaction, msgId: string, emoji: string): boolean
     emit(event: typeof PeerEvent.Read, id: string): boolean
+    emit(event: typeof PeerEvent.WhiteboardEvent, eventType: string, data: unknown): boolean
 }
 
 // biome-ignore lint/suspicious/noUnsafeDeclarationMerging: typed EventEmitter overload pattern
@@ -130,6 +139,9 @@ export class Peer extends EventEmitter {
                 break
             case MessageType.Read:
                 this.emit(PeerEvent.Read, msg.id)
+                break
+            case MessageType.WhiteboardEvent:
+                this.emit(PeerEvent.WhiteboardEvent, msg.eventType, msg.data)
                 break
         }
     }
