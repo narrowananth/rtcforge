@@ -120,6 +120,26 @@ describe('RTCForgeClient', () => {
         expect(latestWs().url).toContain('token=jwt-abc')
     })
 
+    it('appends peerId to URL in no-auth mode (no token)', async () => {
+        const client = new RTCForgeClient({ serverUrl: 'ws://localhost:3000', peerId: 'alice' })
+        client.joinRoom('r1')
+        await tick()
+        expect(latestWs().url).toContain('peerId=alice')
+        expect(latestWs().url).not.toContain('token=')
+    })
+
+    it('prefers token over peerId when both provided', async () => {
+        const client = new RTCForgeClient({
+            serverUrl: 'ws://localhost:3000',
+            token: 'jwt',
+            peerId: 'alice',
+        })
+        client.joinRoom('r1')
+        await tick()
+        expect(latestWs().url).toContain('token=jwt')
+        expect(latestWs().url).not.toContain('peerId=')
+    })
+
     it('emits connected after room-joined', async () => {
         const client = new RTCForgeClient({ serverUrl: 'ws://localhost:3000' })
         const connectedListener = vi.fn()
@@ -226,7 +246,13 @@ describe('RTCForgeClient', () => {
     })
 
     it('logger receives info on connect and disconnect', async () => {
-        const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+        const logger = {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            fatal: vi.fn(),
+        }
         const client = new RTCForgeClient({
             serverUrl: 'ws://localhost:3000',
             reconnect: false,

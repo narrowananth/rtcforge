@@ -1,4 +1,4 @@
-import { EventEmitter } from './EventEmitter.js'
+import { EventEmitter, toError } from '@rtcforge/core'
 import { MessageType, ServerMessageSchema } from './protocol.js'
 import type { ClientMessage, ServerMessage } from './protocol.js'
 import { CloseCode, CloseReason, TransportEvent, noopLogger } from './types.js'
@@ -23,8 +23,11 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     private readonly shouldReconnect: boolean
     private readonly maxReconnectDelay: number
     private readonly maxReconnectAttempts: number | undefined
+    private readonly connectTimeoutMs: number | undefined
     private readonly logger: Logger
     private readonly tokenRefresh: (() => Promise<string>) | undefined
+    private readonly _maxQueueSize: number | undefined
+    private readonly _sendQueue: ClientMessage[] = []
 
     constructor(
         url: string,
@@ -32,17 +35,21 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
             reconnect?: boolean
             maxReconnectDelay?: number
             maxReconnectAttempts?: number
+            connectTimeoutMs?: number
             logger?: Logger
             tokenRefresh?: () => Promise<string>
+            maxQueueSize?: number
         } = {},
     ) {
         super()
         this.url = url
-        this.shouldReconnect = options.reconnect ?? true
+        this.shouldReconnect = options.reconnect ?? false
         this.maxReconnectDelay = options.maxReconnectDelay ?? 32_000
         this.maxReconnectAttempts = options.maxReconnectAttempts
+        this.connectTimeoutMs = options.connectTimeoutMs
         this.logger = options.logger ?? noopLogger
         this.tokenRefresh = options.tokenRefresh
+        this._maxQueueSize = options.maxQueueSize
     }
 
     connect(): Promise<void> {
@@ -54,13 +61,30 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     private static readonly WS_OPEN = 1
 
     send(msg: ClientMessage): void {
+        if (this._closed) return
         if (this.ws?.readyState === WebSocketTransport.WS_OPEN) {
+            if (this._sendQueue.length > 0) this._flushQueue()
+            this.ws.send(JSON.stringify(msg))
+        } else {
+            if (this._sendQueue.length >= (this._maxQueueSize ?? 100)) {
+                this.emit(TransportEvent.Error, new Error('Send queue full'))
+                return
+            }
+            this._sendQueue.push(msg)
+        }
+    }
+
+    private _flushQueue(): void {
+        if (this.ws?.readyState !== WebSocketTransport.WS_OPEN) return
+        for (const msg of this._sendQueue) {
             this.ws.send(JSON.stringify(msg))
         }
+        this._sendQueue.length = 0
     }
 
     close(): void {
         this._closed = true
+        this._sendQueue.length = 0
         if (this.reconnectTimer !== null) {
             clearTimeout(this.reconnectTimer)
             this.reconnectTimer = null
@@ -68,18 +92,39 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         this.ws?.close(CloseCode.Normal, CloseReason.ClientClosed)
     }
 
+    flush(): void {
+        this._flushQueue()
+    }
+
     private initSocket(onOpen?: () => void, onError?: (err: Error) => void): void {
-        if (this._connecting) return
+        if (this._connecting) {
+            onError?.(new Error('Connection already in progress'))
+            return
+        }
         this._connecting = true
         void this.getWsClass()
             .then((WS) => {
                 this._connecting = false
+                if (this._closed) return
                 const ws = new WS(this.url)
                 this.ws = ws
 
                 let settled = false
 
+                const connectTimeoutMs = this.connectTimeoutMs
+                const connectTimer =
+                    connectTimeoutMs !== 0
+                        ? setTimeout(() => {
+                              ws.close()
+                              if (!settled) {
+                                  settled = true
+                                  onError?.(new Error('WebSocket connect timeout'))
+                              }
+                          }, connectTimeoutMs ?? 10_000)
+                        : null
+
                 ws.onopen = () => {
+                    if (connectTimer) clearTimeout(connectTimer)
                     this.reconnectAttempt = 0
                     this.logger.info('WebSocket connected', { url: this.url })
                     this.emit(TransportEvent.Open)
@@ -102,6 +147,13 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                             this.logger.warn('Max reconnect attempts reached', {
                                 attempts: this.reconnectAttempt,
                             })
+                            this._closed = true
+                            const exhaustedErr = new Error('Max reconnect attempts reached')
+                            this.emit(TransportEvent.Error, exhaustedErr)
+                            if (!settled) {
+                                settled = true
+                                onError?.(exhaustedErr)
+                            }
                             return
                         }
                         this.scheduleReconnect()
@@ -119,12 +171,13 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                             return
                         }
                         this.emit(TransportEvent.Message, msg)
-                    } catch {
-                        // ignore malformed messages
+                    } catch (err) {
+                        this.emit(TransportEvent.Error, toError(err))
                     }
                 }
 
                 ws.onerror = () => {
+                    if (connectTimer) clearTimeout(connectTimer)
                     const err = new Error('WebSocket error')
                     this.logger.error('WebSocket error', { url: this.url })
                     this.emit(TransportEvent.Error, err)
@@ -148,7 +201,8 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         if (this.reconnectTimer !== null) {
             clearTimeout(this.reconnectTimer)
         }
-        const delay = Math.min(1000 * 2 ** this.reconnectAttempt, this.maxReconnectDelay)
+        const base = Math.min(1000 * 2 ** this.reconnectAttempt, this.maxReconnectDelay)
+        const delay = base + base * 0.3 * Math.random()
         this.reconnectAttempt++
         this.logger.info('Reconnecting', { attempt: this.reconnectAttempt, delay })
         this.emit(TransportEvent.Reconnecting, this.reconnectAttempt)
@@ -171,13 +225,18 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         }, delay)
     }
 
+    private _wsClass: typeof WebSocket | null = null
+
     private async getWsClass(): Promise<typeof WebSocket> {
+        if (this._wsClass) return this._wsClass
         if (typeof globalThis.WebSocket !== 'undefined') {
-            return globalThis.WebSocket
+            this._wsClass = globalThis.WebSocket
+            return this._wsClass
         }
         try {
             const { WebSocket: WS } = await import('ws')
-            return WS as unknown as typeof globalThis.WebSocket
+            this._wsClass = WS as unknown as typeof globalThis.WebSocket
+            return this._wsClass
         } catch {
             throw new Error(
                 'WebSocket is not available. Install the "ws" package or use Node.js >= 22.',

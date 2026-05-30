@@ -8,10 +8,12 @@ import { MediaEvent } from '../src/types.js'
 
 function makeRoom(localPeerId = 'local', initialPeers: string[] = []) {
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {}
+    const peers = [localPeerId, ...initialPeers]
 
     const room = {
         localPeerId,
-        peers: [localPeerId, ...initialPeers],
+        peers,
+        hasPeer: (id: string) => peers.includes(id),
         on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
             listeners[event] = listeners[event] ?? []
             listeners[event].push(handler)
@@ -97,7 +99,7 @@ describe('Call — start', () => {
         call.start()
         call.start()
 
-        expect(room.on).toHaveBeenCalledTimes(3) // PeerJoined, PeerLeft, Signal
+        expect(room.on).toHaveBeenCalledTimes(4) // PeerJoined, PeerLeft, Signal, refreshed
     })
 })
 
@@ -133,7 +135,7 @@ describe('Call — addTrack / subscribeAll', () => {
         const call = new Call(room as never)
         call.start()
 
-        const track = {} as MediaStreamTrack
+        const track = { stop: vi.fn() } as unknown as MediaStreamTrack
         const stream = {} as MediaStream
         call.addTrack(track, stream)
 
@@ -148,18 +150,11 @@ describe('Call — addTrack / subscribeAll', () => {
         const handler = vi.fn()
         call.on(MediaEvent.TrackPublished, handler)
 
-        const track = {} as MediaStreamTrack
+        const track = { stop: vi.fn() } as unknown as MediaStreamTrack
         const stream = {} as MediaStream
         call.addTrack(track, stream)
 
         expect(handler).toHaveBeenCalledWith(track, stream)
-    })
-
-    it('subscribeAll is a no-op in mesh mode', () => {
-        const room = makeRoom('local', [])
-        const call = new Call(room as never)
-        call.start()
-        expect(() => call.subscribeAll()).not.toThrow()
     })
 })
 
@@ -188,6 +183,80 @@ describe('Call — signal handling', () => {
         expect(mockPCInstance.setRemoteDescription).not.toHaveBeenCalled()
     })
 
+    it('emits Error and does not crash when signal handling rejects', async () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never)
+        call.start()
+
+        mockPCInstance.setRemoteDescription.mockRejectedValueOnce(new Error('bad SDP'))
+        const errorHandler = vi.fn()
+        call.on(MediaEvent.Error, errorHandler)
+
+        const answerSignal = { kind: SignalKind.Media, type: SignalType.Answer, sdp: 'bad' }
+        await room._emit(MessageType.Signal, 'remote', answerSignal)
+
+        expect(errorHandler).toHaveBeenCalledWith('remote', expect.any(Error))
+    })
+
+    it('evicts broken PC on first signal failure so next signal gets fresh connection (V4)', async () => {
+        // room without initial peers — Offer signal arrives from a new peer (wasNew=true path)
+        // PeerConnection.handleOffer/handleAnswer swallow errors internally, so we test via
+        // room.sendSignal throwing (the one place handleRoomSignal's catch can fire on offer path)
+        const room = makeRoom('local', [])
+        const call = new Call(room as never)
+        call.start()
+
+        // Add peer AFTER start() so it isn't eagerly connected (wasNew stays true on signal)
+        room.peers.push('new-peer')
+
+        // sendSignal throws on first call (sending the answer back fails)
+        room.sendSignal.mockImplementationOnce(() => {
+            throw new Error('transport closed')
+        })
+
+        const errorHandler = vi.fn()
+        call.on(MediaEvent.Error, errorHandler)
+
+        // Offer signal → handleOffer returns answer → sendSignal throws → catch block fires.
+        // _emit doesn't await the async handler, so use a macrotask flush to drain all microtasks.
+        room._emit(MessageType.Signal, 'new-peer', {
+            kind: SignalKind.Media,
+            type: SignalType.Offer,
+            sdp: 'offer-sdp',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(errorHandler).toHaveBeenCalledTimes(1)
+        // wasNew=true path: pc.close() called on eviction
+        expect(mockPCInstance.close).toHaveBeenCalledTimes(1)
+
+        // Second signal — PC was evicted, so getOrCreateConnection creates a fresh one
+        room.sendSignal.mockReset()
+        room._emit(MessageType.Signal, 'new-peer', {
+            kind: SignalKind.Media,
+            type: SignalType.Offer,
+            sdp: 'offer-2',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+        expect(vi.mocked(RTCPeerConnection)).toHaveBeenCalledTimes(2)
+    })
+
+    it('discards late signal from peer no longer in room', async () => {
+        const room = makeRoom('local', [])
+        const call = new Call(room as never)
+        call.start()
+
+        // peer never joined, no existing connection
+        const iceSignal = {
+            kind: SignalKind.Media,
+            type: SignalType.Ice,
+            candidate: { candidate: 'c' },
+        }
+        await room._emit(MessageType.Signal, 'ghost-peer', iceSignal)
+
+        expect(vi.mocked(RTCPeerConnection)).not.toHaveBeenCalled()
+    })
+
     it('handles ICE candidate signal', async () => {
         const room = makeRoom('local', ['remote'])
         const call = new Call(room as never)
@@ -210,6 +279,72 @@ describe('Call — signal handling', () => {
     })
 })
 
+describe('Call — connection failure', () => {
+    it('emits ConnectionFailed and evicts PC when state becomes failed', () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never)
+        call.start()
+
+        const failedHandler = vi.fn()
+        call.on(MediaEvent.ConnectionFailed, failedHandler)
+
+        // PeerConnection reads this.pc.connectionState when onconnectionstatechange fires
+        ;(mockPCInstance as unknown as { connectionState: string }).connectionState = 'failed'
+        mockPCInstance.onconnectionstatechange?.({} as never)
+
+        expect(failedHandler).toHaveBeenCalledWith('remote')
+        expect(mockPCInstance.close).toHaveBeenCalled()
+    })
+})
+
+describe('Call — ConnectionEvent.Error evicts stale PC (Finding 2)', () => {
+    it('evicts PC and emits Error when PeerConnection internal handleAnswer throws', async () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never)
+        call.start()
+
+        mockPCInstance.setRemoteDescription.mockRejectedValueOnce(new Error('ICE failure'))
+        const errorHandler = vi.fn()
+        call.on(MediaEvent.Error, errorHandler)
+
+        room._emit(MessageType.Signal, 'remote', {
+            kind: SignalKind.Media,
+            type: SignalType.Answer,
+            sdp: 'bad-sdp',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(errorHandler).toHaveBeenCalledWith('remote', expect.any(Error))
+        expect(mockPCInstance.close).toHaveBeenCalled()
+    })
+
+    it('creates fresh connection after eviction so next signal succeeds (Finding 2)', async () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never)
+        call.start()
+
+        // Cause internal error → eviction
+        mockPCInstance.setRemoteDescription.mockRejectedValueOnce(new Error('ICE failure'))
+        room._emit(MessageType.Signal, 'remote', {
+            kind: SignalKind.Media,
+            type: SignalType.Answer,
+            sdp: 'bad',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+
+        // PC evicted — second Answer signal must create a fresh RTCPeerConnection
+        room._emit(MessageType.Signal, 'remote', {
+            kind: SignalKind.Media,
+            type: SignalType.Answer,
+            sdp: 'good',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+
+        // First: start() created connection for 'remote'; second: post-eviction reconnect
+        expect(vi.mocked(RTCPeerConnection)).toHaveBeenCalledTimes(2)
+    })
+})
+
 describe('Call — close', () => {
     it('removes room listeners on close', () => {
         const room = makeRoom('local', [])
@@ -217,7 +352,7 @@ describe('Call — close', () => {
         call.start()
         call.close()
 
-        expect(room.off).toHaveBeenCalledTimes(3)
+        expect(room.off).toHaveBeenCalledTimes(4)
     })
 
     it('close before start is a no-op', () => {
@@ -229,7 +364,7 @@ describe('Call — close', () => {
 
 describe('Call — initial stream tracks', () => {
     it('adds initial stream tracks to new peer connections', () => {
-        const track = {} as MediaStreamTrack
+        const track = { stop: vi.fn() } as unknown as MediaStreamTrack
         const stream = { getTracks: vi.fn().mockReturnValue([track]) } as unknown as MediaStream
 
         const room = makeRoom('local', ['remote'])
@@ -237,5 +372,76 @@ describe('Call — initial stream tracks', () => {
         call.start()
 
         expect(mockPCInstance.addTrack).toHaveBeenCalledWith(track, stream)
+    })
+})
+
+describe('Call — mute/unmute', () => {
+    function makeTrack(kind: 'audio' | 'video'): MediaStreamTrack {
+        return { kind, enabled: true, stop: vi.fn() } as unknown as MediaStreamTrack
+    }
+
+    it('muteAudio disables audio tracks', () => {
+        const audio = makeTrack('audio')
+        const video = makeTrack('video')
+        const stream = {
+            getTracks: vi.fn().mockReturnValue([audio, video]),
+        } as unknown as MediaStream
+        const room = makeRoom('local', [])
+        const call = new Call(room as never, { stream })
+        call.start()
+
+        expect(call.isAudioMuted()).toBe(false)
+        call.muteAudio()
+        expect((audio as unknown as { enabled: boolean }).enabled).toBe(false)
+        expect((video as unknown as { enabled: boolean }).enabled).toBe(true)
+        expect(call.isAudioMuted()).toBe(true)
+    })
+
+    it('unmuteAudio re-enables audio tracks', () => {
+        const audio = makeTrack('audio')
+        const stream = {
+            getTracks: vi.fn().mockReturnValue([audio]),
+        } as unknown as MediaStream
+        const room = makeRoom('local', [])
+        const call = new Call(room as never, { stream })
+        call.start()
+
+        call.muteAudio()
+        expect(call.isAudioMuted()).toBe(true)
+        call.unmuteAudio()
+        expect((audio as unknown as { enabled: boolean }).enabled).toBe(true)
+        expect(call.isAudioMuted()).toBe(false)
+    })
+
+    it('muteVideo disables video tracks only', () => {
+        const audio = makeTrack('audio')
+        const video = makeTrack('video')
+        const stream = {
+            getTracks: vi.fn().mockReturnValue([audio, video]),
+        } as unknown as MediaStream
+        const room = makeRoom('local', [])
+        const call = new Call(room as never, { stream })
+        call.start()
+
+        expect(call.isVideoMuted()).toBe(false)
+        call.muteVideo()
+        expect((video as unknown as { enabled: boolean }).enabled).toBe(false)
+        expect((audio as unknown as { enabled: boolean }).enabled).toBe(true)
+        expect(call.isVideoMuted()).toBe(true)
+    })
+
+    it('unmuteVideo re-enables video tracks', () => {
+        const video = makeTrack('video')
+        const stream = {
+            getTracks: vi.fn().mockReturnValue([video]),
+        } as unknown as MediaStream
+        const room = makeRoom('local', [])
+        const call = new Call(room as never, { stream })
+        call.start()
+
+        call.muteVideo()
+        call.unmuteVideo()
+        expect((video as unknown as { enabled: boolean }).enabled).toBe(true)
+        expect(call.isVideoMuted()).toBe(false)
     })
 })

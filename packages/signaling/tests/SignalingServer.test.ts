@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
 import { SignalingServer } from '../src/SignalingServer.js'
 import { MessageType } from '../src/protocol.js'
-import { PeerRole, ServerEvent } from '../src/types.js'
+import { ServerEvent } from '../src/types.js'
 import type { Logger, MetricsCollector } from '../src/types.js'
 
 interface TestClient {
@@ -187,7 +187,7 @@ describe('SignalingServer', () => {
             auth: async () => ({
                 roomId: 'auth-room',
                 peerId: 'auth-peer',
-                role: PeerRole.Participant,
+                role: 'participant',
             }),
         })
         await authServer.start()
@@ -213,11 +213,11 @@ describe('SignalingServer — Phase 3: observability & reliability', () => {
     const openClients: WebSocket[] = []
 
     function makeLogger(): Logger {
-        return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+        return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn() }
     }
 
     function makeMetrics(): MetricsCollector {
-        return { increment: vi.fn(), gauge: vi.fn() }
+        return { increment: vi.fn(), gauge: vi.fn(), histogram: vi.fn(), timing: vi.fn() }
     }
 
     function url(roomId: string, peerId: string): string {

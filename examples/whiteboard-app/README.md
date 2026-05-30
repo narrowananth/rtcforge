@@ -1,55 +1,77 @@
 # whiteboard-app
 
-> **Status: not yet implemented.** This example is planned for a future phase once `@rtcforge/whiteboard` is available.
-
 Collaborative whiteboard example using `@rtcforge/sdk`, `@rtcforge/signaling`, and `@rtcforge/whiteboard`.
 
-## Planned features
+Features: real-time freehand drawing, color/brush-size picker, erase mode, clear canvas, remote cursor tracking, state sync for late joiners, touch support.
 
-- Multiple users draw on a shared canvas in real time.
-- State is synced via a CRDT-compatible whiteboard service — no conflicts when users draw simultaneously.
-- Late joiners receive the full canvas history on connect.
-- Supports shapes, freehand drawing, text, and undo/redo.
-
-## Prerequisites (when implemented)
+## Prerequisites
 
 | Dependency | Version  |
 | ---------- | -------- |
 | Node.js    | `>= 18`  |
 | npm        | `>= 9`   |
 
-## How to run (when implemented)
+Run `npm install` from the **monorepo root** before starting.
 
-You will need two terminals.
+## How to run
 
-**Terminal 1 — signaling + whiteboard server** (WebSocket on port 3004):
+You need two terminals.
+
+**Terminal 1 — signaling server** (WebSocket on port 3005):
+
+```bash
+cd examples/whiteboard-app
+npm run server
+# Whiteboard server running on ws://localhost:3005
+```
+
+**Terminal 2 — browser dev server** (Vite on port 5177):
 
 ```bash
 cd examples/whiteboard-app
 npm run dev
-# Server running on ws://localhost:3004
+# → http://localhost:5177
 ```
 
-**Terminal 2 — browser dev server** (Vite on port 5176):
+Open **two or more browser tabs** at `http://localhost:5177`.
 
-```bash
-cd examples/whiteboard-app
-npm run dev:client
-# → http://localhost:5176
-```
+In each tab:
+1. Enter a unique **Peer ID** (e.g. `alice`, `bob`).
+2. Enter the same **Room ID** (e.g. `board1`).
+3. Click **Join**.
 
-Open **two or more browser tabs** at `http://localhost:5176`, enter a room ID, and start drawing. Every stroke appears instantly in all other tabs.
+All strokes appear instantly in every tab. A tab that joins late receives a full state sync of existing strokes. Click **Clear** to wipe the canvas for everyone.
+
+**Toolbar controls:**
+- **Color picker + Brush size** — adjusts stroke color and width
+- **Erase** — toggles erase mode; eraser width is 4× the brush size (draws white strokes via `WhiteboardEventType.Erase`)
+- **Clear** — broadcasts `WhiteboardEventType.Clear`, wipes all peers' canvases and server stroke history
+- **Remote cursors** — each peer's pointer position is broadcast via `WhiteboardEventType.Cursor` and rendered as a floating dot on the canvas
 
 ## Scripts
 
-| Script       | Description                                      |
-| ------------ | ------------------------------------------------ |
-| `npm run dev`| Start the server in watch mode (`ts-node`)       |
-| `npm start`  | Start the compiled server (`node dist/index.js`) |
+| Script           | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `npm run server` | Start the signaling + whiteboard server (`tsx`)   |
+| `npm run dev`    | Start the Vite dev server with hot reload         |
+| `npm run build`  | Build the frontend to `dist/`                     |
 
 ## Ports
 
 | Service            | Address                    |
 | ------------------ | -------------------------- |
-| Signaling server   | `ws://localhost:3004`      |
-| Browser dev server | `http://localhost:5176`    |
+| Signaling server   | `ws://localhost:3005`      |
+| Browser dev server | `http://localhost:5177`    |
+
+## Architecture
+
+```
+Browser tab A ──┐
+                ├── WebSocket ──► signaling server (server.ts :3005)
+Browser tab B ──┘                └── WhiteboardService
+                                      • validates + relays draw events
+                                      • maintains stroke history
+                                      • sends full state to late joiners
+```
+
+The signaling server uses `@rtcforge/whiteboard`'s `WhiteboardService` to relay draw/clear events and maintain a stroke list for state sync. When a new peer joins, `onPeerJoined` sends them the accumulated stroke history. The browser client uses `@rtcforge/sdk`'s `WhiteboardRoom` to send and receive whiteboard events.

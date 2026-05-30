@@ -1,22 +1,20 @@
 {
     "name": "@rtcforge/sdk",
     "version": "0.1.0",
-    "description": "Browser + Node.js client SDK — RTCForgeClient",
-    "main": "dist/index.cjs",
+    "description": "Browser + Node.js client SDK \u2014 RTCForgeClient",
+    "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
-            "require": "./dist/index.cjs"
+            "require": "./dist/index.js"
         }
     },
     "files": ["dist"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020",
-        "dev": "tsup src/index.ts --format cjs,esm --dts --watch --target es2020",
-        "typecheck": "tsc --noEmit"
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020"
     },
     "keywords": ["webrtc", "sdk", "browser", "realtime", "rtcforge"],
     "license": "MIT",
@@ -25,6 +23,7 @@
     },
     "dependencies": {
         "@rtcforge/core": "*",
+        "@rtcforge/whiteboard": "*",
         "zod": "^4.4.3"
     }
 }

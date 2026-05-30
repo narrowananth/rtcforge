@@ -93,4 +93,33 @@ describe('EventEmitter', () => {
         const listener = vi.fn()
         expect(() => ee.off('data', listener)).not.toThrow()
     })
+
+    it('once: off(event, originalListener) cancels before firing', () => {
+        const ee = new EventEmitter<TestEvents>()
+        const listener = vi.fn()
+        ee.once('data', listener)
+        ee.off('data', listener) // must remove the internal wrapper
+        ee.emit('data', 'x')
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('listenerCount: returns 0 with no listeners', () => {
+        const ee = new EventEmitter<TestEvents>()
+        expect(ee.listenerCount('data')).toBe(0)
+    })
+
+    it('listenerCount: counts registered listeners including once', () => {
+        const ee = new EventEmitter<TestEvents>()
+        ee.on('data', vi.fn())
+        ee.once('data', vi.fn())
+        expect(ee.listenerCount('data')).toBe(2)
+    })
+
+    it('listenerCount: decrements after once fires', () => {
+        const ee = new EventEmitter<TestEvents>()
+        ee.once('data', vi.fn())
+        expect(ee.listenerCount('data')).toBe(1)
+        ee.emit('data', 'x')
+        expect(ee.listenerCount('data')).toBe(0)
+    })
 })

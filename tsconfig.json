@@ -8,10 +8,7 @@
             "@rtcforge/signaling": ["./packages/signaling/src/index.ts"],
             "@rtcforge/sdk": ["./packages/sdk/src/index.ts"],
             "@rtcforge/media": ["./packages/media/src/index.ts"],
-            "@rtcforge/chat": ["./packages/chat/src/index.ts"],
-            "@rtcforge/recording": ["./packages/recording/src/index.ts"],
-            "@rtcforge/streaming": ["./packages/streaming/src/index.ts"],
-            "@rtcforge/whiteboard": ["./packages/whiteboard/src/index.ts"]
+            "@rtcforge/sfu": ["./packages/sfu/src/index.ts"]
         }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts", "cli/src/**/*.ts"]

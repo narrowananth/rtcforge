@@ -93,4 +93,23 @@ describe('EventEmitter', () => {
         const listener = vi.fn()
         expect(() => ee.off('data', listener)).not.toThrow()
     })
+
+    it('once: off(event, originalListener) cancels before firing', () => {
+        const ee = new EventEmitter<TestEvents>()
+        const listener = vi.fn()
+        ee.once('data', listener)
+        ee.off('data', listener)
+        ee.emit('data', 'x')
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('listenerCount: returns correct count and 0 after remove', () => {
+        const ee = new EventEmitter<TestEvents>()
+        expect(ee.listenerCount('data')).toBe(0)
+        ee.on('data', vi.fn())
+        ee.once('data', vi.fn())
+        expect(ee.listenerCount('data')).toBe(2)
+        ee.emit('data', 'x') // once fires and removes itself
+        expect(ee.listenerCount('data')).toBe(1)
+    })
 })

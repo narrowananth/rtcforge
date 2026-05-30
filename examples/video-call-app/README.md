@@ -2,7 +2,9 @@
 
 1:1 and group video call example using `@rtcforge/sdk`, `@rtcforge/signaling`, and `@rtcforge/media`.
 
-Features: camera/mic capture, peer-to-peer video via WebRTC mesh, remote track display, peer join/leave events.
+Features: camera/mic capture, peer-to-peer video via WebRTC mesh, remote track display, mute/unmute audio & video, screen share, active speaker detection, recording via `@rtcforge/recording` (with pause/resume), ping/pong custom signals, peer join/leave/kick events, connection failure and data channel event logging.
+
+Server features: `maxPeersPerRoom`, `roomIdleTimeoutMs`, per-peer rate limiting, audit log, peer kick.
 
 ## Prerequisites
 
@@ -43,6 +45,12 @@ In each tab:
 3. Click **Join Room** — the browser will ask for camera and microphone permission. Allow it.
 
 Each tab streams video to the other. Remote video appears automatically once both peers have joined. Closing a tab ends that peer's stream.
+
+**In-room controls:**
+- **Mute / Unmute** — toggle audio or video independently via `call.muteAudio()` / `call.muteVideo()`
+- **Share Screen** — captures a display with `getDisplayMedia` and publishes it via `call.addScreenTrack()`; the tile is removed automatically when the capture ends
+- **Start Recording / Pause Rec** — records the local stream via `@rtcforge/recording`; supports pause/resume (`RecordingHandle.pause()` / `.resume()`)
+- Active speaker is highlighted with a green border (1-second detection interval via `call.startActiveSpeakerDetection()`)
 
 ## Scripts
 

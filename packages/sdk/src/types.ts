@@ -3,13 +3,23 @@ import type { Logger } from '@rtcforge/core'
 export { noopLogger } from '@rtcforge/core'
 export type { Logger }
 
+export interface IceServerConfig {
+    urls: string | string[]
+    username?: string
+    credential?: string
+}
+
 export interface RTCForgeClientOptions {
     serverUrl: string
     token?: string
     tokenRefresh?: () => Promise<string>
+    peerId?: string
     reconnect?: boolean
     maxReconnectDelay?: number
     maxReconnectAttempts?: number
+    connectTimeoutMs?: number
+    maxQueueSize?: number
+    joinTimeoutMs?: number
     logger?: Logger
 }
 
@@ -24,6 +34,20 @@ export type ConnectionState = (typeof ConnectionState)[keyof typeof ConnectionSt
 
 export interface CallInterface {
     addTrack(track: MediaStreamTrack, stream: MediaStream): void
+    removeTrack(track: MediaStreamTrack): void
+    replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void>
+    getStats(peerId?: string): Promise<Map<string, RTCStatsReport>>
+    createDataChannel(
+        peerId: string,
+        label: string,
+        opts?: RTCDataChannelInit,
+    ): RTCDataChannel | undefined
+    muteAudio(): void
+    unmuteAudio(): void
+    muteVideo(): void
+    unmuteVideo(): void
+    isAudioMuted(): boolean
+    isVideoMuted(): boolean
     on(event: 'remote-stream', handler: (peerId: string, stream: MediaStream) => void): void
     on(event: 'remote-stream-removed', handler: (peerId: string) => void): void
     start(): void
@@ -32,6 +56,7 @@ export interface CallInterface {
 
 export const RoomEvent = {
     Closed: 'closed',
+    Refreshed: 'refreshed',
 } as const
 
 export type RoomEvent = (typeof RoomEvent)[keyof typeof RoomEvent]

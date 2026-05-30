@@ -5,7 +5,7 @@ export {
     ServerEvent,
     RoomEvent,
     PeerEvent,
-    PeerRole,
+    RoomState,
     CloseCode,
     CloseReason,
     Metric,
@@ -16,10 +16,12 @@ export type {
     SignalingServerOptions,
     AuthFunction,
     AuthPayload,
-    RoomState,
     Logger,
     MetricsCollector,
+    AuditEvent,
+    AuditEventType,
+    IceServerConfig,
 } from './types.js'
 export type { ServerStats } from './SignalingServer.js'
 export { MessageType } from './protocol.js'
-export type { ServerMessage, ClientMessage, MediaAttachment } from './protocol.js'
+export type { ServerMessage, ClientMessage } from './protocol.js'

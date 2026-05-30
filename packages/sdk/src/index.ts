@@ -1,11 +1,14 @@
 export { RTCForgeClient } from './RTCForgeClient.js'
 export { Room, RoomMediaEvent } from './Room.js'
-export { ChatRoom, ChatRoomEvent } from './ChatRoom.js'
-export { WhiteboardRoom } from './WhiteboardRoom.js'
-export { EventEmitter } from './EventEmitter.js'
+export { EventEmitter } from '@rtcforge/core'
 export { ClientEvent, RoomEvent, noopLogger } from './types.js'
 export { MessageType } from './protocol.js'
-export type { RTCForgeClientOptions, ConnectionState, Logger, CallInterface } from './types.js'
+export type {
+    RTCForgeClientOptions,
+    ConnectionState,
+    Logger,
+    CallInterface,
+    IceServerConfig,
+} from './types.js'
 export type { ServerMessage, ClientMessage } from './protocol.js'
-export type { ChatMessage, ChatRoomEvent as ChatRoomEventType } from './ChatRoom.js'
 export type { PeerInfo, RoomMediaEvent as RoomMediaEventType } from './Room.js'

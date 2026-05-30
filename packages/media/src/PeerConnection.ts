@@ -1,4 +1,5 @@
-import { EventEmitter } from '@rtcforge/core'
+import { EventEmitter, noopLogger } from '@rtcforge/core'
+import type { Logger } from '@rtcforge/core'
 import { ConnectionEvent } from './types.js'
 import type { CallOptions } from './types.js'
 
@@ -7,18 +8,28 @@ type PeerConnectionEvents = {
     [ConnectionEvent.IceCandidate]: [candidate: RTCIceCandidateInit | null]
     [ConnectionEvent.Track]: [track: MediaStreamTrack, streams: readonly MediaStream[]]
     [ConnectionEvent.StateChange]: [state: RTCPeerConnectionState]
+    [ConnectionEvent.Error]: [error: unknown]
+    [ConnectionEvent.DataChannel]: [channel: RTCDataChannel]
 }
 
 export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     private readonly pc: RTCPeerConnection
-    // true = this peer yields on offer collision (rolls back its own offer)
+    private static readonly MAX_PENDING_CANDIDATES = 100
+    private static readonly _capsCache = new Map<string, RTCRtpCapabilities | null>()
     private readonly polite: boolean
     private makingOffer = false
+    private _offerGeneration = 0
     private readonly pendingCandidates: RTCIceCandidateInit[] = []
+    private _eocBuffered = false
+    private readonly opts: CallOptions
+    private readonly _logger: Logger
+    private readonly _senderMap = new Map<MediaStreamTrack, RTCRtpSender>()
 
     constructor(polite: boolean, opts: CallOptions = {}) {
         super()
         this.polite = polite
+        this.opts = opts
+        this._logger = opts.logger ?? noopLogger
         const config: RTCConfiguration = {
             ...opts.rtcConfig,
             iceServers: opts.iceServers ?? [],
@@ -28,18 +39,27 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         this.pc.onnegotiationneeded = async () => {
             if (this.makingOffer) return
             this.makingOffer = true
+            const gen = ++this._offerGeneration
             try {
                 await this.pc.setLocalDescription()
+                if (gen !== this._offerGeneration) return
                 const desc = this.pc.localDescription
-                // Only emit for offers — answers are returned directly by handleOffer()
                 if (desc?.type === 'offer') this.emit(ConnectionEvent.NegotiationNeeded, desc)
+            } catch (err) {
+                if (gen === this._offerGeneration) this.emit(ConnectionEvent.Error, err)
             } finally {
-                this.makingOffer = false
+                if (gen === this._offerGeneration) this.makingOffer = false
             }
         }
 
         this.pc.onicecandidate = ({ candidate }) => {
+            if (candidate && this.opts.candidateFilter && !this.opts.candidateFilter(candidate))
+                return
             this.emit(ConnectionEvent.IceCandidate, candidate ? candidate.toJSON() : null)
+        }
+
+        this.pc.ondatachannel = (e) => {
+            this.emit(ConnectionEvent.DataChannel, e.channel)
         }
 
         this.pc.ontrack = ({ track, streams }) => {
@@ -47,70 +67,161 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         }
 
         this.pc.onconnectionstatechange = () => {
-            this.emit(ConnectionEvent.StateChange, this.pc.connectionState)
+            this.emit(
+                ConnectionEvent.StateChange,
+                this.pc.connectionState as RTCPeerConnectionState,
+            )
         }
     }
 
     async handleOffer(sdp: string): Promise<RTCSessionDescriptionInit | null> {
-        const offerCollision = this.makingOffer || this.pc.signalingState !== 'stable'
+        try {
+            const offerCollision = this.makingOffer || this.pc.signalingState !== 'stable'
 
-        if (offerCollision) {
-            if (!this.polite) return null
-            await this.pc.setLocalDescription({ type: 'rollback' })
+            if (offerCollision) {
+                if (!this.polite) return null
+                ++this._offerGeneration // invalidate T1's in-flight offer
+                this.makingOffer = false // safe — T1's finally won't touch makingOffer (gen mismatch)
+                await this.pc.setLocalDescription({ type: 'rollback' })
+            }
+
+            await this.pc.setRemoteDescription({ type: 'offer', sdp })
+            await this.drainCandidates()
+            await this.pc.setLocalDescription()
+
+            return this.pc.localDescription
+        } catch (err) {
+            this.emit(ConnectionEvent.Error, err)
+            return null
         }
-
-        await this.pc.setRemoteDescription({ type: 'offer', sdp })
-        await this.drainCandidates()
-        await this.pc.setLocalDescription()
-
-        return this.pc.localDescription
     }
 
     async handleAnswer(sdp: string): Promise<void> {
-        await this.pc.setRemoteDescription({ type: 'answer', sdp })
-        await this.drainCandidates()
+        try {
+            await this.pc.setRemoteDescription({ type: 'answer', sdp })
+            await this.drainCandidates()
+        } catch (err) {
+            this.emit(ConnectionEvent.Error, err)
+        }
     }
 
     async addIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
         if (!this.pc.remoteDescription) {
-            if (candidate) this.pendingCandidates.push(candidate)
+            if (candidate === null) {
+                this._eocBuffered = true
+            } else if (this.pendingCandidates.length < PeerConnection.MAX_PENDING_CANDIDATES) {
+                this.pendingCandidates.push(candidate)
+            } else {
+                this.emit(
+                    ConnectionEvent.Error,
+                    new Error(
+                        `ICE candidate buffer full (max ${PeerConnection.MAX_PENDING_CANDIDATES}); candidate dropped`,
+                    ),
+                )
+            }
             return
         }
         try {
             await this.pc.addIceCandidate(candidate ?? undefined)
-        } catch {
-            // Some browsers throw on the end-of-candidates null marker; safe to ignore
-        }
+        } catch {}
     }
 
     addTrack(track: MediaStreamTrack, stream: MediaStream, maxBitrate?: number): RTCRtpSender {
-        const sender = this.pc.addTrack(track, stream)
-        if (maxBitrate !== undefined) {
-            const params = sender.getParameters()
-            if (params.encodings?.length) {
-                params.encodings[0].maxBitrate = maxBitrate
-            } else {
-                params.encodings = [{ maxBitrate }]
-            }
-            sender.setParameters(params).catch(() => {
-                // Best-effort — not all browsers support setParameters before negotiation
+        let sender: RTCRtpSender
+        const simulcastLayers = this.opts.simulcast?.layers
+        if (simulcastLayers?.length || maxBitrate !== undefined) {
+            const sendEncodings = simulcastLayers?.length
+                ? simulcastLayers.map((l) => ({
+                      rid: l.rid,
+                      maxBitrate: l.maxBitrate,
+                      scaleResolutionDownBy: l.scaleResolutionDownBy,
+                  }))
+                : [{ maxBitrate: maxBitrate as number }]
+            const transceiver = this.pc.addTransceiver(track, {
+                direction: 'sendrecv',
+                streams: [stream],
+                sendEncodings,
             })
+            sender = transceiver.sender
+        } else {
+            sender = this.pc.addTrack(track, stream)
         }
+        this._senderMap.set(track, sender)
+        this.applyCodecPreference(sender)
         return sender
+    }
+
+    async replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void> {
+        const sender = this._senderMap.get(oldTrack)
+        if (!sender) return
+        await sender.replaceTrack(newTrack)
+        this._senderMap.delete(oldTrack)
+        this._senderMap.set(newTrack, sender)
+    }
+
+    createDataChannel(label: string, opts?: RTCDataChannelInit): RTCDataChannel {
+        return this.pc.createDataChannel(label, opts)
+    }
+
+    removeTrack(track: MediaStreamTrack): void {
+        const sender = this._senderMap.get(track)
+        if (!sender) return
+        this.pc.removeTrack(sender)
+        this._senderMap.delete(track)
+    }
+
+    restartIce(): void {
+        this.pc.restartIce()
+    }
+
+    getStats(): Promise<RTCStatsReport> {
+        return this.pc.getStats()
     }
 
     close(): void {
         this.pc.close()
     }
 
+    private applyCodecPreference(sender: RTCRtpSender): void {
+        if (!this.opts.codec) return
+        const codec = this.opts.codec
+        const kind = sender.track?.kind as 'audio' | 'video' | undefined
+        if (!kind) return
+
+        if (!PeerConnection._capsCache.has(kind)) {
+            PeerConnection._capsCache.set(kind, RTCRtpSender.getCapabilities(kind))
+        }
+        const capabilities = PeerConnection._capsCache.get(kind)
+        if (!capabilities) return
+
+        const lowerCodec = codec.toLowerCase()
+        const preferred = capabilities.codecs.filter((c) =>
+            c.mimeType.toLowerCase().includes(lowerCodec),
+        )
+        if (preferred.length === 0) return
+        const rest = capabilities.codecs.filter(
+            (c) => !c.mimeType.toLowerCase().includes(lowerCodec),
+        )
+        const transceiver = this.pc.getTransceivers().find((t) => t.sender === sender)
+        if (transceiver) {
+            try {
+                transceiver.setCodecPreferences([...preferred, ...rest])
+            } catch {}
+        }
+    }
+
     private async drainCandidates(): Promise<void> {
         for (const c of this.pendingCandidates) {
             try {
                 await this.pc.addIceCandidate(c)
-            } catch {
-                // Buffered candidate rejected by browser; connection state events surface real failures
-            }
+            } catch {}
         }
         this.pendingCandidates.length = 0
+        if (this._eocBuffered) {
+            this._eocBuffered = false
+            try {
+                await this.pc.addIceCandidate(undefined)
+            } catch {}
+        }
     }
 }

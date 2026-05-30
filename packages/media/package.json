@@ -2,21 +2,19 @@
     "name": "@rtcforge/media",
     "version": "0.1.0",
     "description": "WebRTC peer connections, media capture, and call management",
-    "main": "dist/index.cjs",
+    "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
-            "require": "./dist/index.cjs"
+            "require": "./dist/index.js"
         }
     },
     "files": ["dist"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-        "typecheck": "tsc --noEmit"
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean"
     },
     "keywords": ["webrtc", "mediasoup", "sfu", "realtime", "rtcforge"],
     "license": "MIT",
@@ -25,11 +23,13 @@
     },
     "peerDependencies": {
         "@rtcforge/core": "^0.1.0",
-        "@rtcforge/sdk": "^0.1.0"
+        "@rtcforge/sdk": "^0.1.0",
+        "@rtcforge/signaling": "^0.1.0"
     },
     "devDependencies": {
         "@rtcforge/core": "*",
-        "@rtcforge/sdk": "*"
+        "@rtcforge/sdk": "*",
+        "@rtcforge/signaling": "*"
     },
     "publishConfig": {
         "access": "public"

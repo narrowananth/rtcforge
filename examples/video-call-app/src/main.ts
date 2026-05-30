@@ -1,6 +1,4 @@
 import { Call, MediaEvent, getUserMedia } from '@rtcforge/media'
-import { RecordingEvent, RecordingService } from '@rtcforge/recording'
-import type { RecordingHandle } from '@rtcforge/recording'
 import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 
@@ -36,8 +34,9 @@ let currentRoom: Room | null = null
 let localStream: MediaStream | null = null
 let call: Call | null = null
 
-const recorder = new RecordingService()
-let activeRecording: RecordingHandle | null = null
+let mediaRecorder: MediaRecorder | null = null
+let recordedChunks: Blob[] = []
+let recMimeType = ''
 let recTimerInterval: ReturnType<typeof setInterval> | null = null
 let recStartTime = 0
 
@@ -176,21 +175,18 @@ micBtn.addEventListener('click', () => {
     updateMediaButtons()
 })
 
-recordBtn.addEventListener('click', async () => {
-    if (activeRecording) {
-        await activeRecording.stop()
+recordBtn.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop()
     } else {
         startRecording()
     }
 })
 
 leaveBtn.addEventListener('click', async () => {
-    if (activeRecording) {
-        await activeRecording
-            .stop()
-            .catch((err: Error) => log('sys', `Recording stop error: ${err.message}`))
-        activeRecording = null
-    }
+    if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop()
+    mediaRecorder = null
+    recordedChunks = []
     call?.close()
     call = null
 
@@ -297,10 +293,41 @@ function renderPeers(): void {
 function startRecording(): void {
     if (!localStream) return
 
-    const mimeType =
-        RecordingService.getSupportedMimeTypes().find((t) => t.startsWith('video/')) ?? ''
+    const candidateTypes = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4',
+    ]
+    recMimeType = candidateTypes.find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
+    recordedChunks = []
 
-    activeRecording = recorder.start(localStream, mimeType ? { mimeType } : {})
+    const opts: MediaRecorderOptions = recMimeType ? { mimeType: recMimeType } : {}
+    mediaRecorder = new MediaRecorder(localStream, opts)
+
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data)
+    }
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: recMimeType || 'video/webm' })
+        const ext = recMimeType.includes('mp4') ? 'mp4' : 'webm'
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `recording-${Date.now()}.${ext}`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 60_000)
+        log('sys', `Recording saved (${(blob.size / 1024).toFixed(0)} KB)`)
+        resetRecordingUI()
+    }
+
+    mediaRecorder.onerror = (e) => {
+        log('sys', `Recording error: ${(e as ErrorEvent).message ?? 'unknown error'}`)
+        resetRecordingUI()
+    }
+
+    mediaRecorder.start(1000)
 
     recStartTime = Date.now()
     recTimerInterval = setInterval(() => {
@@ -312,34 +339,13 @@ function startRecording(): void {
     recordingStatusEl.classList.add('active')
     recTimerEl.textContent = '0:00'
     log('sys', 'Recording started')
-
-    activeRecording.on(RecordingEvent.Complete, ({ blob, duration, mimeType: type }) => {
-        resetRecordingUI()
-
-        const ext = type.includes('mp4') ? 'mp4' : 'webm'
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `recording-${Date.now()}.${ext}`
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 60_000)
-
-        log(
-            'sys',
-            `Recording saved (${formatDuration(duration)}, ${(blob.size / 1024).toFixed(0)} KB)`,
-        )
-    })
-
-    activeRecording.on(RecordingEvent.Error, (err) => {
-        resetRecordingUI()
-        log('sys', `Recording error: ${err.message}`)
-    })
 }
 
 function resetRecordingUI(): void {
     clearInterval(recTimerInterval ?? undefined)
     recTimerInterval = null
-    activeRecording = null
+    mediaRecorder = null
+    recordedChunks = []
     recordBtn.textContent = 'Record'
     recordBtn.className = 'secondary'
     recordingStatusEl.classList.remove('active')

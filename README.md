@@ -95,8 +95,8 @@ packages/<name>/
 | `@rtcforge/sdk`          | `RTCForgeClient`, `Room` — browser + Node.js client SDK      |
 | `@rtcforge/media`        | `MediaService` — mediasoup SFU, Worker Pool, Producer, Consumer |
 | `@rtcforge/chat`         | `ChatService`, `PresenceService`, typing indicators          |
-| `@rtcforge/recording`    | `RecordingService` — per-room recording, S3/MinIO upload     |
-| `@rtcforge/streaming`    | `StreamingService` — HLS and RTMP egress                     |
+| `@rtcforge/recording`    | `RecordingService` — client-side recording via MediaRecorder; per-stream chunked upload hook |
+| `@rtcforge/streaming`    | `StreamingService` — WebRTC fan-out streaming; encoder hook interface (HLS/RTMP via custom integration) |
 | `@rtcforge/whiteboard`   | `WhiteboardService` — state sync, CRDT-compatible hooks      |
 
 ---

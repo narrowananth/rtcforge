@@ -6,20 +6,11 @@ import { z } from 'zod'
 export type { Logger, MetricsCollector }
 export { noopLogger, noopMetrics, Metric }
 
-export const PeerRole = {
-    Host: 'host',
-    Participant: 'participant',
-    Viewer: 'viewer',
-} as const
-
-export type PeerRole = (typeof PeerRole)[keyof typeof PeerRole]
-
-export const PeerRoleSchema = z.enum(PeerRole)
-
 export const AuthPayloadSchema = z.object({
     roomId: z.string().min(1),
     peerId: z.string().min(1),
-    role: PeerRoleSchema,
+    role: z.string(),
+    metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type AuthPayload = z.infer<typeof AuthPayloadSchema>
@@ -38,12 +29,15 @@ export const RoomEvent = {
     PeerJoined: 'peerJoined',
     PeerLeft: 'peerLeft',
     Closed: 'closed',
+    PeerError: 'peerError',
+    PeerKicked: 'peerKicked',
 } as const
 
 export type RoomEvent = (typeof RoomEvent)[keyof typeof RoomEvent]
 
 export const ServerEvent = {
     RoomCreated: 'roomCreated',
+    RoomClosed: 'roomClosed',
     Error: 'error',
 } as const
 
@@ -52,13 +46,9 @@ export type ServerEvent = (typeof ServerEvent)[keyof typeof ServerEvent]
 export const PeerEvent = {
     Disconnected: 'disconnected',
     Signal: 'signal',
-    Chat: 'chat',
-    Typing: 'typing',
-    Edit: 'edit',
-    Delete: 'delete',
-    Reaction: 'reaction',
-    Read: 'read',
-    WhiteboardEvent: 'whiteboard-event',
+    Broadcast: 'broadcast',
+    Error: 'error',
+    RateLimitExceeded: 'rate-limit-exceeded',
 } as const
 
 export type PeerEvent = (typeof PeerEvent)[keyof typeof PeerEvent]
@@ -84,13 +74,45 @@ export const CloseReason = {
 
 export type CloseReason = (typeof CloseReason)[keyof typeof CloseReason]
 
+export type AuditEventType =
+    | 'peer-joined'
+    | 'peer-left'
+    | 'peer-kicked'
+    | 'room-created'
+    | 'room-closed'
+
+export interface AuditEvent {
+    type: AuditEventType
+    roomId: string
+    peerId?: string
+    ts: number
+    detail?: Record<string, unknown>
+}
+
+export interface IceServerConfig {
+    urls: string | string[]
+    username?: string
+    credential?: string
+}
+
 export interface SignalingServerOptions {
     port?: number
     server?: Server
     auth?: AuthFunction
     maxPeersPerRoom?: number
+    roomMaxDurationMs?: number
+    roomIdleTimeoutMs?: number
     pingInterval?: number
     pongTimeout?: number
     logger?: Logger
     metrics?: MetricsCollector
+    serverAssignedPeerId?: boolean
+    rateLimit?: {
+        maxMessagesPerSecond?: number
+    }
+    auditLog?: (event: AuditEvent) => void
+    iceServersHook?: (
+        peerId: string,
+        roomId: string,
+    ) => IceServerConfig[] | null | undefined | Promise<IceServerConfig[] | null | undefined>
 }

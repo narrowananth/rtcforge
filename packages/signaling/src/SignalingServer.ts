@@ -1,16 +1,17 @@
-import { EventEmitter } from 'node:events'
+import { randomUUID } from 'node:crypto'
 import http from 'node:http'
+import { EventEmitter } from '@rtcforge/core'
 import { WebSocketServer } from 'ws'
 import type { WebSocket } from 'ws'
 import { Peer } from './Peer.js'
 import { Room } from './Room.js'
+import { MessageType } from './protocol.js'
 import {
     AuthPayloadSchema,
     CloseCode,
     CloseReason,
     Metric,
     PeerEvent,
-    PeerRole,
     RoomEvent,
     ServerEvent,
     noopLogger,
@@ -24,17 +25,13 @@ export interface ServerStats {
     uptime: number
 }
 
-export declare interface SignalingServer {
-    on(event: typeof ServerEvent.RoomCreated, listener: (room: Room) => void): this
-    on(event: typeof ServerEvent.Error, listener: (err: Error) => void): this
-    once(event: typeof ServerEvent.RoomCreated, listener: (room: Room) => void): this
-    once(event: typeof ServerEvent.Error, listener: (err: Error) => void): this
-    emit(event: typeof ServerEvent.RoomCreated, room: Room): boolean
-    emit(event: typeof ServerEvent.Error, err: Error): boolean
+type SignalingServerEvents = {
+    [ServerEvent.RoomCreated]: [room: Room]
+    [ServerEvent.RoomClosed]: [roomId: string]
+    [ServerEvent.Error]: [err: Error]
 }
 
-// biome-ignore lint/suspicious/noUnsafeDeclarationMerging: typed EventEmitter overload pattern
-export class SignalingServer extends EventEmitter {
+export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private readonly opts: SignalingServerOptions
     private readonly logger: Logger
     private readonly metrics: MetricsCollector
@@ -74,7 +71,8 @@ export class SignalingServer extends EventEmitter {
 
         this.wss.on('connection', (ws, req) => {
             this.handleConnection(ws, req).catch((err: Error) => {
-                ws.close(CloseCode.PolicyViolation, err.message)
+                this.logger.error('Connection handler error', { err: err.message })
+                ws.close(CloseCode.PolicyViolation, 'Internal error')
             })
         })
 
@@ -121,6 +119,10 @@ export class SignalingServer extends EventEmitter {
         this.logger.info('SignalingServer stopped')
     }
 
+    getRoom(roomId: string): Room | undefined {
+        return this.rooms.get(roomId)
+    }
+
     getStats(): ServerStats {
         return {
             rooms: this.rooms.size,
@@ -144,6 +146,12 @@ export class SignalingServer extends EventEmitter {
         let count = 0
         for (const room of this.rooms.values()) count += room.getPeerCount()
         return count
+    }
+
+    private _rollbackNewRoom(roomId: string, isNewRoom: boolean, room: Room): void {
+        if (isNewRoom && room.getPeerCount() === 0) {
+            this.rooms.delete(roomId)
+        }
     }
 
     private async handleConnection(ws: WebSocket, req: http.IncomingMessage): Promise<void> {
@@ -179,38 +187,95 @@ export class SignalingServer extends EventEmitter {
                 ws.close(CloseCode.PolicyViolation, CloseReason.MissingRoomOrPeer)
                 return
             }
-            payload = { roomId, peerId, role: PeerRole.Participant }
+            payload = { roomId, peerId, role: '' }
         }
 
-        const { roomId, peerId, role } = payload
+        const { roomId, role } = payload
+        const peerId = this.opts.serverAssignedPeerId ? randomUUID() : payload.peerId
 
         let room = this.rooms.get(roomId)
         const isNewRoom = !room
 
         if (!room) {
-            room = new Room(roomId, { maxPeers: this.opts.maxPeersPerRoom })
+            room = new Room(roomId, {
+                maxPeers: this.opts.maxPeersPerRoom,
+                maxDurationMs: this.opts.roomMaxDurationMs,
+                idleTimeoutMs: this.opts.roomIdleTimeoutMs,
+            })
             this.rooms.set(roomId, room)
             room.on(RoomEvent.Closed, () => {
                 this.rooms.delete(roomId)
+                this.emit(ServerEvent.RoomClosed, roomId)
                 this.logger.info('Room closed', { roomId })
                 this.metrics.increment(Metric.RoomsClosed)
                 this.metrics.gauge(Metric.ActiveRooms, this.rooms.size)
+                this.opts.auditLog?.({ type: 'room-closed', roomId, ts: Date.now() })
+            })
+            room.on(RoomEvent.PeerKicked, (kickedPeerId, reason) => {
+                this.logger.info('Peer kicked', { peerId: kickedPeerId, roomId, reason })
+                this.metrics.increment(Metric.PeersKicked)
+                this.opts.auditLog?.({
+                    type: 'peer-kicked',
+                    roomId,
+                    peerId: kickedPeerId,
+                    ts: Date.now(),
+                    detail: reason ? { reason } : undefined,
+                })
             })
         }
 
         const activeRoom = room
         const onSignal = (to: string, data: unknown) => {
-            activeRoom.relay(peerId, to, data)
-            this.metrics.increment(Metric.SignalsRelayed)
+            if (activeRoom.relay(peerId, to, data)) {
+                this.metrics.increment(Metric.SignalsRelayed)
+            }
         }
-        const peer = new Peer(peerId, role, ws, onSignal)
+        const peer = new Peer(
+            peerId,
+            role,
+            ws,
+            onSignal,
+            payload.metadata ?? {},
+            this.opts.rateLimit?.maxMessagesPerSecond,
+        )
 
-        room.addPeer(peer)
+        peer.on(PeerEvent.Error, (err) => {
+            this.logger.warn('Peer error', { peerId: peer.id, err: err.message })
+        })
+
+        peer.on(PeerEvent.Broadcast, (channel: string, data: unknown) => {
+            activeRoom.broadcastExcept(peerId, {
+                type: MessageType.Broadcast,
+                from: peerId,
+                channel,
+                data,
+                ts: Date.now(),
+            })
+            this.metrics.increment(Metric.BroadcastsRelayed)
+        })
+
+        let iceServers: import('./types.js').IceServerConfig[] | undefined
+        try {
+            iceServers = this.opts.iceServersHook
+                ? ((await this.opts.iceServersHook(peerId, roomId)) ?? undefined)
+                : undefined
+        } catch (err) {
+            this._rollbackNewRoom(roomId, isNewRoom, room)
+            throw err
+        }
+        try {
+            room.addPeer(peer, iceServers)
+        } catch (err) {
+            this._rollbackNewRoom(roomId, isNewRoom, room)
+            throw err
+        }
+        this.opts.auditLog?.({ type: 'peer-joined', roomId, peerId, ts: Date.now() })
 
         peer.once(PeerEvent.Disconnected, () => {
             this.logger.info('Peer left', { peerId, roomId })
             this.metrics.increment(Metric.PeersDisconnected)
             this.metrics.gauge(Metric.ActivePeers, this.activePeerCount())
+            this.opts.auditLog?.({ type: 'peer-left', roomId, peerId, ts: Date.now() })
         })
 
         this.logger.info('Peer joined', { peerId, roomId, role })
@@ -222,6 +287,7 @@ export class SignalingServer extends EventEmitter {
             this.metrics.increment(Metric.RoomsCreated)
             this.metrics.gauge(Metric.ActiveRooms, this.rooms.size)
             this.emit(ServerEvent.RoomCreated, room)
+            this.opts.auditLog?.({ type: 'room-created', roomId, ts: Date.now() })
         }
     }
 
@@ -230,7 +296,7 @@ export class SignalingServer extends EventEmitter {
             const deadline = Date.now() - this.PONG_TIMEOUT
             for (const room of this.rooms.values()) {
                 for (const peer of room.getPeers()) {
-                    if (peer.lastPong < deadline) {
+                    if (!peer.isAlive(deadline)) {
                         this.logger.warn('Heartbeat timeout, disconnecting peer', {
                             peerId: peer.id,
                         })

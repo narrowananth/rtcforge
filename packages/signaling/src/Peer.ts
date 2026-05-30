@@ -1,89 +1,48 @@
-import { EventEmitter } from 'node:events'
+import { EventEmitter, toError } from '@rtcforge/core'
 import { WebSocket } from 'ws'
 import { ClientMessageSchema, MessageType } from './protocol.js'
-import type { MediaAttachment, ServerMessage } from './protocol.js'
+import type { ServerMessage } from './protocol.js'
 import { PeerEvent } from './types.js'
-import type { PeerRole } from './types.js'
 
-export declare interface Peer {
-    on(event: typeof PeerEvent.Disconnected, listener: (code: number, reason: string) => void): this
-    on(
-        event: typeof PeerEvent.Chat,
-        listener: (
-            text: string | undefined,
-            to?: string | string[],
-            replyTo?: string,
-            attachments?: MediaAttachment[],
-        ) => void,
-    ): this
-    on(event: typeof PeerEvent.Typing, listener: () => void): this
-    on(event: typeof PeerEvent.Edit, listener: (id: string, text: string) => void): this
-    on(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
-    on(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
-    on(event: typeof PeerEvent.Read, listener: (id: string) => void): this
-    on(
-        event: typeof PeerEvent.WhiteboardEvent,
-        listener: (eventType: string, data: unknown) => void,
-    ): this
-    once(
-        event: typeof PeerEvent.Disconnected,
-        listener: (code: number, reason: string) => void,
-    ): this
-    once(
-        event: typeof PeerEvent.Chat,
-        listener: (
-            text: string | undefined,
-            to?: string | string[],
-            replyTo?: string,
-            attachments?: MediaAttachment[],
-        ) => void,
-    ): this
-    once(event: typeof PeerEvent.Typing, listener: () => void): this
-    once(event: typeof PeerEvent.Edit, listener: (id: string, text: string) => void): this
-    once(event: typeof PeerEvent.Delete, listener: (id: string) => void): this
-    once(event: typeof PeerEvent.Reaction, listener: (msgId: string, emoji: string) => void): this
-    once(event: typeof PeerEvent.Read, listener: (id: string) => void): this
-    once(
-        event: typeof PeerEvent.WhiteboardEvent,
-        listener: (eventType: string, data: unknown) => void,
-    ): this
-    emit(event: typeof PeerEvent.Disconnected, code: number, reason: string): boolean
-    emit(
-        event: typeof PeerEvent.Chat,
-        text: string | undefined,
-        to?: string | string[],
-        replyTo?: string,
-        attachments?: MediaAttachment[],
-    ): boolean
-    emit(event: typeof PeerEvent.Typing): boolean
-    emit(event: typeof PeerEvent.Edit, id: string, text: string): boolean
-    emit(event: typeof PeerEvent.Delete, id: string): boolean
-    emit(event: typeof PeerEvent.Reaction, msgId: string, emoji: string): boolean
-    emit(event: typeof PeerEvent.Read, id: string): boolean
-    emit(event: typeof PeerEvent.WhiteboardEvent, eventType: string, data: unknown): boolean
+type PeerEvents = {
+    [PeerEvent.Disconnected]: [code: number, reason: string]
+    [PeerEvent.Signal]: [to: string, data: unknown]
+    [PeerEvent.Broadcast]: [channel: string, data: unknown]
+    [PeerEvent.Error]: [err: Error]
+    [PeerEvent.RateLimitExceeded]: []
 }
 
-// biome-ignore lint/suspicious/noUnsafeDeclarationMerging: typed EventEmitter overload pattern
-export class Peer extends EventEmitter {
+type RateLimit = { maxPerSec: number; count: number; windowStart: number }
+
+export class Peer extends EventEmitter<PeerEvents> {
     readonly id: string
-    readonly role: PeerRole
+    private _role: string
+    readonly metadata: Record<string, string>
     lastPong: number
 
     private readonly ws: WebSocket
     private readonly onSignal: (to: string, data: unknown) => void
+    private readonly _rateLimit: RateLimit | null
 
     constructor(
         id: string,
-        role: PeerRole,
+        role: string,
         ws: WebSocket,
         onSignal: (to: string, data: unknown) => void,
+        metadata: Record<string, string> = {},
+        maxMessagesPerSecond?: number,
     ) {
         super()
         this.id = id
-        this.role = role
+        this._role = role
+        this.metadata = metadata
         this.ws = ws
         this.onSignal = onSignal
         this.lastPong = Date.now()
+        this._rateLimit =
+            maxMessagesPerSecond !== undefined
+                ? { maxPerSec: maxMessagesPerSecond, count: 0, windowStart: Date.now() }
+                : null
 
         this.ws.on('message', (raw) => this.handleMessage(raw.toString()))
         this.ws.on('close', (code, reason) => {
@@ -91,14 +50,37 @@ export class Peer extends EventEmitter {
         })
     }
 
+    get role(): string {
+        return this._role
+    }
+
+    setRole(role: string): void {
+        this._role = role
+    }
+
+    isAlive(deadline: number): boolean {
+        return this.lastPong >= deadline
+    }
+
     send(msg: ServerMessage): void {
-        if (this.ws.readyState === WebSocket.OPEN) {
+        if (this.ws.readyState !== WebSocket.OPEN) {
+            throw new Error(`Peer ${this.id} WebSocket is not open`)
+        }
+        try {
             this.ws.send(JSON.stringify(msg))
+        } catch (err) {
+            const error = toError(err)
+            this.emit(PeerEvent.Error, error)
+            throw error
         }
     }
 
     ping(): void {
-        this.send({ type: MessageType.Ping })
+        try {
+            this.send({ type: MessageType.Ping })
+        } catch {
+            // no-op: peer already disconnected
+        }
     }
 
     disconnect(code: number, reason: string): void {
@@ -106,42 +88,45 @@ export class Peer extends EventEmitter {
     }
 
     private handleMessage(raw: string): void {
+        const now = Date.now()
+        if (this._rateLimit !== null) {
+            if (now - this._rateLimit.windowStart >= 1000) {
+                this._rateLimit.count = 0
+                this._rateLimit.windowStart = now
+            }
+            if (this._rateLimit.count >= this._rateLimit.maxPerSec) {
+                this.emit(PeerEvent.RateLimitExceeded)
+                return
+            }
+            this._rateLimit.count++
+        }
+
         let parsed: unknown
         try {
             parsed = JSON.parse(raw)
-        } catch {
+        } catch (err) {
+            this.emit(PeerEvent.Error, new Error(`JSON parse error: ${String(err)}`))
             return
         }
         const result = ClientMessageSchema.safeParse(parsed)
-        if (!result.success) return
+        if (!result.success) {
+            this.emit(
+                PeerEvent.Error,
+                new Error(`Parse error: ${JSON.stringify(result.error.issues)}`),
+            )
+            return
+        }
         const msg = result.data
         switch (msg.type) {
             case MessageType.Signal:
                 this.onSignal(msg.to, msg.data)
+                this.emit(PeerEvent.Signal, msg.to, msg.data)
                 break
             case MessageType.Pong:
-                this.lastPong = Date.now()
+                this.lastPong = now
                 break
-            case MessageType.Chat:
-                this.emit(PeerEvent.Chat, msg.text, msg.to, msg.replyTo, msg.attachments)
-                break
-            case MessageType.Typing:
-                this.emit(PeerEvent.Typing)
-                break
-            case MessageType.Edit:
-                this.emit(PeerEvent.Edit, msg.id, msg.text)
-                break
-            case MessageType.Delete:
-                this.emit(PeerEvent.Delete, msg.id)
-                break
-            case MessageType.Reaction:
-                this.emit(PeerEvent.Reaction, msg.msgId, msg.emoji)
-                break
-            case MessageType.Read:
-                this.emit(PeerEvent.Read, msg.id)
-                break
-            case MessageType.WhiteboardEvent:
-                this.emit(PeerEvent.WhiteboardEvent, msg.eventType, msg.data)
+            case MessageType.Broadcast:
+                this.emit(PeerEvent.Broadcast, msg.channel, msg.data ?? null)
                 break
         }
     }

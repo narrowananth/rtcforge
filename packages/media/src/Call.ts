@@ -1,6 +1,6 @@
-import { EventEmitter, noopLogger } from '@rtcforge/core'
+import { EventEmitter, noopLogger, toError } from '@rtcforge/core'
 import type { Logger } from '@rtcforge/core'
-import { MessageType } from '@rtcforge/sdk'
+import { MessageType, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 import { PeerConnection } from './PeerConnection.js'
 import { SignalKind, SignalType, isMediaSignal } from './protocol.js'
@@ -12,6 +12,10 @@ type CallEvents = {
     [MediaEvent.RemoteStream]: [peerId: string, stream: MediaStream]
     [MediaEvent.RemoteStreamRemoved]: [peerId: string]
     [MediaEvent.TrackPublished]: [track: MediaStreamTrack, stream: MediaStream]
+    [MediaEvent.Error]: [peerId: string, err: Error]
+    [MediaEvent.DataChannel]: [peerId: string, channel: RTCDataChannel]
+    [MediaEvent.ActiveSpeaker]: [peerId: string | null, audioLevel: number]
+    [MediaEvent.ConnectionFailed]: [peerId: string]
 }
 
 export class Call extends EventEmitter<CallEvents> {
@@ -19,9 +23,12 @@ export class Call extends EventEmitter<CallEvents> {
     private readonly opts: CallOptions
     private readonly logger: Logger
     private readonly connections = new Map<string, PeerConnection>()
+    private readonly _negTimers = new Map<string, ReturnType<typeof setTimeout>>()
     private readonly localTracks: Array<{ track: MediaStreamTrack; stream: MediaStream }> = []
     private started = false
     private closed = false
+    private _activeSpeakerTimer: ReturnType<typeof setInterval> | null = null
+    private _activeSpeakerPeerId: string | null = null
 
     constructor(room: Room, opts: CallOptions = {}) {
         super()
@@ -49,31 +56,206 @@ export class Call extends EventEmitter<CallEvents> {
         this.room.on(MessageType.PeerJoined, this.handlePeerJoined)
         this.room.on(MessageType.PeerLeft, this.handlePeerLeft)
         this.room.on(MessageType.Signal, this.handleRoomSignal)
+        this.room.on(RoomEvent.Refreshed, this.handleRoomRefreshed)
     }
 
-    addTrack(track: MediaStreamTrack, stream: MediaStream): void {
+    addTrack(
+        track: MediaStreamTrack,
+        stream: MediaStream,
+        opts?: { contentHint?: string; maxBitrate?: number },
+    ): void {
+        if (opts?.contentHint) {
+            ;(track as MediaStreamTrack & { contentHint?: string }).contentHint = opts.contentHint
+        }
+        const bitrate = opts?.maxBitrate ?? this.opts.maxBitrate
         this.localTracks.push({ track, stream })
         for (const pc of this.connections.values()) {
-            pc.addTrack(track, stream, this.opts.maxBitrate)
+            pc.addTrack(track, stream, bitrate)
         }
         this.emit(MediaEvent.TrackPublished, track, stream)
     }
 
-    // Compatibility shim for future SFU mode; mesh receives tracks automatically.
-    subscribeAll(): void {}
+    async replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void> {
+        const idx = this.localTracks.findIndex((e) => e.track === oldTrack)
+        if (idx !== -1)
+            this.localTracks[idx] = { track: newTrack, stream: this.localTracks[idx].stream }
+        await Promise.all(
+            Array.from(this.connections.values(), (pc) => pc.replaceTrack(oldTrack, newTrack)),
+        )
+    }
+
+    addScreenTrack(track: MediaStreamTrack, stream: MediaStream): void {
+        this.addTrack(track, stream, {
+            contentHint: this.opts.screenShare?.contentHint,
+            maxBitrate: this.opts.screenShare?.maxBitrate,
+        })
+    }
+
+    createDataChannel(
+        peerId: string,
+        label: string,
+        opts?: RTCDataChannelInit,
+    ): RTCDataChannel | undefined {
+        return this.connections.get(peerId)?.createDataChannel(label, opts)
+    }
+
+    async getStats(peerId?: string): Promise<Map<string, RTCStatsReport>> {
+        const result = new Map<string, RTCStatsReport>()
+        if (peerId) {
+            const pc = this.connections.get(peerId)
+            if (pc) result.set(peerId, await pc.getStats())
+        } else {
+            await Promise.all(
+                Array.from(this.connections.entries(), async ([pid, pc]) => {
+                    result.set(pid, await pc.getStats())
+                }),
+            )
+        }
+        return result
+    }
+
+    startActiveSpeakerDetection(intervalMs = 1000): void {
+        if (this._activeSpeakerTimer) return
+        this._activeSpeakerTimer = setInterval(async () => {
+            const results = await Promise.all(
+                Array.from(this.connections.entries(), async ([peerId, pc]) => {
+                    try {
+                        const stats = await pc.getStats()
+                        let maxLevel = 0
+                        for (const report of stats.values()) {
+                            if (report.type === 'inbound-rtp') {
+                                const level = (report as unknown as Record<string, unknown>)
+                                    .audioLevel as number | undefined
+                                if (level !== undefined && level > maxLevel) maxLevel = level
+                            }
+                        }
+                        return { peerId, level: maxLevel }
+                    } catch {
+                        return null
+                    }
+                }),
+            )
+            let maxLevel = 0
+            let speaker: string | null = null
+            for (const r of results) {
+                if (r && r.level > maxLevel) {
+                    maxLevel = r.level
+                    speaker = r.peerId
+                }
+            }
+            if (speaker !== this._activeSpeakerPeerId) {
+                this._activeSpeakerPeerId = speaker
+                this.emit(MediaEvent.ActiveSpeaker, speaker, maxLevel)
+            }
+        }, intervalMs)
+    }
+
+    stopActiveSpeakerDetection(): void {
+        if (this._activeSpeakerTimer) {
+            clearInterval(this._activeSpeakerTimer)
+            this._activeSpeakerTimer = null
+        }
+    }
+
+    removeTrack(track: MediaStreamTrack): void {
+        for (const pc of this.connections.values()) {
+            pc.removeTrack(track)
+        }
+        const idx = this.localTracks.findIndex((e) => e.track === track)
+        if (idx !== -1) this.localTracks.splice(idx, 1)
+    }
+
+    muteAudio(): void {
+        this._setTrackEnabled('audio', false)
+    }
+    unmuteAudio(): void {
+        this._setTrackEnabled('audio', true)
+    }
+    muteVideo(): void {
+        this._setTrackEnabled('video', false)
+    }
+    unmuteVideo(): void {
+        this._setTrackEnabled('video', true)
+    }
+    isAudioMuted(): boolean {
+        return this._isKindMuted('audio')
+    }
+    isVideoMuted(): boolean {
+        return this._isKindMuted('video')
+    }
+
+    restart(): void {
+        this.stopActiveSpeakerDetection()
+        this._activeSpeakerPeerId = null
+        this._teardownConnections()
+        this._detachRoomListeners()
+        this.started = false
+        this.closed = false
+        this.start()
+    }
 
     close(): void {
-        if (!this.started || this.closed) return
+        if (this.closed) return
         this.closed = true
         this.logger.info('Call closed', { localPeerId: this.room.localPeerId })
-        this.room.off(MessageType.PeerJoined, this.handlePeerJoined)
-        this.room.off(MessageType.PeerLeft, this.handlePeerLeft)
-        this.room.off(MessageType.Signal, this.handleRoomSignal)
+        this.stopActiveSpeakerDetection()
+        this.localTracks.length = 0
+        this._detachRoomListeners()
+        this._teardownConnections()
+    }
+
+    private _teardownConnections(): void {
+        for (const timer of this._negTimers.values()) clearTimeout(timer)
+        this._negTimers.clear()
         for (const pc of this.connections.values()) {
             pc.removeAllListeners()
             pc.close()
         }
         this.connections.clear()
+    }
+
+    private _detachRoomListeners(): void {
+        if (!this.started) return
+        this.room.off(MessageType.PeerJoined, this.handlePeerJoined)
+        this.room.off(MessageType.PeerLeft, this.handlePeerLeft)
+        this.room.off(MessageType.Signal, this.handleRoomSignal)
+        this.room.off(RoomEvent.Refreshed, this.handleRoomRefreshed)
+    }
+
+    private _clearPeerTimer(peerId: string): void {
+        const timer = this._negTimers.get(peerId)
+        if (timer) {
+            clearTimeout(timer)
+            this._negTimers.delete(peerId)
+        }
+    }
+
+    private _dropConnection(peerId: string, pc: PeerConnection): void {
+        this.connections.delete(peerId)
+        pc.removeAllListeners()
+        pc.close()
+    }
+
+    private _setTrackEnabled(kind: 'audio' | 'video', enabled: boolean): void {
+        for (const { track } of this.localTracks) {
+            if (track.kind === kind) track.enabled = enabled
+        }
+    }
+
+    private _isKindMuted(kind: 'audio' | 'video'): boolean {
+        let found = false
+        let allMuted = true
+        for (const { track } of this.localTracks) {
+            if (track.kind === kind) {
+                found = true
+                if (track.enabled) allMuted = false
+            }
+        }
+        return found && allMuted
+    }
+
+    private readonly handleRoomRefreshed = (): void => {
+        this.restart()
     }
 
     private readonly handlePeerJoined = (peerId: string): void => {
@@ -83,39 +265,47 @@ export class Call extends EventEmitter<CallEvents> {
 
     private readonly handlePeerLeft = (peerId: string): void => {
         this.logger.debug('Peer left, closing connection', { peerId })
+        this._clearPeerTimer(peerId)
         const pc = this.connections.get(peerId)
         if (!pc) return
-        pc.removeAllListeners()
-        pc.close()
-        this.connections.delete(peerId)
+        this._dropConnection(peerId, pc)
         this.emit(MediaEvent.RemoteStreamRemoved, peerId)
     }
 
     private readonly handleRoomSignal = async (from: string, data: unknown): Promise<void> => {
         if (!isMediaSignal(data)) return
+        // discard stale signals for peers that already left
+        if (!this.connections.has(from) && !this.room.hasPeer(from)) return
+        const wasNew = !this.connections.has(from)
         const pc = this.getOrCreateConnection(from)
 
-        switch (data.type) {
-            case SignalType.Offer: {
-                this.logger.debug('Received offer', { from })
-                const answer = await pc.handleOffer(data.sdp)
-                if (answer?.sdp) {
-                    const signal: MediaSignal = {
-                        kind: SignalKind.Media,
-                        type: SignalType.Answer,
-                        sdp: answer.sdp,
+        try {
+            switch (data.type) {
+                case SignalType.Offer: {
+                    this.logger.debug('Received offer', { from })
+                    const answer = await pc.handleOffer(data.sdp)
+                    if (answer?.sdp) {
+                        const signal: MediaSignal = {
+                            kind: SignalKind.Media,
+                            type: SignalType.Answer,
+                            sdp: answer.sdp,
+                        }
+                        this.room.sendSignal(from, signal)
                     }
-                    this.room.sendSignal(from, signal)
+                    break
                 }
-                break
+                case SignalType.Answer:
+                    this.logger.debug('Received answer', { from })
+                    await pc.handleAnswer(data.sdp)
+                    break
+                case SignalType.Ice:
+                    await pc.addIceCandidate(data.candidate)
+                    break
             }
-            case SignalType.Answer:
-                this.logger.debug('Received answer', { from })
-                await pc.handleAnswer(data.sdp)
-                break
-            case SignalType.Ice:
-                await pc.addIceCandidate(data.candidate)
-                break
+        } catch (err) {
+            this.logger.warn('Signal handling error', { from, err })
+            if (wasNew) this._dropConnection(from, pc)
+            this.emit(MediaEvent.Error, from, toError(err))
         }
     }
 
@@ -123,8 +313,9 @@ export class Call extends EventEmitter<CallEvents> {
         const existing = this.connections.get(peerId)
         if (existing) return existing
 
-        // Lexicographically smaller peer ID yields on offer collision
-        const polite = this.room.localPeerId < peerId
+        const polite = this.opts.isPolite
+            ? this.opts.isPolite(this.room.localPeerId, peerId)
+            : this.room.localPeerId < peerId
         const pc = new PeerConnection(polite, this.opts)
         this.connections.set(peerId, pc)
 
@@ -145,6 +336,18 @@ export class Call extends EventEmitter<CallEvents> {
                     sdp: desc.sdp,
                 }
                 this.room.sendSignal(peerId, signal)
+                if (this.opts.negotiationTimeoutMs) {
+                    this._clearPeerTimer(peerId)
+                    this._negTimers.set(
+                        peerId,
+                        setTimeout(() => {
+                            this._negTimers.delete(peerId)
+                            if (this.connections.get(peerId) !== pc) return
+                            this._dropConnection(peerId, pc)
+                            this.emit(MediaEvent.Error, peerId, new Error('Negotiation timeout'))
+                        }, this.opts.negotiationTimeoutMs),
+                    )
+                }
             }
         })
 
@@ -154,6 +357,29 @@ export class Call extends EventEmitter<CallEvents> {
                 this.logger.debug('Remote stream received', { peerId })
                 this.emit(MediaEvent.RemoteStream, peerId, stream)
             }
+        })
+
+        pc.on(ConnectionEvent.StateChange, (state) => {
+            if (state === 'connected' || state === 'closed' || state === 'failed') {
+                this._clearPeerTimer(peerId)
+            }
+            if (state === 'failed') {
+                this._dropConnection(peerId, pc)
+                this.emit(MediaEvent.ConnectionFailed, peerId)
+            }
+        })
+
+        pc.on(ConnectionEvent.DataChannel, (channel) => {
+            this.emit(MediaEvent.DataChannel, peerId, channel)
+        })
+
+        pc.on(ConnectionEvent.Error, (err) => {
+            this.logger.warn('PeerConnection error', { peerId, err })
+            if (this.connections.get(peerId) === pc) {
+                this._clearPeerTimer(peerId)
+                this._dropConnection(peerId, pc)
+            }
+            this.emit(MediaEvent.Error, peerId, toError(err))
         })
 
         return pc

@@ -1,8 +1,16 @@
 import { RoomEvent, ServerEvent, SignalingServer } from '@rtcforge/signaling'
+import type { AuditEvent } from '@rtcforge/signaling'
 
 const PORT = 3003
 
-const server = new SignalingServer({ port: PORT })
+const server = new SignalingServer({
+    port: PORT,
+    maxPeersPerRoom: 8,
+    roomIdleTimeoutMs: 120_000,
+    rateLimit: { maxMessagesPerSecond: 20 },
+    auditLog: (e: AuditEvent) =>
+        console.log(`[audit] ${e.type} peer=${e.peerId ?? '-'} room=${e.roomId}`),
+})
 
 server.on(ServerEvent.RoomCreated, (room) => {
     console.log(`[room] created: ${room.id}`)
@@ -13,6 +21,10 @@ server.on(ServerEvent.RoomCreated, (room) => {
 
     room.on(RoomEvent.PeerLeft, (peer) => {
         console.log(`[room:${room.id}] peer left: ${peer.id}`)
+    })
+
+    room.on(RoomEvent.PeerKicked, (peerId, reason) => {
+        console.log(`[room:${room.id}] peer kicked: ${peerId}${reason ? ` (${reason})` : ''}`)
     })
 
     room.on(RoomEvent.Closed, () => {

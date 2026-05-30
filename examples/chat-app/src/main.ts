@@ -1,10 +1,21 @@
-import { ChatRoomEvent, ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
-import type { ChatMessage, Room } from '@rtcforge/sdk'
+import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
+import type { Room } from '@rtcforge/sdk'
 
 const SIGNALING_URL = 'ws://localhost:3001'
 const TYPING_DEBOUNCE_MS = 2000
 const TYPING_CLEAR_MS = 3500
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥']
+
+// ── Local types ───────────────────────────────────────────────────────────────
+
+interface ChatMessage {
+    id: string
+    from: string
+    text?: string
+    ts: number
+    to?: string | string[]
+    editedAt?: number
+}
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -105,64 +116,104 @@ joinBtn.addEventListener('click', async () => {
         setMode('broadcast')
         renderMembers()
 
-        room.chat.on(ChatRoomEvent.History, (msgs) => {
-            for (const msg of msgs) appendMessage(msg, room.localPeerId)
-        })
+        // ── Broadcast channel listener ────────────────────────────────────────
+        room.on(MessageType.Broadcast, (from: string, channel: string, data: unknown) => {
+            if (channel !== 'chat') return
 
-        room.chat.on(ChatRoomEvent.Message, (msg) => {
-            clearTypingForPeer(msg.from)
-            appendMessage(msg, room.localPeerId)
-            if (msg.from !== room.localPeerId) room.chat.sendRead(msg.id)
-        })
+            const payload = data as Record<string, unknown>
 
-        room.chat.on(ChatRoomEvent.Typing, (peerId) => {
-            if (peerId === room.localPeerId) return
-            typingPeers.add(peerId)
-            clearTimeout(typingClearTimers.get(peerId))
-            const t = setTimeout(() => {
-                typingPeers.delete(peerId)
-                typingClearTimers.delete(peerId)
-                renderTypingIndicator()
-            }, TYPING_CLEAR_MS)
-            typingClearTimers.set(peerId, t)
-            renderTypingIndicator()
-        })
-
-        room.chat.on(ChatRoomEvent.Edited, (id, text) => {
-            const el = msgEls.get(id)
-            if (!el) return
-            el.dataset.text = text
-            const bodyEl = el.querySelector('.message-body') as HTMLElement
-            const textNode = bodyEl?.childNodes[0]
-            if (textNode?.nodeType === Node.TEXT_NODE) textNode.textContent = text
-            if (!bodyEl.querySelector('.edited-label')) {
-                const label = document.createElement('span')
-                label.className = 'edited-label'
-                label.textContent = '(edited)'
-                bodyEl.appendChild(label)
+            switch (payload.type) {
+                case 'message': {
+                    const msg = payload as ChatMessage & { type: string }
+                    // DM filter: show only if broadcast (no `to`), sender is self, or we are a recipient
+                    if (
+                        msg.to !== undefined &&
+                        from !== room.localPeerId &&
+                        msg.to !== room.localPeerId &&
+                        !(Array.isArray(msg.to) && msg.to.includes(room.localPeerId))
+                    ) {
+                        return
+                    }
+                    const chatMsg: ChatMessage = {
+                        id: msg.id,
+                        from,
+                        text: msg.text,
+                        ts: msg.ts,
+                        to: msg.to,
+                    }
+                    clearTypingForPeer(from)
+                    appendMessage(chatMsg, room.localPeerId)
+                    if (from !== room.localPeerId) {
+                        room.broadcast('chat', { type: 'read', id: msg.id })
+                    }
+                    break
+                }
+                case 'typing': {
+                    if (from === room.localPeerId) return
+                    typingPeers.add(from)
+                    clearTimeout(typingClearTimers.get(from))
+                    const t = setTimeout(() => {
+                        typingPeers.delete(from)
+                        typingClearTimers.delete(from)
+                        renderTypingIndicator()
+                    }, TYPING_CLEAR_MS)
+                    typingClearTimers.set(from, t)
+                    renderTypingIndicator()
+                    break
+                }
+                case 'edit': {
+                    const { id, text } = payload as { id: string; text: string }
+                    const el = msgEls.get(id)
+                    if (!el) return
+                    el.dataset.text = text
+                    const bodyEl = el.querySelector('.message-body') as HTMLElement
+                    const textNode = bodyEl?.childNodes[0]
+                    if (textNode?.nodeType === Node.TEXT_NODE) textNode.textContent = text
+                    if (!bodyEl.querySelector('.edited-label')) {
+                        const label = document.createElement('span')
+                        label.className = 'edited-label'
+                        label.textContent = '(edited)'
+                        bodyEl.appendChild(label)
+                    }
+                    break
+                }
+                case 'delete': {
+                    const { id } = payload as { id: string }
+                    const el = msgEls.get(id)
+                    if (!el) return
+                    const bodyEl = el.querySelector('.message-body') as HTMLElement
+                    bodyEl.innerHTML = '<em style="color:#555">This message was deleted.</em>'
+                    el.querySelector('.message-actions')?.remove()
+                    msgEls.delete(id)
+                    break
+                }
+                case 'reaction': {
+                    const { msgId, emoji, action } = payload as {
+                        msgId: string
+                        emoji: string
+                        action: 'add' | 'remove'
+                    }
+                    let msgReactions = reactionState.get(msgId)
+                    if (!msgReactions) {
+                        msgReactions = new Map()
+                        reactionState.set(msgId, msgReactions)
+                    }
+                    const peers = msgReactions.get(emoji) ?? new Set<string>()
+                    msgReactions.set(emoji, peers)
+                    if (action === 'remove') {
+                        peers.delete(from)
+                    } else {
+                        peers.add(from)
+                    }
+                    renderReactions(msgId, room.localPeerId)
+                    break
+                }
+                case 'read':
+                    // Acknowledged — no UI change needed in this example
+                    break
+                default:
+                    break
             }
-        })
-
-        room.chat.on(ChatRoomEvent.Deleted, (id) => {
-            const el = msgEls.get(id)
-            if (!el) return
-            const bodyEl = el.querySelector('.message-body') as HTMLElement
-            bodyEl.innerHTML = '<em style="color:#555">This message was deleted.</em>'
-            el.querySelector('.message-actions')?.remove()
-            msgEls.delete(id)
-        })
-
-        room.chat.on(ChatRoomEvent.Reaction, (msgId, emoji, by) => {
-            let msgReactions = reactionState.get(msgId)
-            if (!msgReactions) {
-                msgReactions = new Map()
-                reactionState.set(msgId, msgReactions)
-            }
-            const peers = msgReactions.get(emoji) ?? new Set<string>()
-            msgReactions.set(emoji, peers)
-            if (peers.has(by)) peers.delete(by)
-            else peers.add(by)
-            renderReactions(msgId, room.localPeerId)
         })
 
         room.on(MessageType.PeerJoined, () => renderMembers())
@@ -201,7 +252,7 @@ messageInputEl.addEventListener('keydown', (e) => {
 
 messageInputEl.addEventListener('input', () => {
     if (!currentRoom || typingCooldown) return
-    currentRoom.chat.sendTyping()
+    currentRoom.broadcast('chat', { type: 'typing' })
     typingCooldown = true
     setTimeout(() => {
         typingCooldown = false
@@ -228,7 +279,9 @@ function sendMessage(): void {
         to = [...selectedPeers]
     }
 
-    room.chat.send(text, to !== undefined ? { to } : undefined)
+    const id = crypto.randomUUID()
+    const ts = Date.now()
+    room.broadcast('chat', { type: 'message', id, text, ts, ...(to !== undefined ? { to } : {}) })
     messageInputEl.value = ''
 }
 
@@ -327,7 +380,15 @@ function renderReactions(msgId: string, localPeerId: string): void {
         const chip = document.createElement('span')
         chip.className = `reaction-chip${peers.has(localPeerId) ? ' mine' : ''}`
         chip.textContent = `${emoji} ${peers.size}`
-        chip.addEventListener('click', () => currentRoom?.chat.sendReaction(msgId, emoji))
+        chip.addEventListener('click', () => {
+            const hasReacted = reactionState.get(msgId)?.get(emoji)?.has(localPeerId) ?? false
+            currentRoom?.broadcast('chat', {
+                type: 'reaction',
+                msgId,
+                emoji,
+                action: hasReacted ? 'remove' : 'add',
+            })
+        })
         reactionsEl.appendChild(chip)
     }
 }
@@ -407,7 +468,9 @@ function appendMessage(msg: ChatMessage, localPeerId: string): void {
         delBtn.className = 'action-btn'
         delBtn.textContent = '✕'
         delBtn.title = 'Delete'
-        delBtn.addEventListener('click', () => currentRoom?.chat.sendDelete(msg.id))
+        delBtn.addEventListener('click', () =>
+            currentRoom?.broadcast('chat', { type: 'delete', id: msg.id }),
+        )
         actions.appendChild(delBtn)
 
         body.addEventListener('dblclick', () =>
@@ -457,7 +520,9 @@ function startInlineEdit(msgId: string, bodyEl: HTMLElement, currentText: string
     const finish = (save: boolean) => {
         input.removeEventListener('blur', onBlur)
         const newText = input.value.trim()
-        if (save && newText && newText !== currentText) currentRoom?.chat.sendEdit(msgId, newText)
+        if (save && newText && newText !== currentText) {
+            currentRoom?.broadcast('chat', { type: 'edit', id: msgId, text: newText })
+        }
         bodyEl.innerHTML = originalHTML
     }
     const onBlur = () => finish(false)
@@ -486,7 +551,14 @@ function showReactionPicker(msgId: string, anchorEl: HTMLElement): void {
         const btn = document.createElement('button')
         btn.textContent = emoji
         btn.addEventListener('click', () => {
-            currentRoom?.chat.sendReaction(msgId, emoji)
+            const localPeerId = currentRoom?.localPeerId ?? ''
+            const hasReacted = reactionState.get(msgId)?.get(emoji)?.has(localPeerId) ?? false
+            currentRoom?.broadcast('chat', {
+                type: 'reaction',
+                msgId,
+                emoji,
+                action: hasReacted ? 'remove' : 'add',
+            })
             picker.remove()
         })
         picker.appendChild(btn)

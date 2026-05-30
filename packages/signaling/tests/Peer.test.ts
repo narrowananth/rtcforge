@@ -30,9 +30,9 @@ describe('Peer', () => {
         expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: MessageType.Ping }))
     })
 
-    it('skips send when WebSocket is not OPEN', () => {
+    it('throws when WebSocket is not OPEN', () => {
         ws.readyState = 3
-        peer.send({ type: MessageType.Ping })
+        expect(() => peer.send({ type: MessageType.Ping })).toThrow('not open')
         expect(ws.send).not.toHaveBeenCalled()
     })
 
@@ -69,10 +69,15 @@ describe('Peer', () => {
         expect(listener).toHaveBeenCalledWith(1001, 'Going away')
     })
 
-    it('ignores malformed JSON messages silently', () => {
+    it('emits PeerEvent.Error on malformed JSON messages', () => {
+        const errorListener = vi.fn()
+        peer.on(PeerEvent.Error, errorListener)
         expect(() => {
             ws.emit('message', Buffer.from('not-valid-json{'))
         }).not.toThrow()
+        expect(errorListener).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('JSON parse error') }),
+        )
         expect(onSignal).not.toHaveBeenCalled()
     })
 })

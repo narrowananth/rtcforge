@@ -3,6 +3,7 @@ export interface Logger {
     info(msg: string, ctx?: Record<string, unknown>): void
     warn(msg: string, ctx?: Record<string, unknown>): void
     error(msg: string, ctx?: Record<string, unknown>): void
+    fatal(msg: string, ctx?: Record<string, unknown>): void
 }
 
 export const noopLogger: Logger = {
@@ -10,16 +11,21 @@ export const noopLogger: Logger = {
     info: () => {},
     warn: () => {},
     error: () => {},
+    fatal: () => {},
 }
 
 export interface MetricsCollector {
     increment(metric: string, labels?: Record<string, string>): void
     gauge(metric: string, value: number, labels?: Record<string, string>): void
+    histogram(metric: string, value: number, labels?: Record<string, string>): void
+    timing(metric: string, ms: number, labels?: Record<string, string>): void
 }
 
 export const noopMetrics: MetricsCollector = {
     increment: () => {},
     gauge: () => {},
+    histogram: () => {},
+    timing: () => {},
 }
 
 export const Metric = {
@@ -28,9 +34,15 @@ export const Metric = {
     PeersConnected: 'peers_connected',
     PeersDisconnected: 'peers_disconnected',
     SignalsRelayed: 'signals_relayed',
+    BroadcastsRelayed: 'broadcasts_relayed',
     AuthErrors: 'auth_errors',
     ActiveRooms: 'active_rooms',
     ActivePeers: 'active_peers',
+    PeersKicked: 'peers_kicked',
 } as const
 
 export type Metric = (typeof Metric)[keyof typeof Metric]
+
+export function toError(err: unknown): Error {
+    return err instanceof Error ? err : new Error(String(err))
+}

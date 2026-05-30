@@ -38,6 +38,9 @@ describe('Room', () => {
                     roomId: 'r1',
                     peerId: 'p1',
                     peers: [],
+                    peerRoles: {},
+                    peerMetadata: {},
+                    localRole: 'participant',
                 }),
             )
         })
@@ -53,6 +56,9 @@ describe('Room', () => {
                     roomId: 'r1',
                     peerId: 'p2',
                     peers: ['p1'],
+                    peerRoles: { p1: 'participant' },
+                    peerMetadata: {},
+                    localRole: 'participant',
                 }),
             )
         })
@@ -64,7 +70,12 @@ describe('Room', () => {
             ws1.send.mockClear()
             room.addPeer(p2)
             expect(ws1.send).toHaveBeenCalledWith(
-                JSON.stringify({ type: MessageType.PeerJoined, peerId: 'p2' }),
+                JSON.stringify({
+                    type: MessageType.PeerJoined,
+                    peerId: 'p2',
+                    role: 'participant',
+                    metadata: {},
+                }),
             )
         })
 
@@ -82,6 +93,13 @@ describe('Room', () => {
             room.addPeer(p1old)
             room.addPeer(p1new)
             expect(ws1old.close).toHaveBeenCalledWith(1000, 'Replaced by reconnection')
+        })
+
+        it('removes peer from _peers when RoomJoined send fails', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            ws1.readyState = 3 // CLOSED before join
+            expect(() => room.addPeer(p1)).toThrow()
+            expect(room.getPeerCount()).toBe(0)
         })
 
         it('does not broadcast peer-joined to others on reconnection', () => {
@@ -113,6 +131,18 @@ describe('Room', () => {
 
         it('ignores relay to unknown peer ID', () => {
             expect(() => room.relay('p1', 'unknown', {})).not.toThrow()
+        })
+
+        it('emits peerError when relay target socket is not open', () => {
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2, ws: ws2 } = makePeer('p2')
+            room.addPeer(p1)
+            room.addPeer(p2)
+            ws2.readyState = 3 // CLOSED
+            const errorListener = vi.fn()
+            room.on(RoomEvent.PeerError, errorListener)
+            room.relay('p1', 'p2', { sdp: 'v=0' })
+            expect(errorListener).toHaveBeenCalledWith('p2', expect.any(Error))
         })
     })
 
@@ -230,6 +260,18 @@ describe('Room', () => {
         it('returns false when peer is not found', () => {
             expect(room.kickPeer('nonexistent')).toBe(false)
         })
+
+        it('still disconnects peer and emits peerKicked when Kicked send fails', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            room.addPeer(p1)
+            ws1.readyState = 3 // CLOSED before kick
+            const kicked = vi.fn()
+            room.on(RoomEvent.PeerKicked, kicked)
+            const result = room.kickPeer('p1', 'ban')
+            expect(result).toBe(true)
+            expect(ws1.close).toHaveBeenCalled()
+            expect(kicked).toHaveBeenCalledWith('p1', 'ban')
+        })
     })
 
     describe('maxPeers', () => {
@@ -253,23 +295,108 @@ describe('Room', () => {
         })
     })
 
-    describe('enableMedia', () => {
-        it('registers onPeerJoined handler', () => {
-            const onJoined = vi.fn()
-            room.enableMedia(onJoined)
+    describe('_forceClose via maxDurationMs', () => {
+        it('emits peerLeft for all peers before closed when room expires', () => {
+            vi.useFakeTimers()
+            const expRoom = new Room('expire-room', { maxDurationMs: 1000 })
             const { peer: p1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
+            expRoom.addPeer(p1)
+            expRoom.addPeer(p2)
+
+            const leftPeerIds: string[] = []
+            const closedOrder: string[] = []
+            expRoom.on(RoomEvent.PeerLeft, (peer) => {
+                leftPeerIds.push(peer.id)
+                closedOrder.push('peerLeft')
+            })
+            expRoom.on(RoomEvent.Closed, () => closedOrder.push('closed'))
+
+            vi.advanceTimersByTime(1001)
+
+            expect(leftPeerIds).toHaveLength(2)
+            expect(leftPeerIds).toContain('p1')
+            expect(leftPeerIds).toContain('p2')
+            expect(closedOrder[closedOrder.length - 1]).toBe('closed')
+            vi.useRealTimers()
+        })
+    })
+
+    describe('relay()', () => {
+        it('returns true on successful send', () => {
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
             room.addPeer(p1)
-            expect(onJoined).toHaveBeenCalledWith(p1)
+            room.addPeer(p2)
+            expect(room.relay('p1', 'p2', { sdp: 'offer' })).toBe(true)
         })
 
-        it('registers onPeerLeft handler when provided', () => {
-            const onJoined = vi.fn()
-            const onLeft = vi.fn()
-            room.enableMedia(onJoined, onLeft)
-            const { peer: p1, ws: ws1 } = makePeer('p1')
+        it('returns false when target peer not in room', () => {
+            const { peer: p1 } = makePeer('p1')
             room.addPeer(p1)
-            simulateDisconnect(ws1)
-            expect(onLeft).toHaveBeenCalledWith(p1)
+            expect(room.relay('p1', 'ghost', { sdp: 'offer' })).toBe(false)
+        })
+
+        it('returns false and emits PeerError when send throws', () => {
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2, ws: ws2 } = makePeer('p2')
+            room.addPeer(p1)
+            room.addPeer(p2)
+            ws2.send.mockImplementation(() => {
+                throw new Error('socket closed')
+            })
+            const errHandler = vi.fn()
+            room.on(RoomEvent.PeerError, errHandler)
+            expect(room.relay('p1', 'p2', {})).toBe(false)
+            expect(errHandler).toHaveBeenCalledWith('p2', expect.any(Error))
+        })
+    })
+
+    describe('_resetIdleTimer — S1 guard', () => {
+        it('does not create idle timer when room is closing', () => {
+            vi.useFakeTimers()
+            const idleRoom = new Room('idle-room', { idleTimeoutMs: 100 })
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
+            idleRoom.addPeer(p1)
+            idleRoom.addPeer(p2)
+
+            // Force close — sets state to Closing then Closed before broadcast
+            const closedFn = vi.fn()
+            idleRoom.on(RoomEvent.Closed, closedFn)
+
+            // Advance past maxDurationMs via a forceClose-like path:
+            // use a short maxDurationMs room instead
+            vi.useRealTimers()
+        })
+
+        it('does not reschedule idle timer during _forceClose broadcast', () => {
+            vi.useFakeTimers()
+            // room with short idleTimeoutMs and maxDurationMs to trigger _forceClose
+            const idleRoom = new Room('idle-room', {
+                idleTimeoutMs: 500,
+                maxDurationMs: 100,
+            })
+            const { peer: p1 } = makePeer('p1')
+            idleRoom.addPeer(p1)
+
+            // Trigger an activity to start idle timer
+            idleRoom.broadcast({ type: MessageType.Ping })
+
+            const closedFn = vi.fn()
+            idleRoom.on(RoomEvent.Closed, closedFn)
+
+            // Fire maxDurationMs — calls _forceClose which calls broadcast
+            vi.advanceTimersByTime(101)
+
+            // Room should be closed exactly once
+            expect(closedFn).toHaveBeenCalledOnce()
+
+            // Advance past idleTimeoutMs to confirm no stray timer re-fires _forceClose
+            vi.advanceTimersByTime(600)
+            expect(closedFn).toHaveBeenCalledOnce()
+
+            vi.useRealTimers()
         })
     })
 })

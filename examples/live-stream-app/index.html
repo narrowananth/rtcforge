@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RTCForge — Live Stream Example</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 2rem; }
+        h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #fff; }
+        h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        #join-form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 340px; }
+        input, select {
+            padding: 0.6rem 0.8rem; border-radius: 6px;
+            border: 1px solid #333; background: #1a1a1a; color: #e0e0e0;
+            font-size: 0.95rem;
+        }
+        button {
+            padding: 0.6rem 1.2rem; border-radius: 6px; border: none;
+            background: #3b82f6; color: #fff; font-size: 0.95rem; cursor: pointer;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { opacity: 0.5; cursor: default; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.secondary { background: #374151; }
+        button.secondary:hover { background: #4b5563; }
+
+        .role-badge {
+            display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .role-badge.host { background: #7c3aed; color: #e9d5ff; }
+        .role-badge.viewer { background: #065f46; color: #6ee7b7; }
+
+        #room-view { display: none; }
+        .room-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .room-header h1 { margin: 0; }
+
+        .video-section { margin-bottom: 1.5rem; }
+        #video-container {
+            display: flex; gap: 1rem; flex-wrap: wrap;
+        }
+        .video-tile {
+            position: relative; width: 360px;
+            background: #111; border-radius: 8px; overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+        .video-tile.host-tile { border-color: #7c3aed; }
+        .video-tile.viewer-tile { border-color: #065f46; }
+        .video-tile video {
+            width: 100%; display: block;
+            aspect-ratio: 16/9; object-fit: cover; background: #0a0a0a;
+        }
+        .video-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 0.3rem 0.6rem; font-size: 0.8rem; color: #fff;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        }
+
+        .columns { display: flex; gap: 2rem; }
+        .panel { flex: 1; }
+
+        #viewer-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+        #viewer-list li {
+            padding: 0.4rem 0.75rem; background: #1a1a1a; border-radius: 6px; font-size: 0.9rem;
+        }
+        .empty { color: #555; font-size: 0.9rem; font-style: italic; }
+
+        #event-log {
+            height: 260px; overflow-y: auto; background: #111; border-radius: 6px;
+            padding: 0.75rem; font-family: monospace; font-size: 0.82rem;
+            display: flex; flex-direction: column; gap: 0.3rem;
+        }
+        .log-entry { padding: 0.2rem 0; border-bottom: 1px solid #1e1e1e; }
+        .log-entry .time { color: #555; margin-right: 0.5rem; }
+        .log-entry.info { color: #34d399; }
+        .log-entry.warn { color: #fbbf24; }
+        .log-entry.err { color: #f87171; }
+
+        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        #viewer-count-badge {
+            background: #1e1e1e; padding: 0.25rem 0.75rem; border-radius: 4px;
+            font-size: 0.85rem; color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div id="join-form">
+        <h1>RTCForge — Live Stream</h1>
+        <input id="peer-id" placeholder="Your name (peer ID)" />
+        <input id="room-id" placeholder="Stream room ID" value="stream-room-1" />
+        <select id="role">
+            <option value="host">Host (broadcaster)</option>
+            <option value="viewer">Viewer</option>
+        </select>
+        <button id="join-btn">Join</button>
+        <p style="font-size:0.8rem;color:#555">Server: ws://localhost:3004</p>
+    </div>
+
+    <div id="room-view">
+        <div class="room-header">
+            <h1 id="room-title"></h1>
+            <span id="role-badge" class="role-badge"></span>
+            <span id="viewer-count-badge">0 viewers</span>
+        </div>
+
+        <div class="video-section">
+            <div id="video-container"></div>
+        </div>
+
+        <div class="columns">
+            <div class="panel" id="host-panel" style="display:none">
+                <h2>Viewers</h2>
+                <ul id="viewer-list"><li class="empty">No viewers yet</li></ul>
+            </div>
+            <div class="panel">
+                <h2>Event Log</h2>
+                <div id="event-log"></div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="leave-btn" class="danger">Leave</button>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

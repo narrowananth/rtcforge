@@ -65,4 +65,4 @@ Browser tab A ──┐
 Browser tab B ──┘                └── ChatService + PresenceService
 ```
 
-The signaling server uses `@rtcforge/chat`'s `ChatService` to broadcast messages, track typing, and handle edits/deletes. The browser client uses `@rtcforge/sdk`'s `RTCForgeClient` and `ChatRoom` to send and receive chat events.
+The signaling server uses `@rtcforge/chat`'s `ChatService` to broadcast messages, track typing, handle edits/deletes, and auto-assign message IDs. The browser client uses `@rtcforge/sdk`'s `RTCForgeClient` and `ChatRoom` to send and receive chat events.

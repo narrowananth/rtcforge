@@ -13,8 +13,13 @@ export default defineConfig({
             '@rtcforge/sdk': new URL('./packages/sdk/src/index.ts', import.meta.url).pathname,
             '@rtcforge/chat': new URL('./packages/chat/src/index.ts', import.meta.url).pathname,
             '@rtcforge/media': new URL('./packages/media/src/index.ts', import.meta.url).pathname,
+            '@rtcforge/recording': new URL('./packages/recording/src/index.ts', import.meta.url)
+                .pathname,
             '@rtcforge/streaming': new URL('./packages/streaming/src/index.ts', import.meta.url)
                 .pathname,
+            '@rtcforge/whiteboard': new URL('./packages/whiteboard/src/index.ts', import.meta.url)
+                .pathname,
+            '@rtcforge/sfu': new URL('./packages/sfu/src/index.ts', import.meta.url).pathname,
         },
     },
 })

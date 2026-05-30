@@ -1,22 +1,19 @@
-import { ChatRoom } from './ChatRoom.js'
-import { EventEmitter } from './EventEmitter.js'
+import { EventEmitter, toError } from '@rtcforge/core'
 import type { WebSocketTransport } from './WebSocketTransport.js'
-import { WhiteboardRoom } from './WhiteboardRoom.js'
 import { MessageType } from './protocol.js'
 import type { ClientMessage, ServerMessage } from './protocol.js'
 import { RoomEvent } from './types.js'
-import type { CallInterface } from './types.js'
+import type { CallInterface, IceServerConfig } from './types.js'
 
 export const RoomMediaEvent = {
-    PublishCamera: 'publish-camera',
     TrackAdded: 'track-added',
+    Error: 'media-error',
 } as const
 
 export type RoomMediaEvent = (typeof RoomMediaEvent)[keyof typeof RoomMediaEvent]
 
 export interface PeerInfo {
     id: string
-    joinedAt: number
 }
 
 type RoomEvents = {
@@ -26,41 +23,73 @@ type RoomEvents = {
     [MessageType.PresenceOffline]: [peerId: string]
     [MessageType.Kicked]: [peerId: string, reason: string | undefined]
     [MessageType.Signal]: [from: string, data: unknown]
+    [MessageType.Broadcast]: [from: string, channel: string, data: unknown]
+    [MessageType.RoleChanged]: [peerId: string, role: string]
     [RoomEvent.Closed]: []
-    [RoomMediaEvent.PublishCamera]: [constraints: MediaStreamConstraints | undefined]
+    [RoomEvent.Refreshed]: []
     [RoomMediaEvent.TrackAdded]: [
         track: MediaStreamTrack,
         streams: readonly MediaStream[],
         peerId: string,
     ]
+    [RoomMediaEvent.Error]: [err: Error]
 }
 
 export class Room extends EventEmitter<RoomEvents> {
     readonly id: string
     readonly localPeerId: string
-    readonly chat: ChatRoom
-    readonly whiteboard: WhiteboardRoom
     private readonly _peers = new Map<string, PeerInfo>()
+    private readonly _peerRoles = new Map<string, string>()
+    private readonly _peerMeta = new Map<string, Record<string, string>>()
     private readonly _transport: WebSocketTransport
     private _call: CallInterface | null = null
+    private _closed = false
+    private _localPeerRole: string | undefined
+    private _iceServers: readonly IceServerConfig[]
 
     constructor(
         id: string,
         localPeerId: string,
         initialPeers: string[],
         transport: WebSocketTransport,
+        localRole?: string,
+        iceServers?: IceServerConfig[],
     ) {
         super()
         this.id = id
         this.localPeerId = localPeerId
+        this._localPeerRole = localRole
+        this._iceServers = iceServers ?? []
         this._seedPeers(localPeerId, initialPeers)
         this._transport = transport
-        this.chat = new ChatRoom(transport)
-        this.whiteboard = new WhiteboardRoom()
+    }
+
+    get localPeerRole(): string | undefined {
+        return this._localPeerRole
+    }
+
+    get iceServers(): readonly IceServerConfig[] {
+        return this._iceServers
     }
 
     get peers(): string[] {
         return [...this._peers.keys()]
+    }
+
+    get isClosed(): boolean {
+        return this._closed
+    }
+
+    hasPeer(peerId: string): boolean {
+        return this._peers.has(peerId)
+    }
+
+    getPeerRole(peerId: string): string | undefined {
+        return this._peerRoles.get(peerId)
+    }
+
+    getPeerMetadata(peerId: string): Record<string, string> | undefined {
+        return this._peerMeta.get(peerId)
     }
 
     getPeerInfo(peerId: string): PeerInfo | undefined {
@@ -72,49 +101,45 @@ export class Room extends EventEmitter<RoomEvents> {
     }
 
     sendSignal(to: string, data: unknown): void {
-        this._transport.send({ type: MessageType.Signal, to, data } satisfies ClientMessage)
+        this._trySend({ type: MessageType.Signal, to, data } satisfies ClientMessage)
+    }
+
+    broadcast(channel: string, data?: unknown): void {
+        this._trySend({ type: MessageType.Broadcast, channel, data } satisfies ClientMessage)
+    }
+
+    private _trySend(msg: ClientMessage): void {
+        try {
+            this._transport.send(msg)
+        } catch (err) {
+            this.emit(RoomMediaEvent.Error, toError(err))
+        }
     }
 
     bindCall(call: CallInterface): void {
         this._call?.close()
         this._call = call
         call.on('remote-stream', (peerId, stream) => {
+            const streams = [stream] as readonly MediaStream[]
             for (const track of stream.getTracks()) {
-                this.emit(
-                    RoomMediaEvent.TrackAdded,
-                    track,
-                    [stream] as readonly MediaStream[],
-                    peerId,
-                )
+                this.emit(RoomMediaEvent.TrackAdded, track, streams, peerId)
             }
         })
         call.start()
     }
 
-    async publishCamera(constraints?: MediaStreamConstraints): Promise<MediaStream | undefined> {
-        if (!this._call) return undefined
-        const stream = await navigator.mediaDevices.getUserMedia(
-            constraints ?? { video: true, audio: true },
-        )
-        if (!this._call) {
-            for (const track of stream.getTracks()) track.stop()
-            return undefined
-        }
-        for (const track of stream.getTracks()) {
-            this._call.addTrack(track, stream)
-        }
-        this.emit(RoomMediaEvent.PublishCamera, constraints)
-        return stream
-    }
-
     _handleMessage(msg: ServerMessage): void {
         switch (msg.type) {
             case MessageType.PeerJoined:
-                this._peers.set(msg.peerId, { id: msg.peerId, joinedAt: Date.now() })
+                this._peers.set(msg.peerId, { id: msg.peerId })
+                if (msg.role) this._peerRoles.set(msg.peerId, msg.role)
+                if (msg.metadata) this._peerMeta.set(msg.peerId, msg.metadata)
                 this.emit(MessageType.PeerJoined, msg.peerId)
                 break
             case MessageType.PeerLeft:
                 this._peers.delete(msg.peerId)
+                this._peerRoles.delete(msg.peerId)
+                this._peerMeta.delete(msg.peerId)
                 this.emit(MessageType.PeerLeft, msg.peerId)
                 break
             case MessageType.PresenceOnline:
@@ -129,33 +154,58 @@ export class Room extends EventEmitter<RoomEvents> {
             case MessageType.Signal:
                 this.emit(MessageType.Signal, msg.from, msg.data)
                 break
-            case MessageType.Chat:
-            case MessageType.Typing:
-            case MessageType.History:
-            case MessageType.Delivered:
-            case MessageType.Read:
-            case MessageType.Edited:
-            case MessageType.Deleted:
-            case MessageType.Reaction:
-                this.chat._handleMessage(msg)
+            case MessageType.Broadcast:
+                this.emit(MessageType.Broadcast, msg.from, msg.channel, msg.data ?? null)
+                break
+            case MessageType.RoleChanged:
+                this._peerRoles.set(msg.peerId, msg.role)
+                this.emit(MessageType.RoleChanged, msg.peerId, msg.role)
                 break
         }
     }
 
-    _refresh(localPeerId: string, peers: string[]): void {
+    _initRoles(peerRoles: Record<string, string>): void {
+        for (const [id, role] of Object.entries(peerRoles)) {
+            this._peerRoles.set(id, role)
+        }
+    }
+
+    _initMeta(peerMetadata: Record<string, Record<string, string>>): void {
+        for (const [id, meta] of Object.entries(peerMetadata)) {
+            this._peerMeta.set(id, meta)
+        }
+    }
+
+    _refresh(
+        localPeerId: string,
+        peers: string[],
+        peerRoles?: Record<string, string>,
+        localRole?: string,
+        iceServers?: IceServerConfig[],
+        peerMetadata?: Record<string, Record<string, string>>,
+    ): void {
         this._peers.clear()
+        this._peerRoles.clear()
         this._seedPeers(localPeerId, peers)
+        if (peerRoles) this._initRoles(peerRoles)
+        if (localRole !== undefined) this._localPeerRole = localRole
+        if (iceServers !== undefined) this._iceServers = iceServers
+        if (peerMetadata !== undefined) {
+            this._peerMeta.clear()
+            this._initMeta(peerMetadata)
+        }
+        this.emit(RoomEvent.Refreshed)
     }
 
     _close(): void {
+        this._closed = true
         this._call?.close()
         this._call = null
         this.emit(RoomEvent.Closed)
     }
 
     private _seedPeers(localPeerId: string, peers: string[]): void {
-        const now = Date.now()
-        this._peers.set(localPeerId, { id: localPeerId, joinedAt: now })
-        for (const p of peers) this._peers.set(p, { id: p, joinedAt: now })
+        this._peers.set(localPeerId, { id: localPeerId })
+        for (const p of peers) this._peers.set(p, { id: p })
     }
 }

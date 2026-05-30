@@ -67,6 +67,8 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.7));
         }
         .video-tile.local { border-color: #3b82f6; }
+        .video-tile.active-speaker { border-color: #22c55e; box-shadow: 0 0 0 2px #22c55e40; }
+        .video-tile.screen-share { border-color: #a855f7; }
         #no-video-hint {
             color: #555; font-size: 0.85rem; font-style: italic;
             align-self: center;
@@ -124,6 +126,8 @@
                     <button id="camera-btn" class="secondary" disabled>Camera</button>
                     <button id="mic-btn" class="secondary" disabled>Mic</button>
                     <button id="record-btn" class="secondary" disabled>Record</button>
+                    <button id="pause-rec-btn" class="secondary" disabled>Pause Rec</button>
+                    <button id="screen-share-btn" class="secondary" disabled>Share Screen</button>
                     <button id="ping-all-btn" class="secondary">Ping all</button>
                     <button id="leave-btn" class="danger">Leave</button>
                 </div>
