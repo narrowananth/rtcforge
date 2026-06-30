@@ -17,23 +17,23 @@ Run `npm install` from the **monorepo root** before starting — this installs a
 
 You need two terminals.
 
-**Terminal 1 — signaling server** (WebSocket on port 3001):
+**Terminal 1 — signaling server** (WebSocket on port 3002):
 
 ```bash
 cd examples/chat-app
 npm run server
-# Signaling server running on ws://localhost:3001
+# Signaling server running on ws://localhost:3002
 ```
 
-**Terminal 2 — browser dev server** (Vite on port 5173):
+**Terminal 2 — browser dev server** (Vite on port 5174):
 
 ```bash
 cd examples/chat-app
 npm run dev
-# → http://localhost:5173
+# → http://localhost:5174
 ```
 
-Open **two or more browser tabs** at `http://localhost:5173`.
+Open **two or more browser tabs** at `http://localhost:5174`.
 
 In each tab:
 1. Enter a unique **Peer ID** (e.g. `alice`, `bob`).
@@ -54,14 +54,14 @@ Peers see each other join in real time. Type in the message box and press **Send
 
 | Service           | Address                    |
 | ----------------- | -------------------------- |
-| Signaling server  | `ws://localhost:3001`      |
-| Browser dev server| `http://localhost:5173`    |
+| Signaling server  | `ws://localhost:3002`      |
+| Browser dev server| `http://localhost:5174`    |
 
 ## Architecture
 
 ```
 Browser tab A ──┐
-                ├── WebSocket ──► signaling server (server.ts :3001)
+                ├── WebSocket ──► signaling server (server.ts :3002)
 Browser tab B ──┘                └── ChatService + PresenceService
 ```
 

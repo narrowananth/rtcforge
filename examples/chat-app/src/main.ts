@@ -1,7 +1,7 @@
 import { ClientEvent, MessageType, RTCForgeClient, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
 
-const SIGNALING_URL = 'ws://localhost:3001'
+const SIGNALING_URL = 'ws://localhost:3002'
 const TYPING_DEBOUNCE_MS = 2000
 const TYPING_CLEAR_MS = 3500
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥']

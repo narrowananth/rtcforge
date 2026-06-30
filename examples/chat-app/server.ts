@@ -3,7 +3,7 @@ import type { Peer } from '@rtcforge/signaling'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const PORT = 3001
+const PORT = 3002
 const MAX_PEERS_PER_ROOM = 50
 
 // Rate limiting: max messages per peer within the sliding window
