@@ -10,7 +10,6 @@ Single source for installing, publishing, and locally testing every `rtcforge-*`
 | `rtcforge-media` | `npm i rtcforge-media rtcforge-core rtcforge-sdk rtcforge-signaling` | `Call`, `MediaService` |
 | `rtcforge-sfu` | `npm i rtcforge-sfu` | `SfuCluster` |
 | `rtcforge-adapter-udp` | `npm i rtcforge-adapter-udp` | `UdpGossipTransport` |
-| `rtcforge-cli` | `npm i -g rtcforge-cli` | `rtcforge init` |
 
 > `rtcforge-media` peer deps are **not** auto-installed. Everything else pulls `rtcforge-core` transitively.
 
@@ -43,10 +42,10 @@ npm run build
 # publish in dependency order
 ( cd packages/core && npm publish )                                  # foundation
 for p in sdk signaling sfu adapter-udp; do ( cd packages/$p && npm publish ); done
-( cd packages/media && npm publish ) && ( cd cli && npm publish )    # composed
+( cd packages/media && npm publish )                                 # composed
 
 # verify
-for p in core sdk signaling sfu adapter-udp media cli; do npm view rtcforge-$p version; done
+for p in core sdk signaling sfu adapter-udp media; do npm view rtcforge-$p version; done
 ```
 
 Per-package OTP prompt: append `--otp=<code>`. Bump before re-publish (npm rejects existing versions): `npm version patch --workspaces`. Stay on `0.x` until the API is frozen; cut `1.0.0` when production-ready.

@@ -11,5 +11,5 @@
             "rtcforge-sfu": ["./packages/sfu/src/index.ts"]
         }
     },
-    "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts", "cli/src/**/*.ts"]
+    "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"]
 }

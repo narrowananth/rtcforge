@@ -70,7 +70,6 @@ rtcforge/
  │    ├── sfu-app/          # SFU cluster routing + media plane (sfu + media)
  │    └── whiteboard-app/   # Collaborative whiteboard (sdk DataChannel)
  │
- ├── cli/                  # rtcforge-cli
  ├── docs/SCALING.md       # Scaling model + the 1M-user analysis
  ├── ARCHITECTURE.md       # Architecture & integration guide
  ├── biome.json            # Lint + format config (Biome)
