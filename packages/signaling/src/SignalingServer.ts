@@ -1,5 +1,5 @@
 import http from 'node:http'
-import { EventEmitter } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
 import { WebSocketServer } from 'ws'
 import type { WebSocket } from 'ws'
 import { Authenticator } from './Authenticator.js'

@@ -1,5 +1,5 @@
-import { EventEmitter, noopLogger } from '@rtcforge/core'
-import type { Logger, MediaKind } from '@rtcforge/core'
+import { EventEmitter, noopLogger } from 'rtcforge-core'
+import type { Logger, MediaKind } from 'rtcforge-core'
 import { ConnectionEvent } from './types.js'
 import type { CallOptions } from './types.js'
 

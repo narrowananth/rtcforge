@@ -1,6 +1,6 @@
 export { RTCForgeClient } from './RTCForgeClient.js'
 export { Room, RoomMediaEvent } from './Room.js'
-export { EventEmitter } from '@rtcforge/core'
+export { EventEmitter } from 'rtcforge-core'
 export { ClientEvent, RoomEvent, TransportEvent, noopLogger } from './types.js'
 export { MessageType } from './protocol.js'
 export type {

@@ -1,6 +1,6 @@
-import { EventEmitter, noopLogger } from '@rtcforge/core'
-import type { Logger, MediaKind } from '@rtcforge/core'
 import type { types as MsTypes } from 'mediasoup'
+import { EventEmitter, noopLogger } from 'rtcforge-core'
+import type { Logger, MediaKind } from 'rtcforge-core'
 import { Consumer } from './Consumer.js'
 import { MediaEntityEvent } from './MediaEntity.js'
 import { Producer } from './Producer.js'

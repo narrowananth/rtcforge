@@ -1,4 +1,4 @@
-import type { MediaKind } from '@rtcforge/core'
+import type { MediaKind } from 'rtcforge-core'
 
 export interface LocalTrackEntry {
     track: MediaStreamTrack

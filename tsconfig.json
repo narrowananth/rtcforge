@@ -4,11 +4,11 @@
         "noEmit": true,
         "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "paths": {
-            "@rtcforge/core": ["./packages/core/src/index.ts"],
-            "@rtcforge/signaling": ["./packages/signaling/src/index.ts"],
-            "@rtcforge/sdk": ["./packages/sdk/src/index.ts"],
-            "@rtcforge/media": ["./packages/media/src/index.ts"],
-            "@rtcforge/sfu": ["./packages/sfu/src/index.ts"]
+            "rtcforge-core": ["./packages/core/src/index.ts"],
+            "rtcforge-signaling": ["./packages/signaling/src/index.ts"],
+            "rtcforge-sdk": ["./packages/sdk/src/index.ts"],
+            "rtcforge-media": ["./packages/media/src/index.ts"],
+            "rtcforge-sfu": ["./packages/sfu/src/index.ts"]
         }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts", "cli/src/**/*.ts"]

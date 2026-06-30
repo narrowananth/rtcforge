@@ -1,4 +1,4 @@
-import { EventEmitter, toError } from '@rtcforge/core'
+import { EventEmitter, toError } from 'rtcforge-core'
 import { ReconnectStrategy } from './ReconnectStrategy.js'
 import type { BackoffStrategy } from './ReconnectStrategy.js'
 import { SendQueue } from './SendQueue.js'

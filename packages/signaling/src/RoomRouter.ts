@@ -1,4 +1,4 @@
-import { HashRing, MembershipReconciler } from '@rtcforge/core'
+import { HashRing, MembershipReconciler } from 'rtcforge-core'
 import type { Membership, NodeInfo } from './types.js'
 
 export interface RoomRouterOptions {

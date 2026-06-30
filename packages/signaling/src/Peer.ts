@@ -1,4 +1,4 @@
-import { EventEmitter, toError } from '@rtcforge/core'
+import { EventEmitter, toError } from 'rtcforge-core'
 import { WebSocket } from 'ws'
 import { RateLimiter } from './RateLimiter.js'
 import { ClientMessageSchema, MessageType } from './protocol.js'

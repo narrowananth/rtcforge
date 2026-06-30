@@ -56,12 +56,12 @@ npm test --workspace=packages/sdk
 ```
 rtcforge/
  ├── packages/                  # CORE LAYER (published to npm)
- │    ├── core/            # @rtcforge/core        — shared primitives + scale primitives (zero deps)
- │    ├── signaling/       # @rtcforge/signaling   — WebSocket signaling server, RoomRouter cluster
- │    ├── sdk/             # @rtcforge/sdk         — browser + Node.js client
- │    ├── media/           # @rtcforge/media       — P2P mesh Call + mediasoup SFU
- │    ├── sfu/             # @rtcforge/sfu         — multi-node cluster, cascade fan-out tree
- │    └── adapter-udp/     # @rtcforge/adapter-udp — UdpGossipTransport (gossip network wire)
+ │    ├── core/            # rtcforge-core        — shared primitives + scale primitives (zero deps)
+ │    ├── signaling/       # rtcforge-signaling   — WebSocket signaling server, RoomRouter cluster
+ │    ├── sdk/             # rtcforge-sdk         — browser + Node.js client
+ │    ├── media/           # rtcforge-media       — P2P mesh Call + mediasoup SFU
+ │    ├── sfu/             # rtcforge-sfu         — multi-node cluster, cascade fan-out tree
+ │    └── adapter-udp/     # rtcforge-adapter-udp — UdpGossipTransport (gossip network wire)
  │
  ├── examples/             # APPLICATION LAYER reference apps (not published)
  │    ├── video-call-app/   # 1:1 and group video call (signaling + sdk)
@@ -70,7 +70,7 @@ rtcforge/
  │    ├── sfu-app/          # SFU cluster routing + media plane (sfu + media)
  │    └── whiteboard-app/   # Collaborative whiteboard (sdk DataChannel)
  │
- ├── cli/                  # @rtcforge/cli
+ ├── cli/                  # rtcforge-cli
  ├── docs/SCALING.md       # Scaling model + the 1M-user analysis
  ├── ARCHITECTURE.md       # Architecture & integration guide
  ├── biome.json            # Lint + format config (Biome)
@@ -100,12 +100,31 @@ packages/<name>/
 
 | Package | Description |
 | ------- | ----------- |
-| `@rtcforge/core` | Shared primitives — `EventEmitter`, `Logger`, `MetricsCollector` — **plus shared-nothing scale primitives**: `HashRing`, `GossipMembership`, `Membership`, `Clock`, `StateStore`, `MessageBus`, `Lock`, `IdGenerator`. Zero runtime dependencies. |
-| `@rtcforge/signaling` | `SignalingServer`, `Room`, `Peer` — WebSocket signaling, auth hook, rate-limit, heartbeat, and `RoomRouter` cluster sharding |
-| `@rtcforge/sdk` | `RTCForgeClient`, `Room` — browser + Node.js client; reconnect, send queue, injectable `Transport` |
-| `@rtcforge/media` | `Call` (P2P mesh, perfect-negotiation) + `MediaService`/`MediaRouter` (mediasoup SFU: `WorkerPool`, `Producer`, `Consumer`) |
-| `@rtcforge/sfu` | `SfuCluster`, `CascadingRouter`, `HashRingStrategy`, `CascadeTree`/`CascadeBridge` — multi-node routing, cascade fan-out, health, bandwidth estimation |
-| `@rtcforge/adapter-udp` | `UdpGossipTransport` — the real network wire for `@rtcforge/core` gossip (the only socket code) |
+| `rtcforge-core` | Shared primitives — `EventEmitter`, `Logger`, `MetricsCollector` — **plus shared-nothing scale primitives**: `HashRing`, `GossipMembership`, `Membership`, `Clock`, `StateStore`, `MessageBus`, `Lock`, `IdGenerator`. Zero runtime dependencies. |
+| `rtcforge-signaling` | `SignalingServer`, `Room`, `Peer` — WebSocket signaling, auth hook, rate-limit, heartbeat, and `RoomRouter` cluster sharding |
+| `rtcforge-sdk` | `RTCForgeClient`, `Room` — browser + Node.js client; reconnect, send queue, injectable `Transport` |
+| `rtcforge-media` | `Call` (P2P mesh, perfect-negotiation) + `MediaService`/`MediaRouter` (mediasoup SFU: `WorkerPool`, `Producer`, `Consumer`) |
+| `rtcforge-sfu` | `SfuCluster`, `CascadingRouter`, `HashRingStrategy`, `CascadeTree`/`CascadeBridge` — multi-node routing, cascade fan-out, health, bandwidth estimation |
+| `rtcforge-adapter-udp` | `UdpGossipTransport` — the real network wire for `rtcforge-core` gossip (the only socket code) |
+
+---
+
+## Install & use
+
+Packages are on the public npm registry, unscoped, prefixed `rtcforge-`. Install only the layer you need (deps pull in `rtcforge-core` transitively):
+
+```bash
+npm install rtcforge-sdk            # client
+npm install rtcforge-signaling      # backend
+```
+
+```ts
+import { RTCForgeClient } from "rtcforge-sdk";
+const client = new RTCForgeClient({ serverUrl: "wss://your-signaling-host" });
+const room = await client.joinRoom("my-room");
+```
+
+**Full install table, server example, publishing, and local testing → [`docs/PUBLISHING.md`](docs/PUBLISHING.md).**
 
 ---
 

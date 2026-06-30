@@ -1,6 +1,6 @@
 import type { Server } from 'node:http'
-import { Metric, noopLogger, noopMetrics } from '@rtcforge/core'
-import type { Logger, Membership, MetricsCollector, NodeInfo } from '@rtcforge/core'
+import { Metric, noopLogger, noopMetrics } from 'rtcforge-core'
+import type { Logger, Membership, MetricsCollector, NodeInfo } from 'rtcforge-core'
 import { z } from 'zod'
 
 export type { Logger, MetricsCollector, Membership, NodeInfo }

@@ -23,8 +23,8 @@ export type {
     PipeProducerParams,
 } from './types.js'
 export { DEFAULT_MEDIA_CODECS, DEFAULT_LISTEN_INFOS } from './types.js'
-export { noopLogger } from '@rtcforge/core'
-export type { Logger, MetricsCollector } from '@rtcforge/core'
+export { noopLogger } from 'rtcforge-core'
+export type { Logger, MetricsCollector } from 'rtcforge-core'
 export { SignalKind, SignalType } from './protocol.js'
 export type { MediaSignal } from './protocol.js'
 export { MediaEntity, MediaEntityEvent } from './MediaEntity.js'

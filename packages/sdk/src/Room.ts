@@ -1,4 +1,4 @@
-import { EventEmitter, toError } from '@rtcforge/core'
+import { EventEmitter, toError } from 'rtcforge-core'
 import { MessageType } from './protocol.js'
 import type { ClientMessage, ServerMessage } from './protocol.js'
 import { RoomEvent } from './types.js'

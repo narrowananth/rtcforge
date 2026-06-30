@@ -1,6 +1,6 @@
 import dgram from 'node:dgram'
-import { type Logger, noopLogger } from '@rtcforge/core'
-import type { GossipMessage, GossipTransport } from '@rtcforge/core'
+import { type Logger, noopLogger } from 'rtcforge-core'
+import type { GossipMessage, GossipTransport } from 'rtcforge-core'
 
 const MAX_DATAGRAM = 65_507
 

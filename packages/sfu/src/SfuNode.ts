@@ -1,5 +1,5 @@
-import { EventEmitter } from '@rtcforge/core'
-import type { NetworkStats } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
+import type { NetworkStats } from 'rtcforge-core'
 import { StatsCollector } from './StatsCollector.js'
 import { SfuNodeEvent, noopLogger } from './types.js'
 import type { BandwidthEstimator, BandwidthQuality, Logger, SfuNodeOptions } from './types.js'

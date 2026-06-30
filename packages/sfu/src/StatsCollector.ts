@@ -1,4 +1,4 @@
-import type { NetworkStats } from '@rtcforge/core'
+import type { NetworkStats } from 'rtcforge-core'
 import type { BandwidthEstimator, BandwidthQuality } from './types.js'
 
 export class StatsCollector {

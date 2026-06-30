@@ -1,4 +1,4 @@
-import type { Logger } from '@rtcforge/core'
+import type { Logger } from 'rtcforge-core'
 import type { Room } from './Room.js'
 import { CloseCode, CloseReason } from './types.js'
 

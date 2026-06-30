@@ -1,4 +1,4 @@
-import { EventEmitter, MembershipReconciler } from '@rtcforge/core'
+import { EventEmitter, MembershipReconciler } from 'rtcforge-core'
 import { HealthChecker } from './HealthChecker.js'
 import { LeastLoadedStrategy } from './PlacementStrategy.js'
 import { SfuNode } from './SfuNode.js'

@@ -4,7 +4,7 @@
         "noEmit": true,
         "types": ["node"],
         "paths": {
-            "@rtcforge/core": ["../core/src/index.ts"]
+            "rtcforge-core": ["../core/src/index.ts"]
         }
     },
     "include": ["src", "tests"]

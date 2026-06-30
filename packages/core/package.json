@@ -1,5 +1,5 @@
 {
-    "name": "@rtcforge/core",
+    "name": "rtcforge-core",
     "version": "0.1.0",
     "description": "Shared primitives \u2014 EventEmitter, Logger",
     "main": "dist/index.js",

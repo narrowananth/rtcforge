@@ -1,5 +1,5 @@
-import { EventEmitter } from '@rtcforge/core'
-import type { MediaKind } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
+import type { MediaKind } from 'rtcforge-core'
 
 export interface MediaEntityHandle {
     readonly id: string

@@ -1,4 +1,4 @@
-import { EventEmitter } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
 import { Room } from './Room.js'
 import { CloseCode, RoomEvent } from './types.js'
 

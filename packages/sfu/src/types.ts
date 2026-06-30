@@ -1,5 +1,5 @@
-import { noopLogger } from '@rtcforge/core'
-import type { Logger, Membership, NetworkStats, NodeInfo } from '@rtcforge/core'
+import { noopLogger } from 'rtcforge-core'
+import type { Logger, Membership, NetworkStats, NodeInfo } from 'rtcforge-core'
 import type { SfuNode } from './SfuNode.js'
 
 export type { Logger, NetworkStats, Membership, NodeInfo }

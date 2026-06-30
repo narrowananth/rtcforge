@@ -1,4 +1,4 @@
-import type { EventEmitter } from '@rtcforge/core'
+import type { EventEmitter } from 'rtcforge-core'
 import type { ClientMessage, ServerMessage } from './protocol.js'
 import { TransportEvent } from './types.js'
 

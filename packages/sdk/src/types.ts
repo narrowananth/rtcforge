@@ -1,10 +1,10 @@
-import type { Logger } from '@rtcforge/core'
+import type { Logger } from 'rtcforge-core'
 import type { BackoffStrategy } from './ReconnectStrategy.js'
 import type { MessageQueue } from './SendQueue.js'
 import type { Transport } from './Transport.js'
 import type { ClientMessage } from './protocol.js'
 
-export { noopLogger } from '@rtcforge/core'
+export { noopLogger } from 'rtcforge-core'
 export type { Logger }
 
 export interface IceServerConfig {

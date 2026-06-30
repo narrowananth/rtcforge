@@ -1,5 +1,5 @@
 {
-    "name": "@rtcforge/cli",
+    "name": "rtcforge-cli",
     "version": "0.1.0",
     "description": "RTCForge CLI — rtcforge init, rtcforge dev",
     "bin": {

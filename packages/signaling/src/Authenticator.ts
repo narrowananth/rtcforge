@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
-import { toError } from '@rtcforge/core'
-import type { Logger, MetricsCollector } from '@rtcforge/core'
+import { toError } from 'rtcforge-core'
+import type { Logger, MetricsCollector } from 'rtcforge-core'
 import { AuthPayloadSchema, CloseCode, CloseReason, Metric } from './types.js'
 import type { AuthFunction } from './types.js'
 

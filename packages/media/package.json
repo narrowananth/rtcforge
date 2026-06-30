@@ -1,5 +1,5 @@
 {
-    "name": "@rtcforge/media",
+    "name": "rtcforge-media",
     "version": "0.1.0",
     "description": "WebRTC peer connections, media capture, and call management",
     "main": "dist/index.js",
@@ -30,14 +30,14 @@
         "zod": "^4.4.3"
     },
     "peerDependencies": {
-        "@rtcforge/core": "^0.1.0",
-        "@rtcforge/sdk": "^0.1.0",
-        "@rtcforge/signaling": "^0.1.0"
+        "rtcforge-core": "^0.1.0",
+        "rtcforge-sdk": "^0.1.0",
+        "rtcforge-signaling": "^0.1.0"
     },
     "devDependencies": {
-        "@rtcforge/core": "^0.1.0",
-        "@rtcforge/sdk": "^0.1.0",
-        "@rtcforge/signaling": "^0.1.0"
+        "rtcforge-core": "^0.1.0",
+        "rtcforge-sdk": "^0.1.0",
+        "rtcforge-signaling": "^0.1.0"
     },
     "publishConfig": {
         "access": "public"

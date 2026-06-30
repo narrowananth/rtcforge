@@ -1,5 +1,5 @@
 {
-    "name": "@rtcforge/signaling",
+    "name": "rtcforge-signaling",
     "version": "0.1.0",
     "description": "SignalingServer, Room, Peer \u2014 session lifecycle and auth hook",
     "main": "dist/index.js",
@@ -22,7 +22,7 @@
         "access": "public"
     },
     "dependencies": {
-        "@rtcforge/core": "^0.1.0",
+        "rtcforge-core": "^0.1.0",
         "ws": "^8.20.1",
         "zod": "^4.4.3"
     },

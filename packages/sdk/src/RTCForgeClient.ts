@@ -1,4 +1,4 @@
-import { EventEmitter } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
 import { JoinHandshake } from './JoinHandshake.js'
 import { Room } from './Room.js'
 import type { RoomControl } from './Room.js'

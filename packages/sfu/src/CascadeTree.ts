@@ -1,4 +1,4 @@
-import { EventEmitter, InvalidArgumentError } from '@rtcforge/core'
+import { EventEmitter, InvalidArgumentError } from 'rtcforge-core'
 import { NodeFailureTracker } from './NodeFailureTracker.js'
 import type { SfuCluster } from './SfuCluster.js'
 import type { SfuNode } from './SfuNode.js'

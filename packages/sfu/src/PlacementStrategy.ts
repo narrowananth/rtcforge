@@ -1,4 +1,4 @@
-import { HashRing } from '@rtcforge/core'
+import { HashRing } from 'rtcforge-core'
 import type { SfuNode } from './SfuNode.js'
 import type { PlacementStrategy } from './types.js'
 

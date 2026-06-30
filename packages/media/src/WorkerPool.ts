@@ -1,8 +1,8 @@
 import os from 'node:os'
-import { EventEmitter, noopLogger } from '@rtcforge/core'
-import type { Logger } from '@rtcforge/core'
 import * as mediasoup from 'mediasoup'
 import type { types as MsTypes } from 'mediasoup'
+import { EventEmitter, noopLogger } from 'rtcforge-core'
+import type { Logger } from 'rtcforge-core'
 import type { WorkerSettings } from './types.js'
 
 export const WorkerPoolEvent = {

@@ -1,5 +1,5 @@
 {
-    "name": "@rtcforge/sdk",
+    "name": "rtcforge-sdk",
     "version": "0.1.0",
     "description": "Browser + Node.js client SDK \u2014 RTCForgeClient",
     "main": "dist/index.js",
@@ -22,7 +22,7 @@
         "access": "public"
     },
     "dependencies": {
-        "@rtcforge/core": "^0.1.0",
+        "rtcforge-core": "^0.1.0",
         "zod": "^4.4.3"
     },
     "optionalDependencies": {

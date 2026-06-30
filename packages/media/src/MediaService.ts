@@ -1,6 +1,6 @@
-import { EventEmitter, noopLogger } from '@rtcforge/core'
-import type { Logger } from '@rtcforge/core'
 import type { types as MsTypes } from 'mediasoup'
+import { EventEmitter, noopLogger } from 'rtcforge-core'
+import type { Logger } from 'rtcforge-core'
 import { MediaRouter } from './MediaRouter.js'
 import { WorkerPool, WorkerPoolEvent } from './WorkerPool.js'
 import { DEFAULT_MEDIA_CODECS, RoomLikeEvent } from './types.js'

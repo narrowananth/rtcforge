@@ -1,7 +1,7 @@
 {
-    "name": "@rtcforge/adapter-udp",
+    "name": "rtcforge-adapter-udp",
     "version": "0.1.0",
-    "description": "UDP GossipTransport adapter — connectionless wire for @rtcforge/core GossipMembership",
+    "description": "UDP GossipTransport adapter — connectionless wire for rtcforge-core GossipMembership",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
     "keywords": ["gossip", "swim", "udp", "cluster", "rtcforge"],
     "license": "MIT",
     "dependencies": {
-        "@rtcforge/core": "^0.1.0"
+        "rtcforge-core": "^0.1.0"
     },
     "publishConfig": {
         "access": "public"

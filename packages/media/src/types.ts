@@ -1,5 +1,5 @@
-import type { Logger, MediaKind, MetricsCollector } from '@rtcforge/core'
 import type { types as MsTypes } from 'mediasoup'
+import type { Logger, MediaKind, MetricsCollector } from 'rtcforge-core'
 
 export interface RoomMemberLike {
     readonly id: string
