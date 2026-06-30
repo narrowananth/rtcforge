@@ -1,4 +1,5 @@
 import { PeerEvent, RoomEvent, ServerEvent, SignalingServer } from '@rtcforge/signaling'
+import type { Peer } from '@rtcforge/signaling'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ server.on(ServerEvent.RoomCreated, (room) => {
     audit('room.created', room.id)
     console.log(`[room] created: ${room.id}`)
 
-    room.on(RoomEvent.PeerJoined, (peer) => {
+    const onPeerJoined = (peer: Peer) => {
         audit('peer.joined', room.id, { peerId: peer.id, role: peer.role })
         console.log(`[room:${room.id}] ${peer.id} joined (role=${peer.role})`)
 
@@ -137,7 +138,11 @@ server.on(ServerEvent.RoomCreated, (room) => {
                 audit('broadcast', room.id, { peerId: peer.id, channel })
             }
         })
-    })
+    }
+    room.on(RoomEvent.PeerJoined, onPeerJoined)
+    // The founding peer's PeerJoined fired synchronously during room creation, before this
+    // handler registered its listener — replay current peers so the founder is not skipped.
+    for (const peer of room.getPeers()) onPeerJoined(peer)
 
     room.on(RoomEvent.PeerLeft, (peer) => {
         audit('peer.left', room.id, { peerId: peer.id })

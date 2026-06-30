@@ -4,8 +4,6 @@ import { Call } from '../src/Call.js'
 import { SignalKind, SignalType } from '../src/protocol.js'
 import { MediaEvent } from '../src/types.js'
 
-// ── Minimal Room mock ─────────────────────────────────────────────────────────
-
 function makeRoom(localPeerId = 'local', initialPeers: string[] = []) {
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {}
     const peers = [localPeerId, ...initialPeers]
@@ -28,8 +26,6 @@ function makeRoom(localPeerId = 'local', initialPeers: string[] = []) {
     }
     return room
 }
-
-// ── RTCPeerConnection mock ────────────────────────────────────────────────────
 
 function makeMockPC() {
     const mock = {
@@ -74,8 +70,6 @@ afterEach(() => {
     vi.clearAllMocks()
 })
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
 describe('Call — start', () => {
     it('creates connections for existing peers on start', () => {
         const room = makeRoom('local', ['remote1', 'remote2'])
@@ -99,7 +93,7 @@ describe('Call — start', () => {
         call.start()
         call.start()
 
-        expect(room.on).toHaveBeenCalledTimes(4) // PeerJoined, PeerLeft, Signal, refreshed
+        expect(room.on).toHaveBeenCalledTimes(4)
     })
 })
 
@@ -199,17 +193,12 @@ describe('Call — signal handling', () => {
     })
 
     it('evicts broken PC on first signal failure so next signal gets fresh connection (V4)', async () => {
-        // room without initial peers — Offer signal arrives from a new peer (wasNew=true path)
-        // PeerConnection.handleOffer/handleAnswer swallow errors internally, so we test via
-        // room.sendSignal throwing (the one place handleRoomSignal's catch can fire on offer path)
         const room = makeRoom('local', [])
         const call = new Call(room as never)
         call.start()
 
-        // Add peer AFTER start() so it isn't eagerly connected (wasNew stays true on signal)
         room.peers.push('new-peer')
 
-        // sendSignal throws on first call (sending the answer back fails)
         room.sendSignal.mockImplementationOnce(() => {
             throw new Error('transport closed')
         })
@@ -217,8 +206,6 @@ describe('Call — signal handling', () => {
         const errorHandler = vi.fn()
         call.on(MediaEvent.Error, errorHandler)
 
-        // Offer signal → handleOffer returns answer → sendSignal throws → catch block fires.
-        // _emit doesn't await the async handler, so use a macrotask flush to drain all microtasks.
         room._emit(MessageType.Signal, 'new-peer', {
             kind: SignalKind.Media,
             type: SignalType.Offer,
@@ -227,10 +214,9 @@ describe('Call — signal handling', () => {
         await new Promise((r) => setTimeout(r, 0))
 
         expect(errorHandler).toHaveBeenCalledTimes(1)
-        // wasNew=true path: pc.close() called on eviction
+
         expect(mockPCInstance.close).toHaveBeenCalledTimes(1)
 
-        // Second signal — PC was evicted, so getOrCreateConnection creates a fresh one
         room.sendSignal.mockReset()
         room._emit(MessageType.Signal, 'new-peer', {
             kind: SignalKind.Media,
@@ -246,7 +232,6 @@ describe('Call — signal handling', () => {
         const call = new Call(room as never)
         call.start()
 
-        // peer never joined, no existing connection
         const iceSignal = {
             kind: SignalKind.Media,
             type: SignalType.Ice,
@@ -267,7 +252,7 @@ describe('Call — signal handling', () => {
             type: SignalType.Ice,
             candidate: { candidate: 'cand', sdpMid: '0', sdpMLineIndex: 0 },
         }
-        // handleAnswer first so remoteDescription is set
+
         await room._emit(MessageType.Signal, 'remote', {
             kind: SignalKind.Media,
             type: SignalType.Answer,
@@ -287,8 +272,6 @@ describe('Call — connection failure', () => {
 
         const failedHandler = vi.fn()
         call.on(MediaEvent.ConnectionFailed, failedHandler)
-
-        // PeerConnection reads this.pc.connectionState when onconnectionstatechange fires
         ;(mockPCInstance as unknown as { connectionState: string }).connectionState = 'failed'
         mockPCInstance.onconnectionstatechange?.({} as never)
 
@@ -323,7 +306,6 @@ describe('Call — ConnectionEvent.Error evicts stale PC (Finding 2)', () => {
         const call = new Call(room as never)
         call.start()
 
-        // Cause internal error → eviction
         mockPCInstance.setRemoteDescription.mockRejectedValueOnce(new Error('ICE failure'))
         room._emit(MessageType.Signal, 'remote', {
             kind: SignalKind.Media,
@@ -332,7 +314,6 @@ describe('Call — ConnectionEvent.Error evicts stale PC (Finding 2)', () => {
         })
         await new Promise((r) => setTimeout(r, 0))
 
-        // PC evicted — second Answer signal must create a fresh RTCPeerConnection
         room._emit(MessageType.Signal, 'remote', {
             kind: SignalKind.Media,
             type: SignalType.Answer,
@@ -340,7 +321,6 @@ describe('Call — ConnectionEvent.Error evicts stale PC (Finding 2)', () => {
         })
         await new Promise((r) => setTimeout(r, 0))
 
-        // First: start() created connection for 'remote'; second: post-eviction reconnect
         expect(vi.mocked(RTCPeerConnection)).toHaveBeenCalledTimes(2)
     })
 })

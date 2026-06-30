@@ -1,173 +1,190 @@
+import {
+    GossipMembership,
+    GossipNetwork,
+    InMemoryGossipTransport,
+    type NodeInfo,
+} from '@rtcforge/core'
 import { MediaService } from '@rtcforge/media'
-import type { Producer } from '@rtcforge/media'
 import {
     CascadingRouter,
     CascadingRouterEvent,
+    HashRingStrategy,
     SfuCluster,
     SfuClusterEvent,
     SfuNode,
     SfuNodeEvent,
     SimpleBandwidthEstimator,
 } from '@rtcforge/sfu'
-import { RoomEvent, ServerEvent, SignalingServer } from '@rtcforge/signaling'
+import { RoomEvent, RoomRouter, ServerEvent, SignalingServer } from '@rtcforge/signaling'
+import type { Peer } from '@rtcforge/signaling'
 
 const PORT = 3006
 
-// ── SFU cluster ───────────────────────────────────────────────────────────────
+// Parse an advertised capacity string, honoring a legitimately-advertised 0
+// (a full/draining node) and only falling back to the default when the value
+// is missing or non-numeric. `Number(x) || default` would wrongly map 0 → default.
+function parseCapacity(raw: string | undefined, fallback: number): number {
+    if (raw === undefined) return fallback
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : fallback
+}
+
+// ── Shared-nothing fleet (gossip-discovered, NO Redis/etcd) ─────────────────────
+//
+// Each SFU host runs a GossipMembership and discovers the others peer-to-peer
+// (SWIM). In production every host lives in its own process and the wire is
+// `UdpGossipTransport` from `@rtcforge/adapter-udp`:
+//
+//     import { UdpGossipTransport } from '@rtcforge/adapter-udp'
+//     const transport = new UdpGossipTransport({ host: '0.0.0.0', port: 7946 })
+//
+// Here a single process simulates the 3-host fleet with InMemoryGossipTransport
+// over one shared GossipNetwork bus — same Membership API, no sockets.
+
+const net = new GossipNetwork()
+
+const FLEET = [
+    { id: 'sfu-us-east-1', region: 'us-east', address: 'udp://10.0.0.1:7946', capacity: 500 },
+    { id: 'sfu-eu-west-1', region: 'eu-west', address: 'udp://10.0.0.2:7946', capacity: 500 },
+    { id: 'sfu-ap-south-1', region: 'ap-south', address: 'udp://10.0.0.3:7946', capacity: 500 },
+]
+
+const allAddresses = FLEET.map((h) => h.address)
+
+const members = new Map<string, GossipMembership>()
+for (const h of FLEET) {
+    const info: NodeInfo = {
+        id: h.id,
+        region: h.region,
+        address: h.address,
+        metadata: { capacity: String(h.capacity) },
+    }
+    const membership = new GossipMembership(info, new InMemoryGossipTransport(h.address, net), {
+        seeds: allAddresses.filter((a) => a !== h.address),
+        gossipIntervalMs: 150,
+    })
+    membership.start()
+    members.set(h.id, membership)
+}
+
+// This process acts as the first host; its gossip view feeds both the SFU
+// placement (SfuCluster) and the signaling room router (RoomRouter).
+const selfId = FLEET[0].id
+const fleetView = members.get(selfId) as GossipMembership
+
+// ── SFU cluster — deterministic placement over the gossip fleet ─────────────────
 
 const bwEstimator = new SimpleBandwidthEstimator()
 
 const cluster = new SfuCluster({
+    membership: fleetView, // auto-sync SFU nodes from gossip
+    placementStrategy: new HashRingStrategy(), // room→host by consistent hash, capacity-weighted
+    nodeFactory: (info) =>
+        // each fleet member becomes an SfuNode; capacity weights the hash ring
+        new SfuNode(info.id, info.region ?? 'default', {
+            capacity: parseCapacity(info.metadata?.capacity, 100),
+        }),
     onRebalance: (fromNodeId, reason) => {
         console.log(`\n[cluster] rebalancing from ${fromNodeId} (${reason})`)
     },
 })
+
 const router = new CascadingRouter(cluster)
 const mediaService = new MediaService()
 
-const nodeUsEast = new SfuNode('sfu-us-east-1', 'us-east', { capacity: 500 })
-const nodeEuWest = new SfuNode('sfu-eu-west-1', 'eu-west', { capacity: 500 })
-const nodeApSouth = new SfuNode('sfu-ap-south-1', 'ap-south', { capacity: 500 })
-
-cluster.addNode(nodeUsEast)
-cluster.addNode(nodeEuWest)
-cluster.addNode(nodeApSouth)
+// RoomRouter shows the signaling-plane sharding: ring.get(roomId) → owner node.
+// In a real multi-node deploy you pass `cluster: { selfId, membership }` to
+// SignalingServer and it redirects peers to the owner. This single-node demo
+// runs without that (so every peer is served locally) and uses a standalone
+// RoomRouter purely to PRINT how rooms would shard across the fleet.
+const roomRouter = new RoomRouter({ selfId, membership: fleetView })
 
 cluster.on(SfuClusterEvent.NodeAdded, (node) => {
-    console.log(`[cluster] node added: ${node.id} (${node.region})`)
+    console.log(`[cluster] node discovered via gossip: ${node.id} (${node.region})`)
 })
-
+cluster.on(SfuClusterEvent.NodeRemoved, (node) => {
+    console.log(`[cluster] node gone (gossip): ${node.id} — ring rebalanced`)
+})
 cluster.on(SfuClusterEvent.Overloaded, () => {
     console.warn('[cluster] ALL nodes overloaded!')
-})
-
-cluster.on(SfuClusterEvent.NodeRemoved, (node) => {
-    console.log(`[cluster] node removed: ${node.id}`)
 })
 
 router.on(CascadingRouterEvent.RoomAssigned, (roomId, node) => {
     console.log(`[router] room "${roomId}" → ${node.id} (${node.region})`)
 })
-
 router.on(CascadingRouterEvent.CascadeCreated, (roomId, fromNode, toNode) => {
     console.log(`[router] cascade: room "${roomId}" ${fromNode.id} → ${toNode.id}`)
 })
-
 router.on(CascadingRouterEvent.RoomDetached, (roomId) => {
     console.log(`[router] room "${roomId}" detached`)
 })
 
-router.on(CascadingRouterEvent.CascadeDropped, (roomId, node) => {
-    console.log(`[router] cascade dropped: room "${roomId}" node ${node.id}`)
-})
-
-// ── Simulate node load changes ────────────────────────────────────────────────
-
-let simRooms = 0
-
-function simulateLoad() {
-    simRooms++
-    nodeUsEast.reportLoad(simRooms * 12)
-    nodeEuWest.reportLoad(simRooms * 8)
-    nodeApSouth.reportLoad(simRooms * 5)
+// Print the deterministic room→owner shard table for a few sample room IDs.
+function printShardTable(label: string): void {
+    const sample = ['team-standup', 'webinar-42', 'support-call', 'class-101', 'townhall']
+    console.log(`\n[shard] ${label} — room → owner (signaling) / placement (sfu)`)
+    for (const r of sample) {
+        const owner = roomRouter.owner(r)
+        const placed = cluster.assignNode(undefined, r)
+        console.log(`  ${r.padEnd(14)} → signaling=${owner?.id ?? '—'}  sfu=${placed?.id ?? '—'}`)
+    }
 }
 
-// Fail us-east after 45 seconds, recover after 30 more seconds
+// ── Simulate a gossip-driven failure: deregister a host → ring rebalances ───────
+
 setTimeout(() => {
-    console.log('\n[sim] Simulating sfu-us-east-1 failure...')
-    nodeUsEast.markFailed()
+    console.log('\n[sim] sfu-us-east-1 process dies → stops gossiping...')
+    void members.get('sfu-us-east-1')?.deregister('sfu-us-east-1')
+    members.get('sfu-us-east-1')?.stop()
+    setTimeout(() => printShardTable('after sfu-us-east-1 failure (rebalanced)'), 1_000)
 }, 45_000)
 
-setTimeout(() => {
-    console.log('\n[sim] sfu-us-east-1 recovered')
-    nodeUsEast.markRecovered()
-}, 75_000)
-
-setTimeout(() => {
-    console.log('\n[sim] Draining sfu-eu-west-1 for maintenance...')
-    void nodeEuWest.drain()
-}, 90_000)
-
-setTimeout(() => {
-    console.log('\n[sim] sfu-eu-west-1 drain complete — removing node')
-    cluster.removeNode(nodeEuWest.id)
-}, 105_000)
-
-nodeUsEast.on(SfuNodeEvent.Failed, () => console.warn(`[node:${nodeUsEast.id}] FAILED`))
-nodeUsEast.on(SfuNodeEvent.Recovered, () => console.log(`[node:${nodeUsEast.id}] recovered`))
-nodeUsEast.on(SfuNodeEvent.Overloaded, () =>
-    console.warn(`[node:${nodeUsEast.id}] overloaded (load=${nodeUsEast.load})`),
-)
-
-nodeEuWest.on(SfuNodeEvent.Draining, () => console.log(`[node:${nodeEuWest.id}] draining`))
-nodeEuWest.on(SfuNodeEvent.Drained, () => console.log(`[node:${nodeEuWest.id}] drained`))
-
-// ── Signaling server ──────────────────────────────────────────────────────────
+// ── Signaling server (single-node demo — serves all rooms locally) ──────────────
 
 const server = new SignalingServer({ port: PORT })
 
-server.on(ServerEvent.RoomCreated, (room) => {
+server.on(ServerEvent.RoomCreated, async (room) => {
     console.log(`\n[room] created: ${room.id}`)
 
-    // Assign room to best SFU node
+    // Where this room shards in the fleet (deterministic, no coordination):
+    const owner = roomRouter.owner(room.id)
+    console.log(
+        `[room:${room.id}] signaling owner: ${owner?.id ?? selfId} @ ${owner?.address ?? 'local'}`,
+    )
+
+    // Place the room's SFU on its owner host by consistent hash (room id = key):
     const sfuNode = router.attachRoom(room.id)
-    console.log(`[room:${room.id}] SFU node: ${sfuNode.id} (load: ${sfuNode.load})`)
+    console.log(
+        `[room:${room.id}] SFU host: ${sfuNode.id} (${sfuNode.region}, load: ${sfuNode.load})`,
+    )
 
-    // Attach media plane
-    const mediaRouter = mediaService.attachRoom(room)
-    console.log(`[room:${room.id}] MediaRouter attached (routers: ${mediaService.routerCount})`)
+    // Attach the real mediasoup media plane — one Router per room (runs locally
+    // in this demo; in production it runs on the owner host above).
+    const mediaRouter = await mediaService.attachRoom(room)
+    console.log(
+        `[room:${room.id}] MediaRouter attached — codecs: ${mediaRouter.rtpCapabilities.codecs?.length ?? 0}`,
+    )
 
-    // Track producers per peer for cross-subscription
-    const peerProducers = new Map<string, { audio: Producer; video: Producer }>()
-
-    room.on(RoomEvent.PeerJoined, (peer) => {
+    const onPeerJoined = (peer: Peer) => {
         console.log(`[room:${room.id}] peer joined: ${peer.id}`)
-        simulateLoad()
-
         const quality = bwEstimator.estimate({ bitrate: 1_500_000, packetLoss: 0.01, rtt: 80 })
         console.log(`[room:${room.id}] bandwidth quality estimate: ${quality}`)
-
-        // Create producers for the new peer
-        const audio = mediaRouter.createProducer(peer.id, 'audio')
-        const video = mediaRouter.createProducer(peer.id, 'video')
-        peerProducers.set(peer.id, { audio, video })
-
-        console.log(
-            `[room:${room.id}] producers: ${peer.id} → audio:${audio.id}, video:${video.id}`,
-        )
-
-        // Cross-subscribe: new peer subscribes to all existing peers
-        // Existing peers subscribe to new peer
-        for (const [existingId, producers] of peerProducers) {
-            if (existingId === peer.id) continue
-
-            // New peer subscribes to existing peer
-            const cAudio = mediaRouter.createConsumer(peer.id, producers.audio.id)
-            const cVideo = mediaRouter.createConsumer(peer.id, producers.video.id)
-            console.log(
-                `[room:${room.id}] consumer: ${peer.id} ← ${existingId} (${cAudio.id}, ${cVideo.id})`,
-            )
-
-            // Existing peer subscribes to new peer
-            const cAudioRev = mediaRouter.createConsumer(existingId, audio.id)
-            const cVideoRev = mediaRouter.createConsumer(existingId, video.id)
-            console.log(
-                `[room:${room.id}] consumer: ${existingId} ← ${peer.id} (${cAudioRev.id}, ${cVideoRev.id})`,
-            )
-        }
-
         sfuNode.reportLoad(sfuNode.load + 2)
-        console.log(
-            `[room:${room.id}] producers: ${mediaRouter.producerCount}, consumers: ${mediaRouter.consumerCount}`,
-        )
-    })
+
+        // Real produce/consume is driven by the browser (mediasoup-client) over your
+        // app wire protocol against the MediaRouter:
+        //   getRtpCapabilities → createWebRtcTransport → connectTransport →
+        //   produce / consume → resumeConsumer
+    }
+    room.on(RoomEvent.PeerJoined, onPeerJoined)
+    // The founding peer's PeerJoined fired synchronously during room creation, before this
+    // async handler awaited attachRoom and registered the listener — replay current peers so
+    // the founder is not skipped.
+    for (const peer of room.getPeers()) onPeerJoined(peer)
 
     room.on(RoomEvent.PeerLeft, (peer) => {
-        peerProducers.delete(peer.id)
         sfuNode.reportLoad(Math.max(0, sfuNode.load - 2))
-        console.log(
-            `[room:${room.id}] peer left: ${peer.id} (producers: ${mediaRouter.producerCount}, consumers: ${mediaRouter.consumerCount})`,
-        )
+        console.log(`[room:${room.id}] peer left: ${peer.id}`)
     })
 
     room.on(RoomEvent.Closed, () => {
@@ -180,19 +197,32 @@ server.on(ServerEvent.Error, (err) => {
     console.error('[server] error:', err)
 })
 
-await server.start()
+await mediaService.init() // spawn the mediasoup worker pool
+await server.start() // accept connections immediately — don't block on gossip
 
 console.log(`SFU app server running on ws://localhost:${PORT}`)
 console.log('Open http://localhost:5178 to use the app')
+
+// Let gossip converge, then report the fleet + deterministic shard table.
+await new Promise((r) => setTimeout(r, 800))
 console.log(
-    `Cluster: ${cluster.nodes.length} nodes (${cluster.nodes.map((n) => n.region).join(', ')})`,
+    `Cluster (gossip-discovered): ${cluster.nodes.length} nodes (${cluster.nodes
+        .map((n) => n.region)
+        .join(', ')})`,
 )
-console.log('Press Ctrl+C to stop.\n')
+printShardTable('initial')
+console.log('\nPress Ctrl+C to stop.\n')
+
+const sampleNode = cluster.nodes[0] as SfuNode | undefined
+sampleNode?.on(SfuNodeEvent.Overloaded, () =>
+    console.warn(`[node:${sampleNode.id}] overloaded (load=${sampleNode.load})`),
+)
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, async () => {
         console.log(`\n[server] ${sig} — shutting down`)
-        mediaService.closeAll()
+        for (const m of members.values()) m.stop()
+        await mediaService.closeAll()
         await server.stop()
         process.exit(0)
     })

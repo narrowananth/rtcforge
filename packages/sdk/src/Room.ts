@@ -1,9 +1,8 @@
 import { EventEmitter, toError } from '@rtcforge/core'
-import type { WebSocketTransport } from './WebSocketTransport.js'
 import { MessageType } from './protocol.js'
 import type { ClientMessage, ServerMessage } from './protocol.js'
 import { RoomEvent } from './types.js'
-import type { CallInterface, IceServerConfig } from './types.js'
+import type { BoundCall, IceServerConfig } from './types.js'
 
 export const RoomMediaEvent = {
     TrackAdded: 'track-added',
@@ -14,6 +13,36 @@ export type RoomMediaEvent = (typeof RoomMediaEvent)[keyof typeof RoomMediaEvent
 
 export interface PeerInfo {
     id: string
+}
+
+export interface RoomTransport {
+    send(msg: ClientMessage): void
+}
+
+export interface RoomInit {
+    id: string
+    localPeerId: string
+    peers: string[]
+    transport: RoomTransport
+    localRole?: string
+    iceServers?: IceServerConfig[]
+    peerRoles?: Record<string, string>
+    peerMetadata?: Record<string, Record<string, string>>
+}
+
+export interface RoomRefresh {
+    localPeerId: string
+    peers: string[]
+    peerRoles?: Record<string, string>
+    localRole?: string
+    iceServers?: IceServerConfig[]
+    peerMetadata?: Record<string, Record<string, string>>
+}
+
+export interface RoomControl {
+    handleMessage(msg: ServerMessage): void
+    refresh(params: RoomRefresh): void
+    close(): void
 }
 
 type RoomEvents = {
@@ -35,33 +64,41 @@ type RoomEvents = {
     [RoomMediaEvent.Error]: [err: Error]
 }
 
+type RemoteStreamHandler = (peerId: string, stream: MediaStream) => void
+
 export class Room extends EventEmitter<RoomEvents> {
     readonly id: string
     readonly localPeerId: string
     private readonly _peers = new Map<string, PeerInfo>()
     private readonly _peerRoles = new Map<string, string>()
     private readonly _peerMeta = new Map<string, Record<string, string>>()
-    private readonly _transport: WebSocketTransport
-    private _call: CallInterface | null = null
+    private readonly _transport: RoomTransport
+    private _call: BoundCall | null = null
+    private _callStreamHandler: RemoteStreamHandler | null = null
     private _closed = false
     private _localPeerRole: string | undefined
     private _iceServers: readonly IceServerConfig[]
 
-    constructor(
-        id: string,
-        localPeerId: string,
-        initialPeers: string[],
-        transport: WebSocketTransport,
-        localRole?: string,
-        iceServers?: IceServerConfig[],
-    ) {
+    private constructor(init: RoomInit) {
         super()
-        this.id = id
-        this.localPeerId = localPeerId
-        this._localPeerRole = localRole
-        this._iceServers = iceServers ?? []
-        this._seedPeers(localPeerId, initialPeers)
-        this._transport = transport
+        this.id = init.id
+        this.localPeerId = init.localPeerId
+        this._localPeerRole = init.localRole
+        this._iceServers = init.iceServers ?? []
+        this._transport = init.transport
+        this._seedPeers(init.localPeerId, init.peers)
+        if (init.peerRoles) this._initRoles(init.peerRoles)
+        if (init.peerMetadata) this._initMeta(init.peerMetadata)
+    }
+
+    static create(init: RoomInit): { room: Room; control: RoomControl } {
+        const room = new Room(init)
+        const control: RoomControl = {
+            handleMessage: (msg) => room._handleMessage(msg),
+            refresh: (params) => room._refresh(params),
+            close: () => room._close(),
+        }
+        return { room, control }
     }
 
     get localPeerRole(): string | undefined {
@@ -89,7 +126,8 @@ export class Room extends EventEmitter<RoomEvents> {
     }
 
     getPeerMetadata(peerId: string): Record<string, string> | undefined {
-        return this._peerMeta.get(peerId)
+        const meta = this._peerMeta.get(peerId)
+        return meta ? { ...meta } : undefined
     }
 
     getPeerInfo(peerId: string): PeerInfo | undefined {
@@ -116,24 +154,35 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
-    bindCall(call: CallInterface): void {
-        this._call?.close()
+    bindCall(call: BoundCall): void {
+        this._unbindCall()
         this._call = call
-        call.on('remote-stream', (peerId, stream) => {
+        const handler: RemoteStreamHandler = (peerId, stream) => {
             const streams = [stream] as readonly MediaStream[]
             for (const track of stream.getTracks()) {
                 this.emit(RoomMediaEvent.TrackAdded, track, streams, peerId)
             }
-        })
+        }
+        this._callStreamHandler = handler
+        call.on('remote-stream', handler)
         call.start()
     }
 
-    _handleMessage(msg: ServerMessage): void {
+    private _unbindCall(): void {
+        if (this._call && this._callStreamHandler) {
+            this._call.off('remote-stream', this._callStreamHandler)
+        }
+        this._call?.close()
+        this._call = null
+        this._callStreamHandler = null
+    }
+
+    private _handleMessage(msg: ServerMessage): void {
         switch (msg.type) {
             case MessageType.PeerJoined:
                 this._peers.set(msg.peerId, { id: msg.peerId })
                 if (msg.role) this._peerRoles.set(msg.peerId, msg.role)
-                if (msg.metadata) this._peerMeta.set(msg.peerId, msg.metadata)
+                if (msg.metadata) this._peerMeta.set(msg.peerId, { ...msg.metadata })
                 this.emit(MessageType.PeerJoined, msg.peerId)
                 break
             case MessageType.PeerLeft:
@@ -164,43 +213,35 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
-    _initRoles(peerRoles: Record<string, string>): void {
+    private _initRoles(peerRoles: Record<string, string>): void {
         for (const [id, role] of Object.entries(peerRoles)) {
             this._peerRoles.set(id, role)
         }
     }
 
-    _initMeta(peerMetadata: Record<string, Record<string, string>>): void {
+    private _initMeta(peerMetadata: Record<string, Record<string, string>>): void {
         for (const [id, meta] of Object.entries(peerMetadata)) {
-            this._peerMeta.set(id, meta)
+            this._peerMeta.set(id, { ...meta })
         }
     }
 
-    _refresh(
-        localPeerId: string,
-        peers: string[],
-        peerRoles?: Record<string, string>,
-        localRole?: string,
-        iceServers?: IceServerConfig[],
-        peerMetadata?: Record<string, Record<string, string>>,
-    ): void {
+    private _refresh(params: RoomRefresh): void {
         this._peers.clear()
         this._peerRoles.clear()
-        this._seedPeers(localPeerId, peers)
-        if (peerRoles) this._initRoles(peerRoles)
-        if (localRole !== undefined) this._localPeerRole = localRole
-        if (iceServers !== undefined) this._iceServers = iceServers
-        if (peerMetadata !== undefined) {
+        this._seedPeers(params.localPeerId, params.peers)
+        if (params.peerRoles) this._initRoles(params.peerRoles)
+        if (params.localRole !== undefined) this._localPeerRole = params.localRole
+        if (params.iceServers !== undefined) this._iceServers = params.iceServers
+        if (params.peerMetadata !== undefined) {
             this._peerMeta.clear()
-            this._initMeta(peerMetadata)
+            this._initMeta(params.peerMetadata)
         }
         this.emit(RoomEvent.Refreshed)
     }
 
-    _close(): void {
+    private _close(): void {
         this._closed = true
-        this._call?.close()
-        this._call = null
+        this._unbindCall()
         this.emit(RoomEvent.Closed)
     }
 

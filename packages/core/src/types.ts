@@ -46,3 +46,11 @@ export type Metric = (typeof Metric)[keyof typeof Metric]
 export function toError(err: unknown): Error {
     return err instanceof Error ? err : new Error(String(err))
 }
+
+export type MediaKind = 'audio' | 'video'
+
+export interface NetworkStats {
+    bitrate: number
+    packetLoss: number
+    rtt: number
+}

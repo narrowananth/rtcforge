@@ -1,0 +1,298 @@
+{
+    "projectRoot": "/Users/fynxtlapind167/Personal/Git/rtcforge",
+    "files": [
+        { "path": ".husky/pre-commit", "language": "unknown", "fileCategory": "code" },
+        {
+            "path": ".understand-anything/.understandignore",
+            "language": "unknown",
+            "fileCategory": "code"
+        },
+        {
+            "path": ".understand-anything/intermediate/scan-result.json",
+            "language": "json",
+            "fileCategory": "config"
+        },
+        { "path": "package.json", "language": "json", "fileCategory": "config" },
+        {
+            "path": "packages/adapter-udp/package.json",
+            "language": "json",
+            "fileCategory": "config"
+        },
+        {
+            "path": "packages/adapter-udp/src/index.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/adapter-udp/src/UdpGossipTransport.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/adapter-udp/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config"
+        },
+        { "path": "packages/core/package.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/core/src/Clock.ts", "language": "typescript", "fileCategory": "code" },
+        { "path": "packages/core/src/errors.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/core/src/EventEmitter.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/core/src/Gossip.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/core/src/HashRing.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/IdGenerator.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/core/src/index.ts", "language": "typescript", "fileCategory": "code" },
+        { "path": "packages/core/src/Lock.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/core/src/Membership.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/MembershipReconciler.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/MessageBus.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/StateStore.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/core/src/types.ts", "language": "typescript", "fileCategory": "code" },
+        { "path": "packages/core/tsconfig.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/media/package.json", "language": "json", "fileCategory": "config" },
+        {
+            "path": "packages/media/src/ActiveSpeakerDetector.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/browser.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/media/src/Call.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/media/src/Consumer.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/media/src/index.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/media/src/LocalTrackRegistry.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/MediaEntity.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/MediaManager.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/MediaRouter.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/MediaService.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/PeerConnection.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/Producer.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/media/src/protocol.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/media/src/types.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/media/src/WorkerPool.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/media/tsconfig.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/sdk/package.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/sdk/src/index.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sdk/src/JoinHandshake.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sdk/src/protocol.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sdk/src/ReconnectStrategy.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sdk/src/Room.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sdk/src/RTCForgeClient.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sdk/src/SendQueue.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sdk/src/Transport.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sdk/src/types.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sdk/src/WebSocketTransport.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sdk/tsconfig.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/sfu/package.json", "language": "json", "fileCategory": "config" },
+        {
+            "path": "packages/sfu/src/CascadeBridge.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/CascadeTree.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/CascadingRouter.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sfu/src/errors.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sfu/src/HealthChecker.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sfu/src/index.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sfu/src/NodeFailureTracker.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/PlacementStrategy.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/SfuBridge.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/SfuCluster.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sfu/src/SfuNode.ts", "language": "typescript", "fileCategory": "code" },
+        {
+            "path": "packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/StatsCollector.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/sfu/src/types.ts", "language": "typescript", "fileCategory": "code" },
+        { "path": "packages/sfu/tsconfig.json", "language": "json", "fileCategory": "config" },
+        { "path": "packages/signaling/package.json", "language": "json", "fileCategory": "config" },
+        {
+            "path": "packages/signaling/src/Authenticator.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/HeartbeatMonitor.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/index.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/Peer.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/protocol.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/RateLimiter.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/Room.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/RoomRegistry.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/RoomRouter.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/SignalingServer.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/signaling/src/types.ts",
+            "language": "typescript",
+            "fileCategory": "code"
+        },
+        { "path": "packages/signaling/tsconfig.json", "language": "json", "fileCategory": "config" }
+    ]
+}

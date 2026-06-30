@@ -1,8 +1,15 @@
 import { noopLogger } from '@rtcforge/core'
-import type { Logger } from '@rtcforge/core'
+import type { Logger, Membership, NetworkStats, NodeInfo } from '@rtcforge/core'
+import type { SfuNode } from './SfuNode.js'
 
-export type { Logger }
+export type { Logger, NetworkStats, Membership, NodeInfo }
 export { noopLogger }
+
+export type BandwidthQuality = 'high' | 'medium' | 'low'
+
+export interface PlacementStrategy {
+    select(candidates: SfuNode[], region?: string, key?: string): SfuNode | undefined
+}
 
 export const SfuNodeEvent = {
     Load: 'load',
@@ -25,19 +32,11 @@ export const SfuClusterEvent = {
     NodeAdded: 'nodeAdded',
     NodeRemoved: 'nodeRemoved',
     Overloaded: 'overloaded',
+    Error: 'error',
 } as const
 
 export type SfuClusterEvent = (typeof SfuClusterEvent)[keyof typeof SfuClusterEvent]
 
-/**
- * Associate a room with an SFU node for media routing.
- *
- * **Cascade semantics**: `addRoute` is called once for the primary assignment
- * and then again for every cascade node. Implementations MUST treat this as
- * an additive operation (e.g. maintain a list of node IDs per room), NOT as a
- * setter that replaces the previous node — doing so would silently drop the
- * primary route when the first cascade link is created.
- */
 export interface SfuMediaInterface {
     addRoute(roomId: string, nodeId: string): void
     removeRoute(roomId: string): void
@@ -45,14 +44,21 @@ export interface SfuMediaInterface {
     removeCascadeRoute(roomId: string, nodeId: string): void
 }
 
+export interface CascadePipeInterface {
+    pipeLink(roomId: string, fromNodeId: string, toNodeId: string): void
+    unpipeLink(roomId: string, fromNodeId: string, toNodeId: string): void
+}
+
 export interface SfuClusterOptions {
     logger?: Logger
-    mediaService?: SfuMediaInterface
     healthCheck?: {
         intervalMs?: number
         onCheck?: (nodeId: string) => Promise<boolean>
     }
     onRebalance?: (fromNodeId: string, reason: 'draining' | 'failed') => void
+    placementStrategy?: PlacementStrategy
+    membership?: Membership
+    nodeFactory?: (info: NodeInfo) => SfuNode
 }
 
 export const CascadingRouterEvent = {
@@ -68,8 +74,25 @@ export interface CascadingRouterOptions {
     logger?: Logger
 }
 
+export const CascadeTreeEvent = {
+    TreeBuilt: 'treeBuilt',
+    LinkCreated: 'linkCreated',
+    LinkDropped: 'linkDropped',
+    LeafAssigned: 'leafAssigned',
+    TreeDropped: 'treeDropped',
+    CapacityShortfall: 'capacityShortfall',
+} as const
+
+export type CascadeTreeEvent = (typeof CascadeTreeEvent)[keyof typeof CascadeTreeEvent]
+
+export interface CascadeTreeOptions {
+    fanout?: number
+    viewersPerNode?: number
+    logger?: Logger
+}
+
 export interface BandwidthEstimator {
-    estimate(stats: { bitrate: number; packetLoss: number; rtt: number }): 'high' | 'medium' | 'low'
+    estimate(stats: NetworkStats): BandwidthQuality
     reset(): void
 }
 

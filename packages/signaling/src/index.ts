@@ -1,6 +1,8 @@
 export { SignalingServer } from './SignalingServer.js'
 export { Room } from './Room.js'
 export { Peer } from './Peer.js'
+export { RoomRouter } from './RoomRouter.js'
+export type { RoomRouterOptions } from './RoomRouter.js'
 export {
     ServerEvent,
     RoomEvent,

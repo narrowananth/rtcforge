@@ -2,6 +2,8 @@ import { EventEmitter, noopLogger, toError } from '@rtcforge/core'
 import type { Logger } from '@rtcforge/core'
 import { MessageType, RoomEvent } from '@rtcforge/sdk'
 import type { Room } from '@rtcforge/sdk'
+import { ActiveSpeakerDetector } from './ActiveSpeakerDetector.js'
+import { LocalTrackRegistry } from './LocalTrackRegistry.js'
 import { PeerConnection } from './PeerConnection.js'
 import { SignalKind, SignalType, isMediaSignal } from './protocol.js'
 import type { MediaSignal } from './protocol.js'
@@ -24,22 +26,17 @@ export class Call extends EventEmitter<CallEvents> {
     private readonly logger: Logger
     private readonly connections = new Map<string, PeerConnection>()
     private readonly _negTimers = new Map<string, ReturnType<typeof setTimeout>>()
-    private readonly localTracks: Array<{ track: MediaStreamTrack; stream: MediaStream }> = []
+    private readonly tracks: LocalTrackRegistry
     private started = false
     private closed = false
-    private _activeSpeakerTimer: ReturnType<typeof setInterval> | null = null
-    private _activeSpeakerPeerId: string | null = null
+    private _activeSpeaker: ActiveSpeakerDetector | null = null
 
     constructor(room: Room, opts: CallOptions = {}) {
         super()
         this.room = room
         this.opts = opts
         this.logger = opts.logger ?? noopLogger
-        if (opts.stream) {
-            for (const track of opts.stream.getTracks()) {
-                this.localTracks.push({ track, stream: opts.stream })
-            }
-        }
+        this.tracks = new LocalTrackRegistry(opts.stream)
     }
 
     start(): void {
@@ -68,7 +65,7 @@ export class Call extends EventEmitter<CallEvents> {
             ;(track as MediaStreamTrack & { contentHint?: string }).contentHint = opts.contentHint
         }
         const bitrate = opts?.maxBitrate ?? this.opts.maxBitrate
-        this.localTracks.push({ track, stream })
+        this.tracks.add(track, stream)
         for (const pc of this.connections.values()) {
             pc.addTrack(track, stream, bitrate)
         }
@@ -76,9 +73,7 @@ export class Call extends EventEmitter<CallEvents> {
     }
 
     async replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void> {
-        const idx = this.localTracks.findIndex((e) => e.track === oldTrack)
-        if (idx !== -1)
-            this.localTracks[idx] = { track: newTrack, stream: this.localTracks[idx].stream }
+        this.tracks.replace(oldTrack, newTrack)
         await Promise.all(
             Array.from(this.connections.values(), (pc) => pc.replaceTrack(oldTrack, newTrack)),
         )
@@ -115,78 +110,49 @@ export class Call extends EventEmitter<CallEvents> {
     }
 
     startActiveSpeakerDetection(intervalMs = 1000): void {
-        if (this._activeSpeakerTimer) return
-        this._activeSpeakerTimer = setInterval(async () => {
-            const results = await Promise.all(
-                Array.from(this.connections.entries(), async ([peerId, pc]) => {
-                    try {
-                        const stats = await pc.getStats()
-                        let maxLevel = 0
-                        for (const report of stats.values()) {
-                            if (report.type === 'inbound-rtp') {
-                                const level = (report as unknown as Record<string, unknown>)
-                                    .audioLevel as number | undefined
-                                if (level !== undefined && level > maxLevel) maxLevel = level
-                            }
-                        }
-                        return { peerId, level: maxLevel }
-                    } catch {
-                        return null
-                    }
-                }),
+        if (this._activeSpeaker === null) {
+            this._activeSpeaker = new ActiveSpeakerDetector(
+                () => this.connections.entries(),
+                (peerId, level) => this.emit(MediaEvent.ActiveSpeaker, peerId, level),
+                intervalMs,
             )
-            let maxLevel = 0
-            let speaker: string | null = null
-            for (const r of results) {
-                if (r && r.level > maxLevel) {
-                    maxLevel = r.level
-                    speaker = r.peerId
-                }
-            }
-            if (speaker !== this._activeSpeakerPeerId) {
-                this._activeSpeakerPeerId = speaker
-                this.emit(MediaEvent.ActiveSpeaker, speaker, maxLevel)
-            }
-        }, intervalMs)
+        }
+        this._activeSpeaker.start()
     }
 
     stopActiveSpeakerDetection(): void {
-        if (this._activeSpeakerTimer) {
-            clearInterval(this._activeSpeakerTimer)
-            this._activeSpeakerTimer = null
-        }
+        this._activeSpeaker?.stop()
+        this._activeSpeaker = null
     }
 
     removeTrack(track: MediaStreamTrack): void {
         for (const pc of this.connections.values()) {
             pc.removeTrack(track)
         }
-        const idx = this.localTracks.findIndex((e) => e.track === track)
-        if (idx !== -1) this.localTracks.splice(idx, 1)
+        this.tracks.remove(track)
     }
 
     muteAudio(): void {
-        this._setTrackEnabled('audio', false)
+        this.tracks.setKindEnabled('audio', false)
     }
     unmuteAudio(): void {
-        this._setTrackEnabled('audio', true)
+        this.tracks.setKindEnabled('audio', true)
     }
     muteVideo(): void {
-        this._setTrackEnabled('video', false)
+        this.tracks.setKindEnabled('video', false)
     }
     unmuteVideo(): void {
-        this._setTrackEnabled('video', true)
+        this.tracks.setKindEnabled('video', true)
     }
     isAudioMuted(): boolean {
-        return this._isKindMuted('audio')
+        return this.tracks.isKindMuted('audio')
     }
     isVideoMuted(): boolean {
-        return this._isKindMuted('video')
+        return this.tracks.isKindMuted('video')
     }
 
     restart(): void {
         this.stopActiveSpeakerDetection()
-        this._activeSpeakerPeerId = null
         this._teardownConnections()
         this._detachRoomListeners()
         this.started = false
@@ -199,7 +165,7 @@ export class Call extends EventEmitter<CallEvents> {
         this.closed = true
         this.logger.info('Call closed', { localPeerId: this.room.localPeerId })
         this.stopActiveSpeakerDetection()
-        this.localTracks.length = 0
+        this.tracks.clear()
         this._detachRoomListeners()
         this._teardownConnections()
     }
@@ -236,24 +202,6 @@ export class Call extends EventEmitter<CallEvents> {
         pc.close()
     }
 
-    private _setTrackEnabled(kind: 'audio' | 'video', enabled: boolean): void {
-        for (const { track } of this.localTracks) {
-            if (track.kind === kind) track.enabled = enabled
-        }
-    }
-
-    private _isKindMuted(kind: 'audio' | 'video'): boolean {
-        let found = false
-        let allMuted = true
-        for (const { track } of this.localTracks) {
-            if (track.kind === kind) {
-                found = true
-                if (track.enabled) allMuted = false
-            }
-        }
-        return found && allMuted
-    }
-
     private readonly handleRoomRefreshed = (): void => {
         this.restart()
     }
@@ -274,7 +222,6 @@ export class Call extends EventEmitter<CallEvents> {
 
     private readonly handleRoomSignal = async (from: string, data: unknown): Promise<void> => {
         if (!isMediaSignal(data)) return
-        // discard stale signals for peers that already left
         if (!this.connections.has(from) && !this.room.hasPeer(from)) return
         const wasNew = !this.connections.has(from)
         const pc = this.getOrCreateConnection(from)
@@ -319,10 +266,15 @@ export class Call extends EventEmitter<CallEvents> {
         const pc = new PeerConnection(polite, this.opts)
         this.connections.set(peerId, pc)
 
-        for (const { track, stream } of this.localTracks) {
+        for (const { track, stream } of this.tracks.entries) {
             pc.addTrack(track, stream, this.opts.maxBitrate)
         }
 
+        this._wireConnection(pc, peerId)
+        return pc
+    }
+
+    private _wireConnection(pc: PeerConnection, peerId: string): void {
         pc.on(ConnectionEvent.IceCandidate, (candidate) => {
             const signal: MediaSignal = { kind: SignalKind.Media, type: SignalType.Ice, candidate }
             this.room.sendSignal(peerId, signal)
@@ -381,7 +333,5 @@ export class Call extends EventEmitter<CallEvents> {
             }
             this.emit(MediaEvent.Error, peerId, toError(err))
         })
-
-        return pc
     }
 }

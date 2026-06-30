@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CascadingRouter } from '../src/CascadingRouter.js'
+import { NodeFailureTracker } from '../src/NodeFailureTracker.js'
 import { SfuCluster } from '../src/SfuCluster.js'
 import { SfuNode } from '../src/SfuNode.js'
 import { CascadingRouterEvent, SfuClusterEvent, SfuNodeEvent } from '../src/types.js'
 
-// ── SfuNode ───────────────────────────────────────────────────────────────────
+afterEach(() => {
+    vi.useRealTimers()
+})
 
 describe('SfuNode — state', () => {
     it('load starts at 0', () => {
@@ -100,8 +103,6 @@ describe('SfuNode — markFailed / markRecovered', () => {
     })
 })
 
-// ── SfuCluster ────────────────────────────────────────────────────────────────
-
 describe('SfuCluster — node management', () => {
     let cluster: SfuCluster
 
@@ -195,7 +196,7 @@ describe('SfuCluster — assignNode', () => {
         const n1 = new SfuNode('n1', 'us-east')
         const n2 = new SfuNode('n2', 'us-east')
         n1.markFailed()
-        n1.reportLoad(0) // failed but low load — must be skipped
+        n1.reportLoad(0)
         n2.reportLoad(50)
         cluster.addNode(n1)
         cluster.addNode(n2)
@@ -214,8 +215,6 @@ describe('SfuCluster — assignNode', () => {
         expect(listener).toHaveBeenCalled()
     })
 })
-
-// ── CascadingRouter ───────────────────────────────────────────────────────────
 
 describe('CascadingRouter — attachRoom', () => {
     let cluster: SfuCluster
@@ -269,18 +268,16 @@ describe('CascadingRouter — cascade', () => {
 
         const router = new CascadingRouter(cluster)
 
-        // Assign room to n1 by making it the only option first
         n2.markFailed()
-        router.attachRoom('room-1') // → n1
+        router.attachRoom('room-1')
 
-        // Recover n2, now a second attach targets n2 (regional preference)
         n2.markRecovered()
-        n1.reportLoad(100) // n1 overloaded → n2 preferred
+        n1.reportLoad(100)
 
         const listener = vi.fn()
         router.on(CascadingRouterEvent.CascadeCreated, listener)
 
-        router.attachRoom('room-1', 'eu-west') // → cascade from n1 to n2
+        router.attachRoom('room-1', 'eu-west')
         expect(listener).toHaveBeenCalledWith('room-1', n1, n2)
     })
 
@@ -294,7 +291,7 @@ describe('CascadingRouter — cascade', () => {
         const listener = vi.fn()
         router.on(CascadingRouterEvent.CascadeCreated, listener)
 
-        router.attachRoom('room-1') // same node → no cascade
+        router.attachRoom('room-1')
         expect(listener).not.toHaveBeenCalled()
     })
 })
@@ -341,26 +338,21 @@ describe('CascadingRouter — detachRoom', () => {
     })
 })
 
-// ── SfuNode — drain() ─────────────────────────────────────────────────────────
-
 describe('SfuNode — drain() timeout resets _draining flag', () => {
     it('allows second drain() call after timeout exhausts first drain', async () => {
         vi.useFakeTimers()
         const node = new SfuNode('n1', 'us-east')
-        // Add a tracked room so drain won't resolve immediately
+
         node.trackRoom('room-1')
 
         const p1 = node.drain(1000)
         expect(node.isDraining).toBe(true)
 
-        // Advance time past timeout — p1 resolves via timeout path
         vi.advanceTimersByTime(1001)
         await p1
 
-        // _draining must be reset so a new drain() can run
         expect(node.isDraining).toBe(false)
 
-        // Second drain() after timeout should not be a no-op (silently dropped)
         node.untrackRoom('room-1')
         const drainedListener = vi.fn()
         node.on(SfuNodeEvent.Drained, drainedListener)
@@ -370,8 +362,6 @@ describe('SfuNode — drain() timeout resets _draining flag', () => {
         vi.useRealTimers()
     })
 })
-
-// ── CascadingRouter — node-failed listener safety ─────────────────────────────
 
 describe('CascadingRouter — node failure clears all room assignments', () => {
     it('clears multiple rooms assigned to same node when node fails', () => {
@@ -405,17 +395,104 @@ describe('CascadingRouter — node failure clears all room assignments', () => {
         router.attachRoom('room-1')
         router.attachRoom('room-2')
 
-        // Listener that re-attaches on detach — would mutate the map mid-iteration
         router.on(CascadingRouterEvent.RoomDetached, (roomId) => {
-            // This would previously corrupt iteration; snapshot fix prevents that
-            router.attachRoom(roomId) // re-attach to n2
+            router.attachRoom(roomId)
         })
 
-        // Only node n1 fails; both rooms should have been detached (and re-attached to n2)
         node.markFailed()
 
-        // n2 picked up both rooms via re-attach in listener
         expect(router.getAssignment('room-1')).toBe(n2)
         expect(router.getAssignment('room-2')).toBe(n2)
+    })
+})
+
+describe('NodeFailureTracker', () => {
+    it('fires onGone once per failure despite Failed + NodeRemoved both firing', () => {
+        const cluster = new SfuCluster()
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+        const onGone = vi.fn()
+        new NodeFailureTracker(cluster, onGone)
+
+        node.markFailed()
+        cluster.removeNode('n1')
+
+        expect(onGone).toHaveBeenCalledTimes(1)
+    })
+
+    it('re-fires onGone after a node with the same id rejoins and fails again', () => {
+        const cluster = new SfuCluster()
+        const onGone = vi.fn()
+        new NodeFailureTracker(cluster, onGone)
+
+        const first = new SfuNode('n1', 'us-east')
+        cluster.addNode(first)
+        first.markFailed()
+        cluster.removeNode('n1')
+        expect(onGone).toHaveBeenCalledTimes(1)
+
+        const second = new SfuNode('n1', 'us-east')
+        cluster.addNode(second)
+        second.markFailed()
+        expect(onGone).toHaveBeenCalledTimes(2)
+    })
+
+    it('re-fires onGone after recovery then a new failure', () => {
+        const cluster = new SfuCluster()
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+        const onGone = vi.fn()
+        new NodeFailureTracker(cluster, onGone)
+
+        node.markFailed()
+        expect(onGone).toHaveBeenCalledTimes(1)
+        node.markRecovered()
+        node.markFailed()
+        expect(onGone).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('SfuCluster — health check', () => {
+    it('emits error and fails the node when a health check fails', async () => {
+        vi.useFakeTimers()
+        const cluster = new SfuCluster({
+            healthCheck: { intervalMs: 100, onCheck: async () => false },
+        })
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+        const onError = vi.fn()
+        cluster.on(SfuClusterEvent.Error, onError)
+
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(120)
+
+        expect(node.isFailed).toBe(true)
+        expect(onError).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('n1') }),
+        )
+
+        cluster.stopHealthChecks()
+        vi.useRealTimers()
+    })
+
+    it('recovers a node when its health check passes again', async () => {
+        vi.useFakeTimers()
+        let healthy = false
+        const cluster = new SfuCluster({
+            healthCheck: { intervalMs: 100, onCheck: async () => healthy },
+        })
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(120)
+        expect(node.isFailed).toBe(true)
+
+        healthy = true
+        await vi.advanceTimersByTimeAsync(120)
+        expect(node.isFailed).toBe(false)
+
+        cluster.stopHealthChecks()
+        vi.useRealTimers()
     })
 })

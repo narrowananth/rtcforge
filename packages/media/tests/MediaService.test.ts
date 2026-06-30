@@ -1,376 +1,255 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Consumer, ConsumerEvent } from '../src/Consumer.js'
+import * as mediasoup from 'mediasoup'
+import type { types as MsTypes } from 'mediasoup'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MediaEntityEvent } from '../src/MediaEntity.js'
 import { MediaRouter, MediaRouterEvent } from '../src/MediaRouter.js'
-import { MediaService, MediaServiceEvent } from '../src/MediaService.js'
-import { Producer, ProducerEvent } from '../src/Producer.js'
+import { DEFAULT_MEDIA_CODECS } from '../src/types.js'
 
-// ── Producer ──────────────────────────────────────────────────────────────────
-
-describe('Producer — state', () => {
-    it('id starts with "producer-"', () => {
-        const p = new Producer('peer-1', 'audio')
-        expect(p.id).toMatch(/^producer-/)
-    })
-
-    it('kind and peerId set from constructor', () => {
-        const p = new Producer('peer-1', 'video')
-        expect(p.kind).toBe('video')
-        expect(p.peerId).toBe('peer-1')
-    })
-
-    it('paused starts false', () => {
-        expect(new Producer('peer-1', 'audio').paused).toBe(false)
-    })
-
-    it('closed starts false', () => {
-        expect(new Producer('peer-1', 'audio').closed).toBe(false)
-    })
-
-    it('pause() sets paused and emits paused', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Paused, fn)
-        p.pause()
-        expect(p.paused).toBe(true)
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('pause() is idempotent', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Paused, fn)
-        p.pause()
-        p.pause()
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('resume() clears paused and emits resumed', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Resumed, fn)
-        p.pause()
-        p.resume()
-        expect(p.paused).toBe(false)
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('resume() is no-op when not paused', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Resumed, fn)
-        p.resume()
-        expect(fn).not.toHaveBeenCalled()
-    })
-
-    it('close() sets closed and emits closed', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Closed, fn)
-        p.close()
-        expect(p.closed).toBe(true)
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('close() is idempotent', () => {
-        const p = new Producer('peer-1', 'audio')
-        const fn = vi.fn()
-        p.on(ProducerEvent.Closed, fn)
-        p.close()
-        p.close()
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('pause() is no-op when closed', () => {
-        const p = new Producer('peer-1', 'audio')
-        p.close()
-        const fn = vi.fn()
-        p.on(ProducerEvent.Paused, fn)
-        p.pause()
-        expect(fn).not.toHaveBeenCalled()
-    })
-})
-
-// ── Consumer ──────────────────────────────────────────────────────────────────
-
-describe('Consumer — state', () => {
-    it('id starts with "consumer-"', () => {
-        const c = new Consumer('peer-2', 'video', 'prod-1')
-        expect(c.id).toMatch(/^consumer-/)
-    })
-
-    it('producerId set from constructor', () => {
-        const c = new Consumer('peer-2', 'video', 'prod-42')
-        expect(c.producerId).toBe('prod-42')
-    })
-
-    it('close() is idempotent', () => {
-        const c = new Consumer('peer-2', 'audio', 'prod-1')
-        const fn = vi.fn()
-        c.on(ConsumerEvent.Closed, fn)
-        c.close()
-        c.close()
-        expect(fn).toHaveBeenCalledOnce()
-    })
-})
-
-// ── MediaRouter ───────────────────────────────────────────────────────────────
-
-describe('MediaRouter — producers', () => {
-    let router: MediaRouter
-
-    beforeEach(() => {
-        router = new MediaRouter('room-1')
-    })
-
-    it('producerCount starts 0', () => {
-        expect(router.producerCount).toBe(0)
-    })
-
-    it('createProducer returns Producer and increments count', () => {
-        const p = router.createProducer('peer-1', 'audio')
-        expect(p).toBeInstanceOf(Producer)
-        expect(router.producerCount).toBe(1)
-    })
-
-    it('createProducer emits producerCreated', () => {
-        const fn = vi.fn()
-        router.on(MediaRouterEvent.ProducerCreated, fn)
-        const p = router.createProducer('peer-1', 'video')
-        expect(fn).toHaveBeenCalledWith(p)
-    })
-
-    it('createProducer throws when router is closed', () => {
-        router.close()
-        expect(() => router.createProducer('peer-1', 'audio')).toThrow('MediaRouter is closed')
-    })
-})
-
-describe('MediaRouter — consumers', () => {
-    let router: MediaRouter
-
-    beforeEach(() => {
-        router = new MediaRouter('room-1')
-    })
-
-    it('createConsumer returns Consumer with correct producerId', () => {
-        const p = router.createProducer('peer-1', 'video')
-        const c = router.createConsumer('peer-2', p.id)
-        expect(c).toBeInstanceOf(Consumer)
-        expect(c.producerId).toBe(p.id)
-        expect(c.kind).toBe('video')
-    })
-
-    it('createConsumer emits consumerCreated', () => {
-        const p = router.createProducer('peer-1', 'audio')
-        const fn = vi.fn()
-        router.on(MediaRouterEvent.ConsumerCreated, fn)
-        const c = router.createConsumer('peer-2', p.id)
-        expect(fn).toHaveBeenCalledWith(c)
-    })
-
-    it('createConsumer throws for unknown producerId', () => {
-        expect(() => router.createConsumer('peer-2', 'ghost')).toThrow('Producer not found: ghost')
-    })
-
-    it('emits producerClosed when producer closes', () => {
-        const p = router.createProducer('peer-1', 'audio')
-        const fn = vi.fn()
-        router.on(MediaRouterEvent.ProducerClosed, fn)
-        p.close()
-        expect(fn).toHaveBeenCalledWith(p)
-    })
-
-    it('closes consumers referencing a producer when it closes', () => {
-        const p = router.createProducer('peer-1', 'audio')
-        const c1 = router.createConsumer('peer-2', p.id)
-        const c2 = router.createConsumer('peer-3', p.id)
-
-        p.close()
-
-        expect(c1.closed).toBe(true)
-        expect(c2.closed).toBe(true)
-        expect(router.consumerCount).toBe(0)
-    })
-
-    it('does not close consumers for a different producer', () => {
-        const p1 = router.createProducer('peer-1', 'audio')
-        const p2 = router.createProducer('peer-2', 'video')
-        const c1 = router.createConsumer('peer-3', p1.id)
-        const c2 = router.createConsumer('peer-3', p2.id)
-
-        p1.close()
-
-        expect(c1.closed).toBe(true)
-        expect(c2.closed).toBe(false)
-        expect(router.consumerCount).toBe(1)
-    })
-})
-
-describe('MediaRouter — close', () => {
-    it('close() cascades to all producers and consumers', () => {
-        const router = new MediaRouter('room-1')
-        const p = router.createProducer('peer-1', 'video')
-        const c = router.createConsumer('peer-2', p.id)
-        router.close()
-        expect(p.closed).toBe(true)
-        expect(c.closed).toBe(true)
-    })
-
-    it('close() emits closed', () => {
-        const router = new MediaRouter('room-1')
-        const fn = vi.fn()
-        router.on(MediaRouterEvent.Closed, fn)
-        router.close()
-        expect(fn).toHaveBeenCalledOnce()
-    })
-
-    it('close() is idempotent', () => {
-        const router = new MediaRouter('room-1')
-        const fn = vi.fn()
-        router.on(MediaRouterEvent.Closed, fn)
-        router.close()
-        router.close()
-        expect(fn).toHaveBeenCalledOnce()
-    })
-})
-
-describe('MediaRouter — closeProducersForPeer', () => {
-    it('closes only producers belonging to the given peerId', () => {
-        const router = new MediaRouter('room-1')
-        const p1 = router.createProducer('peer-1', 'audio')
-        const p2 = router.createProducer('peer-2', 'video')
-        router.closeProducersForPeer('peer-1')
-        expect(p1.closed).toBe(true)
-        expect(p2.closed).toBe(false)
-    })
-})
-
-// ── MediaService ──────────────────────────────────────────────────────────────
-
-function makeRoom(id: string) {
-    const _listeners = new Map<string, Array<(...args: unknown[]) => void>>()
-
-    const on = vi.fn((event: string, cb: (...args: unknown[]) => void) => {
-        const arr = _listeners.get(event) ?? []
-        arr.push(cb)
-        _listeners.set(event, arr)
-    })
-    const off = vi.fn((event: string, cb: (...args: unknown[]) => void) => {
-        const arr = _listeners.get(event)
-        if (arr) {
-            const idx = arr.indexOf(cb)
-            if (idx !== -1) arr.splice(idx, 1)
-        }
-    })
-    const once = vi.fn((event: string, cb: (...args: unknown[]) => void) => {
-        const wrapped = (...args: unknown[]) => {
-            off(event, wrapped)
-            cb(...args)
-        }
-        on(event, wrapped)
-    })
-
-    const room = { id, on, off, once }
-
-    const emit = (event: string, ...args: unknown[]) => {
-        for (const cb of (_listeners.get(event) ?? []).slice()) cb(...args)
-    }
-
-    return {
-        room: room as unknown as import('@rtcforge/signaling').Room,
-        closeRoom: () => emit('closed'),
-        simulatePeerLeft: (peerId: string) => emit('peerLeft', { id: peerId }),
-    }
+const OPUS_PRODUCE_PARAMS: MsTypes.RtpParameters = {
+    codecs: [
+        {
+            mimeType: 'audio/opus',
+            payloadType: 111,
+            clockRate: 48000,
+            channels: 2,
+            parameters: { minptime: 10, useinbandfec: 1 },
+            rtcpFeedback: [],
+        },
+    ],
+    headerExtensions: [],
+    encodings: [{ ssrc: 22222222 }],
+    rtcp: { cname: 'rtcforge-test' },
 }
 
-describe('MediaService — attachRoom', () => {
-    let service: MediaService
+describe('media plane (real mediasoup worker)', () => {
+    let worker: MsTypes.Worker
 
-    beforeEach(() => {
-        service = new MediaService()
+    beforeAll(async () => {
+        worker = await mediasoup.createWorker({ logLevel: 'error' })
     })
 
-    it('routerCount starts 0', () => {
-        expect(service.routerCount).toBe(0)
+    afterAll(() => {
+        worker.close()
     })
 
-    it('attachRoom returns a MediaRouter', () => {
-        const { room } = makeRoom('r1')
-        expect(service.attachRoom(room)).toBeInstanceOf(MediaRouter)
+    async function makeRouter(): Promise<MediaRouter> {
+        const msRouter = await worker.createRouter({ mediaCodecs: DEFAULT_MEDIA_CODECS })
+        return new MediaRouter('room-1', msRouter)
+    }
+
+    async function produceWithRx(router: MediaRouter) {
+        const tx = await router.createWebRtcTransport('alice')
+        const rx = await router.createWebRtcTransport('bob')
+        const producer = await router.produce('alice', tx.id, 'audio', OPUS_PRODUCE_PARAMS)
+        return { producer, rxId: rx.id }
+    }
+
+    describe('MediaRouter — router', () => {
+        let router: MediaRouter
+        beforeEach(async () => {
+            router = await makeRouter()
+        })
+
+        it('exposes real router rtpCapabilities (opus + VP8)', () => {
+            const mimeTypes = router.rtpCapabilities.codecs?.map((c) => c.mimeType) ?? []
+            expect(mimeTypes).toContain('audio/opus')
+            expect(mimeTypes).toContain('video/VP8')
+        })
+
+        it('createWebRtcTransport returns real ICE/DTLS params', async () => {
+            const params = await router.createWebRtcTransport('alice')
+            expect(typeof params.id).toBe('string')
+            expect(params.iceCandidates.length).toBeGreaterThan(0)
+            expect(params.dtlsParameters.fingerprints.length).toBeGreaterThan(0)
+            expect(['auto', 'client', 'server']).toContain(params.dtlsParameters.role)
+        })
+
+        it('connectTransport throws for unknown transport', async () => {
+            await expect(
+                router.connectTransport('ghost', {} as MsTypes.DtlsParameters),
+            ).rejects.toThrow('Transport not found')
+        })
+
+        it('produce throws for unknown transport', async () => {
+            await expect(
+                router.produce('alice', 'ghost', 'audio', OPUS_PRODUCE_PARAMS),
+            ).rejects.toThrow('Transport not found')
+        })
     })
 
-    it('attachRoom increments routerCount', () => {
-        const { room } = makeRoom('r1')
-        service.attachRoom(room)
-        expect(service.routerCount).toBe(1)
+    describe('MediaRouter — produce / consume', () => {
+        let router: MediaRouter
+        beforeEach(async () => {
+            router = await makeRouter()
+        })
+
+        it('produces a track and emits producerAdded', async () => {
+            const t = await router.createWebRtcTransport('alice')
+            const onAdded = vi.fn()
+            router.on(MediaRouterEvent.ProducerAdded, onAdded)
+
+            const producer = await router.produce('alice', t.id, 'audio', OPUS_PRODUCE_PARAMS)
+
+            expect(producer.kind).toBe('audio')
+            expect(producer.peerId).toBe('alice')
+            expect(producer.role).toBe('producer')
+            expect(router.producerCount).toBe(1)
+            expect(onAdded).toHaveBeenCalledWith(producer)
+        })
+
+        it('consumes an existing producer (paused) and emits consumerAdded', async () => {
+            const { producer, rxId } = await produceWithRx(router)
+
+            const onAdded = vi.fn()
+            router.on(MediaRouterEvent.ConsumerAdded, onAdded)
+            const consumer = await router.consume('bob', rxId, producer.id, router.rtpCapabilities)
+
+            expect(consumer.role).toBe('consumer')
+            expect(consumer.producerId).toBe(producer.id)
+            expect(consumer.kind).toBe('audio')
+            expect(consumer.paused).toBe(true)
+            expect(consumer.rtpParameters.codecs[0]?.mimeType).toBe('audio/opus')
+            expect(router.consumerCount).toBe(1)
+            expect(onAdded).toHaveBeenCalledWith(consumer)
+        })
+
+        it('consume throws for unknown producer', async () => {
+            const rx = await router.createWebRtcTransport('bob')
+            await expect(
+                router.consume('bob', rx.id, 'ghost-producer', router.rtpCapabilities),
+            ).rejects.toThrow('Producer not found')
+        })
+
+        it('resumeConsumer unpauses', async () => {
+            const { producer, rxId } = await produceWithRx(router)
+            const consumer = await router.consume('bob', rxId, producer.id, router.rtpCapabilities)
+
+            await router.resumeConsumer(consumer.id)
+            expect(consumer.paused).toBe(false)
+        })
+
+        it('closing a producer closes its consumers and emits producerClosed', async () => {
+            const { producer, rxId } = await produceWithRx(router)
+            const consumer = await router.consume('bob', rxId, producer.id, router.rtpCapabilities)
+
+            const onClosed = vi.fn()
+            router.on(MediaRouterEvent.ProducerClosed, onClosed)
+            producer.close()
+
+            expect(producer.closed).toBe(true)
+            expect(router.producerCount).toBe(0)
+            expect(onClosed).toHaveBeenCalledWith(producer)
+
+            await vi.waitFor(() => expect(consumer.closed).toBe(true))
+            expect(router.consumerCount).toBe(0)
+        })
+
+        it('closing a peer transport drops its producers', async () => {
+            const tx = await router.createWebRtcTransport('alice')
+            await router.produce('alice', tx.id, 'audio', OPUS_PRODUCE_PARAMS)
+            expect(router.producerCount).toBe(1)
+
+            router.closeTransportsForPeer('alice')
+            await Promise.resolve()
+            expect(router.producerCount).toBe(0)
+        })
     })
 
-    it('attachRoom is idempotent — returns same router', () => {
-        const { room } = makeRoom('r1')
-        const r1 = service.attachRoom(room)
-        const r2 = service.attachRoom(room)
-        expect(r1).toBe(r2)
-        expect(service.routerCount).toBe(1)
+    describe('MediaEntity lifecycle', () => {
+        let router: MediaRouter
+        beforeEach(async () => {
+            router = await makeRouter()
+        })
+
+        it('pause/resume delegate to mediasoup and emit', async () => {
+            const t = await router.createWebRtcTransport('alice')
+            const producer = await router.produce('alice', t.id, 'audio', OPUS_PRODUCE_PARAMS)
+            const onPaused = vi.fn()
+            const onResumed = vi.fn()
+            producer.on(MediaEntityEvent.Paused, onPaused)
+            producer.on(MediaEntityEvent.Resumed, onResumed)
+
+            await producer.pause()
+            expect(producer.paused).toBe(true)
+            expect(onPaused).toHaveBeenCalledOnce()
+
+            await producer.resume()
+            expect(producer.paused).toBe(false)
+            expect(onResumed).toHaveBeenCalledOnce()
+        })
+
+        it('close emits closed once (idempotent)', async () => {
+            const t = await router.createWebRtcTransport('alice')
+            const producer = await router.produce('alice', t.id, 'audio', OPUS_PRODUCE_PARAMS)
+            const onClosed = vi.fn()
+            producer.on(MediaEntityEvent.Closed, onClosed)
+            producer.close()
+            producer.close()
+            expect(onClosed).toHaveBeenCalledOnce()
+        })
     })
 
-    it('getRouter returns router by roomId', () => {
-        const { room } = makeRoom('r1')
-        const router = service.attachRoom(room)
-        expect(service.getRouter('r1')).toBe(router)
-    })
+    describe('cross-node media bridging', () => {
+        let workerA: MsTypes.Worker
+        let workerB: MsTypes.Worker
 
-    it('getRouter returns undefined for unknown roomId', () => {
-        expect(service.getRouter('ghost')).toBeUndefined()
-    })
+        beforeAll(async () => {
+            workerA = await mediasoup.createWorker({ logLevel: 'error' })
+            workerB = await mediasoup.createWorker({ logLevel: 'error' })
+        })
+        afterAll(() => {
+            workerA.close()
+            workerB.close()
+        })
 
-    it('router closes when room emits closed', () => {
-        const { room, closeRoom } = makeRoom('r1')
-        const router = service.attachRoom(room)
-        closeRoom()
-        expect(service.getRouter('r1')).toBeUndefined()
-        expect(service.routerCount).toBe(0)
-    })
+        async function routerOn(w: MsTypes.Worker): Promise<MediaRouter> {
+            const msRouter = await w.createRouter({ mediaCodecs: DEFAULT_MEDIA_CODECS })
+            return new MediaRouter('room', msRouter)
+        }
+        async function produceOn(router: MediaRouter) {
+            const tx = await router.createWebRtcTransport('alice')
+            return router.produce('alice', tx.id, 'audio', OPUS_PRODUCE_PARAMS)
+        }
 
-    it('closeAll closes all routers and resets routerCount', () => {
-        const { room: r1 } = makeRoom('r1')
-        const { room: r2 } = makeRoom('r2')
-        service.attachRoom(r1)
-        service.attachRoom(r2)
-        service.closeAll()
-        expect(service.routerCount).toBe(0)
-    })
+        it('pipeProducerTo bridges a producer to another router', async () => {
+            const a = await routerOn(workerA)
+            const b = await routerOn(workerB)
+            const producer = await produceOn(a)
 
-    it('emits routerCreated when a room is attached', () => {
-        const { room } = makeRoom('r1')
-        const fn = vi.fn()
-        service.on(MediaServiceEvent.RouterCreated, fn)
-        const router = service.attachRoom(room)
-        expect(fn).toHaveBeenCalledWith(router)
-    })
+            await a.pipeProducerTo(producer.id, b)
 
-    it('closes producers and consumers for a peer when they leave', () => {
-        const { room, simulatePeerLeft } = makeRoom('r1')
-        const router = service.attachRoom(room)
-        const producer = router.createProducer('peer-1', 'audio')
-        const consumer = router.createConsumer('peer-2', producer.id)
+            expect(b.producerCount).toBe(1)
+            const rx = await b.createWebRtcTransport('bob')
+            const consumer = await b.consume('bob', rx.id, producer.id, b.rtpCapabilities)
+            expect(consumer.producerId).toBe(producer.id)
+        })
 
-        simulatePeerLeft('peer-1')
+        it('pipeProducerTo is idempotent', async () => {
+            const a = await routerOn(workerA)
+            const b = await routerOn(workerB)
+            const producer = await produceOn(a)
+            await a.pipeProducerTo(producer.id, b)
+            await a.pipeProducerTo(producer.id, b)
+            expect(b.producerCount).toBe(1)
+        })
 
-        expect(producer.closed).toBe(true)
-        expect(consumer.closed).toBe(true)
-        expect(router.producerCount).toBe(0)
-        expect(router.consumerCount).toBe(0)
-    })
+        it('bridges via PipeTransport (cross-host engine, loopback)', async () => {
+            const a = await routerOn(workerA)
+            const b = await routerOn(workerB)
+            const producer = await produceOn(a)
 
-    it('closes subscriptions (consumers) when subscribing peer leaves', () => {
-        const { room, simulatePeerLeft } = makeRoom('r1')
-        const router = service.attachRoom(room)
-        const producer = router.createProducer('peer-1', 'video')
-        const consumer = router.createConsumer('peer-2', producer.id)
+            const pa = await a.createPipeTransport()
+            const pb = await b.createPipeTransport()
+            await a.connectPipeTransport(pa.id, pb)
+            await b.connectPipeTransport(pb.id, pa)
 
-        simulatePeerLeft('peer-2')
+            const params = await a.pipeConsume(pa.id, producer.id)
+            await b.pipeProduce(pb.id, params)
 
-        expect(consumer.closed).toBe(true)
-        expect(producer.closed).toBe(false) // peer-1 still active
+            expect(b.producerCount).toBe(1)
+            const rx = await b.createWebRtcTransport('bob')
+            const consumer = await b.consume('bob', rx.id, producer.id, b.rtpCapabilities)
+            expect(consumer.producerId).toBe(producer.id)
+        })
     })
 })

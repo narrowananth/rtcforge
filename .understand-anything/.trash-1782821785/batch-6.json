@@ -1,0 +1,584 @@
+{
+    "nodes": [
+        {
+            "id": "file:.husky/pre-commit",
+            "type": "file",
+            "name": "pre-commit",
+            "filePath": ".husky/pre-commit",
+            "summary": "Husky Git pre-commit hook that runs lint-staged before each commit to lint and format staged files.",
+            "tags": ["git-hook", "build-system", "ci-cd", "configuration"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:.understand-anything/.understandignore",
+            "type": "file",
+            "name": ".understandignore",
+            "filePath": ".understand-anything/.understandignore",
+            "summary": "Ignore-list controlling which files the Understand-Anything analysis tool excludes when scanning the repository.",
+            "tags": ["configuration", "tooling", "ignore-file"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:.understand-anything/intermediate/scan-result.json",
+            "type": "config",
+            "name": "scan-result.json",
+            "filePath": ".understand-anything/intermediate/scan-result.json",
+            "summary": "Generated project-scan inventory used by the Understand-Anything pipeline, listing all files, detected languages, frameworks, the import map, and complexity estimates.",
+            "tags": ["configuration", "tooling", "generated", "data-pipeline"],
+            "complexity": "complex"
+        },
+        {
+            "id": "config:package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "package.json",
+            "summary": "Root npm workspaces manifest for the RTCForge monorepo, wiring shared dev tooling (tsup, vitest, ESLint), workspace packages, and lint-staged/husky configuration.",
+            "tags": ["configuration", "build-system", "monorepo", "npm"],
+            "complexity": "simple",
+            "languageNotes": "Uses npm workspaces to manage the multi-package monorepo."
+        },
+        {
+            "id": "config:packages/adapter-udp/package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "packages/adapter-udp/package.json",
+            "summary": "Package manifest for @rtcforge/adapter-udp, a UDP gossip transport adapter providing a connectionless wire for the core gossip membership layer.",
+            "tags": ["configuration", "npm", "publishing", "adapter"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/adapter-udp/src/index.ts",
+            "type": "file",
+            "name": "index.ts",
+            "filePath": "packages/adapter-udp/src/index.ts",
+            "summary": "Public entry point for @rtcforge/adapter-udp, re-exporting UdpGossipTransport and its options type.",
+            "tags": ["entry-point", "barrel", "adapter"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/adapter-udp/tsconfig.json",
+            "type": "config",
+            "name": "tsconfig.json",
+            "filePath": "packages/adapter-udp/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the adapter-udp package, extending the shared base config and scoping compilation to the package source.",
+            "tags": ["configuration", "typescript", "build-system"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/core/package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "packages/core/package.json",
+            "summary": "Package manifest for @rtcforge/core, the shared primitives package providing EventEmitter, Logger, hashing, and other building blocks for the other packages.",
+            "tags": ["configuration", "npm", "publishing", "core"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/errors.ts",
+            "type": "file",
+            "name": "errors.ts",
+            "filePath": "packages/core/src/errors.ts",
+            "summary": "Defines the RtcForge error hierarchy (RtcForgeError, InvalidArgumentError) and the isRtcForgeError type guard used across packages for consistent error handling.",
+            "tags": ["error-handling", "utility", "core", "type-definition"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/EventEmitter.ts",
+            "type": "file",
+            "name": "EventEmitter.ts",
+            "filePath": "packages/core/src/EventEmitter.ts",
+            "summary": "Lightweight, dependency-free typed EventEmitter used throughout RTCForge for on/once/off/emit pub-sub event handling.",
+            "tags": ["event-handler", "utility", "core", "pub-sub"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "file:packages/core/src/HashRing.ts",
+            "type": "file",
+            "name": "HashRing.ts",
+            "filePath": "packages/core/src/HashRing.ts",
+            "summary": "Weighted rendezvous (highest-random-weight) hash ring used to map keys to cluster nodes for consistent, weight-aware node selection in scale-out scenarios.",
+            "tags": ["utility", "core", "hashing", "load-balancing", "distributed"],
+            "complexity": "moderate",
+            "languageNotes": "Uses rendezvous hashing (HRW) with a cyrb53 string hash and log-based weighting rather than a classic consistent-hash ring."
+        },
+        {
+            "id": "file:packages/core/src/IdGenerator.ts",
+            "type": "file",
+            "name": "IdGenerator.ts",
+            "filePath": "packages/core/src/IdGenerator.ts",
+            "summary": "Provides ID generation helpers: randomId for opaque random identifiers and SequentialId for monotonically increasing counters.",
+            "tags": ["utility", "core", "id-generation"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/MessageBus.ts",
+            "type": "file",
+            "name": "MessageBus.ts",
+            "filePath": "packages/core/src/MessageBus.ts",
+            "summary": "In-process LocalMessageBus implementing topic-based publish/subscribe, the default single-node messaging backend before plugging in a distributed bus.",
+            "tags": ["pub-sub", "utility", "core", "messaging"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/types.ts",
+            "type": "file",
+            "name": "types.ts",
+            "filePath": "packages/core/src/types.ts",
+            "summary": "Shared core type definitions and no-op defaults — Logger/Metrics interfaces, noopLogger, noopMetrics, the Metric helper, and the toError coercion utility.",
+            "tags": ["type-definition", "core", "utility", "logging"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "config:packages/core/tsconfig.json",
+            "type": "config",
+            "name": "tsconfig.json",
+            "filePath": "packages/core/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the core package, extending the shared base config and scoping compilation to its source.",
+            "tags": ["configuration", "typescript", "build-system"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/media/package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "packages/media/package.json",
+            "summary": "Package manifest for @rtcforge/media, the WebRTC media package handling peer connections, media capture, and call management, with separate browser and Node entry points.",
+            "tags": ["configuration", "npm", "publishing", "media", "webrtc"],
+            "complexity": "simple",
+            "languageNotes": "Declares a separate browser export and peerDependencies for mediasoup, enabling isomorphic browser/server media handling."
+        },
+        {
+            "id": "file:packages/media/src/browser.ts",
+            "type": "file",
+            "name": "browser.ts",
+            "filePath": "packages/media/src/browser.ts",
+            "summary": "Browser-targeted public entry point for @rtcforge/media, re-exporting only the client-safe surface (Call, media capture helpers, PeerConnection, signal types) without the Node/SFU server pieces.",
+            "tags": ["entry-point", "barrel", "media", "browser"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/media/src/index.ts",
+            "type": "file",
+            "name": "index.ts",
+            "filePath": "packages/media/src/index.ts",
+            "summary": "Full public entry point for @rtcforge/media, re-exporting the complete media surface including Call, capture helpers, PeerConnection, MediaService, MediaRouter, Producer/Consumer, and WorkerPool.",
+            "tags": ["entry-point", "barrel", "media"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/media/src/MediaManager.ts",
+            "type": "file",
+            "name": "MediaManager.ts",
+            "filePath": "packages/media/src/MediaManager.ts",
+            "summary": "Browser media-capture helpers wrapping navigator.mediaDevices — getUserMedia/getDisplayMedia, device enumeration and filtering, device-change subscription, and permission checks.",
+            "tags": ["media", "webrtc", "browser", "utility", "device-management"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "config:packages/media/tsconfig.json",
+            "type": "config",
+            "name": "tsconfig.json",
+            "filePath": "packages/media/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the media package, extending the shared base config and scoping compilation to its source.",
+            "tags": ["configuration", "typescript", "build-system"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/sdk/package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "packages/sdk/package.json",
+            "summary": "Package manifest for @rtcforge/sdk, the browser and Node.js client SDK exposing RTCForgeClient, with optional and runtime dependencies on the other RTCForge packages.",
+            "tags": ["configuration", "npm", "publishing", "sdk", "client"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/sdk/tsconfig.json",
+            "type": "config",
+            "name": "tsconfig.json",
+            "filePath": "packages/sdk/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the sdk package, extending the shared base config and scoping compilation to its source.",
+            "tags": ["configuration", "typescript", "build-system"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/sfu/package.json",
+            "type": "config",
+            "name": "package.json",
+            "filePath": "packages/sfu/package.json",
+            "summary": "Package manifest for @rtcforge/sfu, the cascading SFU cluster package providing multi-node routing, load balancing, and bandwidth estimation.",
+            "tags": ["configuration", "npm", "publishing", "sfu", "media"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/sfu/src/index.ts",
+            "type": "file",
+            "name": "index.ts",
+            "filePath": "packages/sfu/src/index.ts",
+            "summary": "Public entry point for @rtcforge/sfu, re-exporting the cascading SFU surface — SfuNode, SfuCluster, CascadingRouter, cascade tree planning, placement strategies, bandwidth estimation, and failure tracking.",
+            "tags": ["entry-point", "barrel", "sfu", "media", "distributed"],
+            "complexity": "simple"
+        },
+        {
+            "id": "config:packages/sfu/tsconfig.json",
+            "type": "config",
+            "name": "tsconfig.json",
+            "filePath": "packages/sfu/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the sfu package, extending the shared base config and scoping compilation to its source.",
+            "tags": ["configuration", "typescript", "build-system"],
+            "complexity": "simple"
+        },
+
+        {
+            "id": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "class",
+            "name": "RtcForgeError",
+            "filePath": "packages/core/src/errors.ts",
+            "lineRange": [1, 10],
+            "summary": "Base error class for the RTCForge ecosystem carrying a machine-readable code field for consistent error categorization.",
+            "tags": ["error-handling", "core", "base-class"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "type": "class",
+            "name": "InvalidArgumentError",
+            "filePath": "packages/core/src/errors.ts",
+            "lineRange": [12, 16],
+            "summary": "Specialized RtcForgeError thrown when a caller passes invalid arguments to a public API.",
+            "tags": ["error-handling", "core", "validation"],
+            "complexity": "simple"
+        },
+        {
+            "id": "function:packages/core/src/errors.ts:isRtcForgeError",
+            "type": "function",
+            "name": "isRtcForgeError",
+            "filePath": "packages/core/src/errors.ts",
+            "lineRange": [18, 20],
+            "summary": "Type guard that narrows an unknown value to an RtcForgeError, optionally matching a specific error code.",
+            "tags": ["error-handling", "type-guard", "utility"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/core/src/EventEmitter.ts:EventEmitter",
+            "type": "class",
+            "name": "EventEmitter",
+            "filePath": "packages/core/src/EventEmitter.ts",
+            "lineRange": [9, 64],
+            "summary": "Typed event emitter supporting on/once/off/emit, listener counting, and bulk removal, backed by a Map of event names to listener registrations.",
+            "tags": ["event-handler", "pub-sub", "core", "utility"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "function:packages/core/src/HashRing.ts:cyrb53",
+            "type": "function",
+            "name": "cyrb53",
+            "filePath": "packages/core/src/HashRing.ts",
+            "lineRange": [6, 19],
+            "summary": "Fast non-cryptographic 53-bit string hash (cyrb53) used to derive stable per-node scores for rendezvous hashing.",
+            "tags": ["hashing", "utility", "core"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/core/src/HashRing.ts:HashRing",
+            "type": "class",
+            "name": "HashRing",
+            "filePath": "packages/core/src/HashRing.ts",
+            "lineRange": [23, 87],
+            "summary": "Weight-aware rendezvous hash ring that maps a key to one or N nodes by computing per-node scores, supporting add/remove/has and ordered top-N selection.",
+            "tags": ["hashing", "load-balancing", "distributed", "core"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/core/src/IdGenerator.ts:SequentialId",
+            "type": "class",
+            "name": "SequentialId",
+            "filePath": "packages/core/src/IdGenerator.ts",
+            "lineRange": [9, 16],
+            "summary": "Monotonic counter that yields the next sequential integer ID on each call to next().",
+            "tags": ["id-generation", "utility", "core"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/core/src/MessageBus.ts:LocalMessageBus",
+            "type": "class",
+            "name": "LocalMessageBus",
+            "filePath": "packages/core/src/MessageBus.ts",
+            "lineRange": [8, 31],
+            "summary": "In-process message bus implementing publish to topic subscribers and subscribe returning an unsubscribe handle, backed by a topic-to-handler-set Map.",
+            "tags": ["pub-sub", "messaging", "core"],
+            "complexity": "simple"
+        },
+        {
+            "id": "function:packages/core/src/types.ts:toError",
+            "type": "function",
+            "name": "toError",
+            "filePath": "packages/core/src/types.ts",
+            "lineRange": [46, 48],
+            "summary": "Coerces an unknown thrown value into a proper Error instance, stringifying non-Error values.",
+            "tags": ["error-handling", "utility", "core"],
+            "complexity": "simple"
+        },
+        {
+            "id": "function:packages/media/src/MediaManager.ts:getUserMediaWithOptions",
+            "type": "function",
+            "name": "getUserMediaWithOptions",
+            "filePath": "packages/media/src/MediaManager.ts",
+            "lineRange": [11, 24],
+            "summary": "Acquires a local media stream from navigator.mediaDevices using a high-level options object that is translated into MediaStreamConstraints.",
+            "tags": ["media", "webrtc", "browser", "capture"],
+            "complexity": "simple"
+        },
+        {
+            "id": "function:packages/media/src/MediaManager.ts:checkPermissions",
+            "type": "function",
+            "name": "checkPermissions",
+            "filePath": "packages/media/src/MediaManager.ts",
+            "lineRange": [43, 52],
+            "summary": "Queries the Permissions API in parallel to report current camera and microphone permission states.",
+            "tags": ["media", "browser", "permissions"],
+            "complexity": "simple"
+        }
+    ],
+    "edges": [
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "function:packages/core/src/errors.ts:isRtcForgeError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "function:packages/core/src/errors.ts:isRtcForgeError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "inherits",
+            "direction": "forward",
+            "weight": 0.9
+        },
+
+        {
+            "source": "file:packages/core/src/EventEmitter.ts",
+            "target": "class:packages/core/src/EventEmitter.ts:EventEmitter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/EventEmitter.ts",
+            "target": "class:packages/core/src/EventEmitter.ts:EventEmitter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "function:packages/core/src/HashRing.ts:cyrb53",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "class:packages/core/src/HashRing.ts:HashRing",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "class:packages/core/src/HashRing.ts:HashRing",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/HashRing.ts:HashRing",
+            "target": "function:packages/core/src/HashRing.ts:cyrb53",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/core/src/IdGenerator.ts",
+            "target": "class:packages/core/src/IdGenerator.ts:SequentialId",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/IdGenerator.ts",
+            "target": "class:packages/core/src/IdGenerator.ts:SequentialId",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/core/src/MessageBus.ts",
+            "target": "class:packages/core/src/MessageBus.ts:LocalMessageBus",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/MessageBus.ts",
+            "target": "class:packages/core/src/MessageBus.ts:LocalMessageBus",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/core/src/types.ts",
+            "target": "function:packages/core/src/types.ts:toError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/types.ts",
+            "target": "function:packages/core/src/types.ts:toError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:getUserMediaWithOptions",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:checkPermissions",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:getUserMediaWithOptions",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:checkPermissions",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "config:packages/core/tsconfig.json",
+            "target": "file:packages/core/src/types.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/core/tsconfig.json",
+            "target": "file:packages/core/src/EventEmitter.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/adapter-udp/tsconfig.json",
+            "target": "file:packages/adapter-udp/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/tsconfig.json",
+            "target": "file:packages/media/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/tsconfig.json",
+            "target": "file:packages/media/src/browser.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/sfu/tsconfig.json",
+            "target": "file:packages/sfu/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+
+        {
+            "source": "config:packages/adapter-udp/package.json",
+            "target": "file:packages/adapter-udp/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/package.json",
+            "target": "file:packages/media/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/package.json",
+            "target": "file:packages/media/src/browser.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/sfu/package.json",
+            "target": "file:packages/sfu/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        }
+    ]
+}

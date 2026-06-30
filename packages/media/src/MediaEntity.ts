@@ -1,5 +1,16 @@
-import { randomUUID } from 'node:crypto'
 import { EventEmitter } from '@rtcforge/core'
+import type { MediaKind } from '@rtcforge/core'
+
+export interface MediaEntityHandle {
+    readonly id: string
+    readonly kind: MediaKind
+    readonly paused: boolean
+    readonly closed: boolean
+    pause(): Promise<void>
+    resume(): Promise<void>
+    close(): void
+    on(event: 'transportclose', listener: () => void): unknown
+}
 
 export const MediaEntityEvent = {
     Closed: 'closed',
@@ -9,6 +20,8 @@ export const MediaEntityEvent = {
 
 export type MediaEntityEvent = (typeof MediaEntityEvent)[keyof typeof MediaEntityEvent]
 
+export type MediaEntityRole = 'producer' | 'consumer'
+
 type MediaEntityEvents = {
     [MediaEntityEvent.Closed]: []
     [MediaEntityEvent.Paused]: []
@@ -16,41 +29,58 @@ type MediaEntityEvents = {
 }
 
 export abstract class MediaEntity extends EventEmitter<MediaEntityEvents> {
-    readonly id: string
+    abstract readonly role: MediaEntityRole
     readonly peerId: string
-    readonly kind: 'audio' | 'video'
-    protected _paused = false
-    protected _closed = false
+    protected readonly _entity: MediaEntityHandle
+    private _closeEmitted = false
 
-    constructor(idPrefix: string, peerId: string, kind: 'audio' | 'video') {
+    constructor(peerId: string, entity: MediaEntityHandle) {
         super()
-        this.id = `${idPrefix}-${randomUUID()}`
         this.peerId = peerId
-        this.kind = kind
+        this._entity = entity
+        entity.on('transportclose', () => this._emitClosed())
+    }
+
+    get id(): string {
+        return this._entity.id
+    }
+
+    get kind(): MediaKind {
+        return this._entity.kind
     }
 
     get paused(): boolean {
-        return this._paused
-    }
-    get closed(): boolean {
-        return this._closed
+        return this._entity.paused
     }
 
-    pause(): void {
-        if (this._closed || this._paused) return
-        this._paused = true
+    get closed(): boolean {
+        return this._entity.closed
+    }
+
+    async pause(): Promise<void> {
+        if (this._entity.closed || this._entity.paused) return
+        await this._entity.pause()
         this.emit(MediaEntityEvent.Paused)
     }
 
-    resume(): void {
-        if (this._closed || !this._paused) return
-        this._paused = false
+    async resume(): Promise<void> {
+        if (this._entity.closed || !this._entity.paused) return
+        await this._entity.resume()
         this.emit(MediaEntityEvent.Resumed)
     }
 
     close(): void {
-        if (this._closed) return
-        this._closed = true
+        if (this._entity.closed) {
+            this._emitClosed()
+            return
+        }
+        this._entity.close()
+        this._emitClosed()
+    }
+
+    private _emitClosed(): void {
+        if (this._closeEmitted) return
+        this._closeEmitted = true
         this.emit(MediaEntityEvent.Closed)
     }
 }

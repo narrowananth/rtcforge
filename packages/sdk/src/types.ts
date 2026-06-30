@@ -1,4 +1,8 @@
 import type { Logger } from '@rtcforge/core'
+import type { BackoffStrategy } from './ReconnectStrategy.js'
+import type { MessageQueue } from './SendQueue.js'
+import type { Transport } from './Transport.js'
+import type { ClientMessage } from './protocol.js'
 
 export { noopLogger } from '@rtcforge/core'
 export type { Logger }
@@ -8,6 +12,22 @@ export interface IceServerConfig {
     username?: string
     credential?: string
 }
+
+export interface TransportOptions {
+    reconnect?: boolean
+    maxReconnectDelay?: number
+    maxReconnectAttempts?: number
+    connectTimeoutMs?: number
+    logger?: Logger
+    tokenRefresh?: () => Promise<string>
+    maxQueueSize?: number
+
+    reconnectStrategy?: BackoffStrategy
+
+    sendQueue?: MessageQueue<ClientMessage>
+}
+
+export type TransportFactory = (url: string, options: TransportOptions) => Transport
 
 export interface RTCForgeClientOptions {
     serverUrl: string
@@ -21,6 +41,7 @@ export interface RTCForgeClientOptions {
     maxQueueSize?: number
     joinTimeoutMs?: number
     logger?: Logger
+    transportFactory?: TransportFactory
 }
 
 export const ConnectionState = {
@@ -32,27 +53,54 @@ export const ConnectionState = {
 
 export type ConnectionState = (typeof ConnectionState)[keyof typeof ConnectionState]
 
-export interface CallInterface {
+export interface CallTrackControl {
     addTrack(track: MediaStreamTrack, stream: MediaStream): void
     removeTrack(track: MediaStreamTrack): void
     replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void>
-    getStats(peerId?: string): Promise<Map<string, RTCStatsReport>>
-    createDataChannel(
-        peerId: string,
-        label: string,
-        opts?: RTCDataChannelInit,
-    ): RTCDataChannel | undefined
+}
+
+export interface CallMuteControl {
     muteAudio(): void
     unmuteAudio(): void
     muteVideo(): void
     unmuteVideo(): void
     isAudioMuted(): boolean
     isVideoMuted(): boolean
+}
+
+export interface CallStatsProvider {
+    getStats(peerId?: string): Promise<Map<string, RTCStatsReport>>
+}
+
+export interface CallDataChannelFactory {
+    createDataChannel(
+        peerId: string,
+        label: string,
+        opts?: RTCDataChannelInit,
+    ): RTCDataChannel | undefined
+}
+
+export interface RemoteStreamSource {
     on(event: 'remote-stream', handler: (peerId: string, stream: MediaStream) => void): void
     on(event: 'remote-stream-removed', handler: (peerId: string) => void): void
+    off(event: 'remote-stream', handler: (peerId: string, stream: MediaStream) => void): void
+    off(event: 'remote-stream-removed', handler: (peerId: string) => void): void
+}
+
+export interface CallLifecycle {
     start(): void
     close(): void
 }
+
+export type BoundCall = RemoteStreamSource & CallLifecycle
+
+export interface CallInterface
+    extends CallTrackControl,
+        CallMuteControl,
+        CallStatsProvider,
+        CallDataChannelFactory,
+        RemoteStreamSource,
+        CallLifecycle {}
 
 export const RoomEvent = {
     Closed: 'closed',

@@ -1,0 +1,1322 @@
+{
+    "scriptCompleted": true,
+    "filesAnalyzed": 9,
+    "filesSkipped": [],
+    "results": [
+        {
+            "path": "packages/sdk/src/JoinHandshake.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 62,
+            "nonEmptyLines": 53,
+            "classes": [
+                {
+                    "name": "JoinHandshake",
+                    "startLine": 8,
+                    "endLine": 62,
+                    "methods": ["constructor", "run", "cancel", "_settle"],
+                    "properties": ["_settled", "_timer", "_onMessage", "_reject"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "JoinHandshake",
+                    "line": 8,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "onMessage",
+                    "callee": "this._settle",
+                    "lineNumber": 25
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "resolve",
+                    "lineNumber": 25
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "this._settle",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "reject",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "run",
+                    "callee": "this.transport.on",
+                    "lineNumber": 31
+                },
+                {
+                    "caller": "run",
+                    "callee": "setTimeout",
+                    "lineNumber": 34
+                },
+                {
+                    "caller": "run",
+                    "callee": "this._settle",
+                    "lineNumber": 35
+                },
+                {
+                    "caller": "run",
+                    "callee": "reject",
+                    "lineNumber": 36
+                },
+                {
+                    "caller": "run",
+                    "callee": "this.transport.connect().catch",
+                    "lineNumber": 41
+                },
+                {
+                    "caller": "run",
+                    "callee": "this.transport.connect",
+                    "lineNumber": 41
+                },
+                {
+                    "caller": "run",
+                    "callee": "this._settle",
+                    "lineNumber": 41
+                },
+                {
+                    "caller": "run",
+                    "callee": "reject",
+                    "lineNumber": 41
+                },
+                {
+                    "caller": "cancel",
+                    "callee": "this._settle",
+                    "lineNumber": 46
+                },
+                {
+                    "caller": "cancel",
+                    "callee": "this._reject",
+                    "lineNumber": 46
+                },
+                {
+                    "caller": "_settle",
+                    "callee": "clearTimeout",
+                    "lineNumber": 53
+                },
+                {
+                    "caller": "_settle",
+                    "callee": "this.transport.off",
+                    "lineNumber": 57
+                },
+                {
+                    "caller": "_settle",
+                    "callee": "fn",
+                    "lineNumber": 60
+                }
+            ],
+            "metrics": {
+                "importCount": 4,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/RTCForgeClient.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 193,
+            "nonEmptyLines": 174,
+            "functions": [
+                {
+                    "name": "defaultTransportFactory",
+                    "startLine": 19,
+                    "endLine": 20,
+                    "params": ["url", "options"]
+                }
+            ],
+            "classes": [
+                {
+                    "name": "RTCForgeClient",
+                    "startLine": 33,
+                    "endLine": 193,
+                    "methods": [
+                        "constructor",
+                        "connectionState",
+                        "joinRoom",
+                        "leave",
+                        "_setState",
+                        "_wireLifecycle",
+                        "_attachSteadyState",
+                        "buildUrl"
+                    ],
+                    "properties": [
+                        "opts",
+                        "_transportFactory",
+                        "transport",
+                        "room",
+                        "control",
+                        "_handshake",
+                        "_cleanups",
+                        "_connectionState"
+                    ]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "RTCForgeClient",
+                    "line": 33,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "constructor",
+                    "callee": "super",
+                    "lineNumber": 44
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._setState",
+                    "lineNumber": 58
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._transportFactory",
+                    "lineNumber": 60
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this.buildUrl",
+                    "lineNumber": 60
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._wireLifecycle",
+                    "lineNumber": 70
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "handshake.run",
+                    "lineNumber": 76
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "transport.close",
+                    "lineNumber": 80
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._setState",
+                    "lineNumber": 84
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "Room.create",
+                    "lineNumber": 85
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._attachSteadyState",
+                    "lineNumber": 97
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "transport.flush",
+                    "lineNumber": 98
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this.emit",
+                    "lineNumber": 99
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "this._setState",
+                    "lineNumber": 103
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "cleanup",
+                    "lineNumber": 104
+                },
+                {
+                    "caller": "joinRoom",
+                    "callee": "transport.close",
+                    "lineNumber": 106
+                },
+                {
+                    "caller": "leave",
+                    "callee": "this._handshake?.cancel",
+                    "lineNumber": 113
+                },
+                {
+                    "caller": "leave",
+                    "callee": "this._setState",
+                    "lineNumber": 115
+                },
+                {
+                    "caller": "leave",
+                    "callee": "cleanup",
+                    "lineNumber": 116
+                },
+                {
+                    "caller": "leave",
+                    "callee": "this.control?.close",
+                    "lineNumber": 118
+                },
+                {
+                    "caller": "leave",
+                    "callee": "this.transport?.close",
+                    "lineNumber": 121
+                },
+                {
+                    "caller": "_setState",
+                    "callee": "LEGAL_TRANSITIONS[this._connectionState].includes",
+                    "lineNumber": 127
+                },
+                {
+                    "caller": "_setState",
+                    "callee": "this.opts.logger?.warn",
+                    "lineNumber": 128
+                },
+                {
+                    "caller": "onClose",
+                    "callee": "this._setState",
+                    "lineNumber": 140
+                },
+                {
+                    "caller": "onClose",
+                    "callee": "this.emit",
+                    "lineNumber": 141
+                },
+                {
+                    "caller": "onReconnecting",
+                    "callee": "this._setState",
+                    "lineNumber": 144
+                },
+                {
+                    "caller": "onReconnecting",
+                    "callee": "this.emit",
+                    "lineNumber": 145
+                },
+                {
+                    "caller": "onError",
+                    "callee": "this.emit",
+                    "lineNumber": 147
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.on",
+                    "lineNumber": 149
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.on",
+                    "lineNumber": 150
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.on",
+                    "lineNumber": 151
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "this._cleanups.push",
+                    "lineNumber": 152
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.off",
+                    "lineNumber": 153
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.off",
+                    "lineNumber": 154
+                },
+                {
+                    "caller": "_wireLifecycle",
+                    "callee": "transport.off",
+                    "lineNumber": 155
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "this._setState",
+                    "lineNumber": 162
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "control.refresh",
+                    "lineNumber": 163
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "transport.flush",
+                    "lineNumber": 171
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 172
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 174
+                },
+                {
+                    "caller": "onMessage",
+                    "callee": "control.handleMessage",
+                    "lineNumber": 176
+                },
+                {
+                    "caller": "_attachSteadyState",
+                    "callee": "transport.on",
+                    "lineNumber": 179
+                },
+                {
+                    "caller": "_attachSteadyState",
+                    "callee": "this._cleanups.push",
+                    "lineNumber": 180
+                },
+                {
+                    "caller": "_attachSteadyState",
+                    "callee": "transport.off",
+                    "lineNumber": 180
+                },
+                {
+                    "caller": "buildUrl",
+                    "callee": "url.searchParams.set",
+                    "lineNumber": 185
+                },
+                {
+                    "caller": "buildUrl",
+                    "callee": "url.searchParams.set",
+                    "lineNumber": 187
+                },
+                {
+                    "caller": "buildUrl",
+                    "callee": "url.searchParams.set",
+                    "lineNumber": 189
+                },
+                {
+                    "caller": "buildUrl",
+                    "callee": "url.toString",
+                    "lineNumber": 191
+                }
+            ],
+            "metrics": {
+                "importCount": 9,
+                "exportCount": 1,
+                "functionCount": 1,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/ReconnectStrategy.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 34,
+            "nonEmptyLines": 28,
+            "classes": [
+                {
+                    "name": "ReconnectStrategy",
+                    "startLine": 8,
+                    "endLine": 34,
+                    "methods": ["constructor", "attempt", "reset", "isExhausted", "nextDelay"],
+                    "properties": ["_attempt"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "ReconnectStrategy",
+                    "line": 8,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "nextDelay",
+                    "callee": "Math.min",
+                    "lineNumber": 29
+                },
+                {
+                    "caller": "nextDelay",
+                    "callee": "Math.random",
+                    "lineNumber": 30
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/Room.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 252,
+            "nonEmptyLines": 220,
+            "classes": [
+                {
+                    "name": "Room",
+                    "startLine": 69,
+                    "endLine": 252,
+                    "methods": [
+                        "constructor",
+                        "create",
+                        "localPeerRole",
+                        "iceServers",
+                        "peers",
+                        "isClosed",
+                        "hasPeer",
+                        "getPeerRole",
+                        "getPeerMetadata",
+                        "getPeerInfo",
+                        "getPeerInfoAll",
+                        "sendSignal",
+                        "broadcast",
+                        "_trySend",
+                        "bindCall",
+                        "_unbindCall",
+                        "_handleMessage",
+                        "_initRoles",
+                        "_initMeta",
+                        "_refresh",
+                        "_close",
+                        "_seedPeers"
+                    ],
+                    "properties": [
+                        "id",
+                        "localPeerId",
+                        "_peers",
+                        "_peerRoles",
+                        "_peerMeta",
+                        "_transport",
+                        "_call",
+                        "_callStreamHandler",
+                        "_closed",
+                        "_localPeerRole",
+                        "_iceServers"
+                    ]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "RoomMediaEvent",
+                    "line": 7,
+                    "isDefault": false
+                },
+                {
+                    "name": "Room",
+                    "line": 69,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "constructor",
+                    "callee": "super",
+                    "lineNumber": 83
+                },
+                {
+                    "caller": "constructor",
+                    "callee": "this._seedPeers",
+                    "lineNumber": 89
+                },
+                {
+                    "caller": "constructor",
+                    "callee": "this._initRoles",
+                    "lineNumber": 90
+                },
+                {
+                    "caller": "constructor",
+                    "callee": "this._initMeta",
+                    "lineNumber": 91
+                },
+                {
+                    "caller": "create",
+                    "callee": "room._handleMessage",
+                    "lineNumber": 97
+                },
+                {
+                    "caller": "create",
+                    "callee": "room._refresh",
+                    "lineNumber": 98
+                },
+                {
+                    "caller": "create",
+                    "callee": "room._close",
+                    "lineNumber": 99
+                },
+                {
+                    "caller": "peers",
+                    "callee": "this._peers.keys",
+                    "lineNumber": 113
+                },
+                {
+                    "caller": "hasPeer",
+                    "callee": "this._peers.has",
+                    "lineNumber": 121
+                },
+                {
+                    "caller": "getPeerRole",
+                    "callee": "this._peerRoles.get",
+                    "lineNumber": 125
+                },
+                {
+                    "caller": "getPeerMetadata",
+                    "callee": "this._peerMeta.get",
+                    "lineNumber": 129
+                },
+                {
+                    "caller": "getPeerInfo",
+                    "callee": "this._peers.get",
+                    "lineNumber": 134
+                },
+                {
+                    "caller": "getPeerInfoAll",
+                    "callee": "this._peers.values",
+                    "lineNumber": 138
+                },
+                {
+                    "caller": "sendSignal",
+                    "callee": "this._trySend",
+                    "lineNumber": 142
+                },
+                {
+                    "caller": "broadcast",
+                    "callee": "this._trySend",
+                    "lineNumber": 146
+                },
+                {
+                    "caller": "_trySend",
+                    "callee": "this._transport.send",
+                    "lineNumber": 151
+                },
+                {
+                    "caller": "_trySend",
+                    "callee": "this.emit",
+                    "lineNumber": 153
+                },
+                {
+                    "caller": "_trySend",
+                    "callee": "toError",
+                    "lineNumber": 153
+                },
+                {
+                    "caller": "bindCall",
+                    "callee": "this._unbindCall",
+                    "lineNumber": 158
+                },
+                {
+                    "caller": "handler",
+                    "callee": "stream.getTracks",
+                    "lineNumber": 162
+                },
+                {
+                    "caller": "handler",
+                    "callee": "this.emit",
+                    "lineNumber": 163
+                },
+                {
+                    "caller": "bindCall",
+                    "callee": "call.on",
+                    "lineNumber": 167
+                },
+                {
+                    "caller": "bindCall",
+                    "callee": "call.start",
+                    "lineNumber": 168
+                },
+                {
+                    "caller": "_unbindCall",
+                    "callee": "this._call.off",
+                    "lineNumber": 173
+                },
+                {
+                    "caller": "_unbindCall",
+                    "callee": "this._call?.close",
+                    "lineNumber": 175
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peers.set",
+                    "lineNumber": 183
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peerRoles.set",
+                    "lineNumber": 184
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peerMeta.set",
+                    "lineNumber": 185
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 186
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peers.delete",
+                    "lineNumber": 189
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peerRoles.delete",
+                    "lineNumber": 190
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peerMeta.delete",
+                    "lineNumber": 191
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 192
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 195
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 198
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 201
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 204
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 207
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this._peerRoles.set",
+                    "lineNumber": 210
+                },
+                {
+                    "caller": "_handleMessage",
+                    "callee": "this.emit",
+                    "lineNumber": 211
+                },
+                {
+                    "caller": "_initRoles",
+                    "callee": "Object.entries",
+                    "lineNumber": 217
+                },
+                {
+                    "caller": "_initRoles",
+                    "callee": "this._peerRoles.set",
+                    "lineNumber": 218
+                },
+                {
+                    "caller": "_initMeta",
+                    "callee": "Object.entries",
+                    "lineNumber": 223
+                },
+                {
+                    "caller": "_initMeta",
+                    "callee": "this._peerMeta.set",
+                    "lineNumber": 224
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._peers.clear",
+                    "lineNumber": 229
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._peerRoles.clear",
+                    "lineNumber": 230
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._seedPeers",
+                    "lineNumber": 231
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._initRoles",
+                    "lineNumber": 232
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._peerMeta.clear",
+                    "lineNumber": 236
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this._initMeta",
+                    "lineNumber": 237
+                },
+                {
+                    "caller": "_refresh",
+                    "callee": "this.emit",
+                    "lineNumber": 239
+                },
+                {
+                    "caller": "_close",
+                    "callee": "this._unbindCall",
+                    "lineNumber": 244
+                },
+                {
+                    "caller": "_close",
+                    "callee": "this.emit",
+                    "lineNumber": 245
+                },
+                {
+                    "caller": "_seedPeers",
+                    "callee": "this._peers.set",
+                    "lineNumber": 249
+                },
+                {
+                    "caller": "_seedPeers",
+                    "callee": "this._peers.set",
+                    "lineNumber": 250
+                }
+            ],
+            "metrics": {
+                "importCount": 4,
+                "exportCount": 2,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/SendQueue.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 33,
+            "nonEmptyLines": 27,
+            "classes": [
+                {
+                    "name": "SendQueue",
+                    "startLine": 8,
+                    "endLine": 33,
+                    "methods": ["constructor", "size", "enqueue", "drain", "clear"],
+                    "properties": ["_items"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "SendQueue",
+                    "line": 8,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "enqueue",
+                    "callee": "this._items.push",
+                    "lineNumber": 19
+                },
+                {
+                    "caller": "drain",
+                    "callee": "send",
+                    "lineNumber": 25
+                },
+                {
+                    "caller": "drain",
+                    "callee": "this._items.shift",
+                    "lineNumber": 26
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/Transport.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 18,
+            "nonEmptyLines": 16,
+            "metrics": {
+                "importCount": 2,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/sdk/src/WebSocketTransport.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 228,
+            "nonEmptyLines": 207,
+            "classes": [
+                {
+                    "name": "WebSocketTransport",
+                    "startLine": 14,
+                    "endLine": 228,
+                    "methods": [
+                        "constructor",
+                        "isTerminal",
+                        "connect",
+                        "send",
+                        "flush",
+                        "close",
+                        "initSocket",
+                        "scheduleReconnect",
+                        "_armReconnectTimer",
+                        "getWsClass"
+                    ],
+                    "properties": [
+                        "ws",
+                        "reconnectTimer",
+                        "_closed",
+                        "_exhausted",
+                        "_connecting",
+                        "url",
+                        "shouldReconnect",
+                        "connectTimeoutMs",
+                        "logger",
+                        "tokenRefresh",
+                        "_queue",
+                        "_reconnect",
+                        "_wsClass"
+                    ]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "WebSocketTransport",
+                    "line": 14,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "constructor",
+                    "callee": "super",
+                    "lineNumber": 30
+                },
+                {
+                    "caller": "connect",
+                    "callee": "this.initSocket",
+                    "lineNumber": 48
+                },
+                {
+                    "caller": "send",
+                    "callee": "this.flush",
+                    "lineNumber": 55
+                },
+                {
+                    "caller": "send",
+                    "callee": "this.ws.send",
+                    "lineNumber": 56
+                },
+                {
+                    "caller": "send",
+                    "callee": "JSON.stringify",
+                    "lineNumber": 56
+                },
+                {
+                    "caller": "send",
+                    "callee": "this._queue.enqueue",
+                    "lineNumber": 57
+                },
+                {
+                    "caller": "send",
+                    "callee": "this.emit",
+                    "lineNumber": 58
+                },
+                {
+                    "caller": "flush",
+                    "callee": "this._queue.drain",
+                    "lineNumber": 65
+                },
+                {
+                    "caller": "flush",
+                    "callee": "ws.send",
+                    "lineNumber": 65
+                },
+                {
+                    "caller": "flush",
+                    "callee": "JSON.stringify",
+                    "lineNumber": 65
+                },
+                {
+                    "caller": "close",
+                    "callee": "this._queue.clear",
+                    "lineNumber": 70
+                },
+                {
+                    "caller": "close",
+                    "callee": "clearTimeout",
+                    "lineNumber": 72
+                },
+                {
+                    "caller": "close",
+                    "callee": "this.ws?.close",
+                    "lineNumber": 75
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onError",
+                    "lineNumber": 80
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.getWsClass()\n            .then((WS) => {\n                this._connecting = false\n                if (this._closed) return\n                const ws = new WS(this.url)\n                this.ws = ws\n\n                let settled = false\n\n                const connectTimeoutMs = this.connectTimeoutMs\n                const connectTimer =\n                    connectTimeoutMs !== 0\n                        ? setTimeout(() => {\n                              ws.close()\n                              if (!settled) {\n                                  settled = true\n                                  onError?.(new Error('WebSocket connect timeout'))\n                              }\n                          }, connectTimeoutMs ?? 10_000)\n                        : null\n\n                ws.onopen = () => {\n                    if (connectTimer) clearTimeout(connectTimer)\n                    this._reconnect.reset()\n                    this.logger.info('WebSocket connected', { url: this.url })\n                    this.emit(TransportEvent.Open)\n                    if (!settled) {\n                        settled = true\n                        onOpen?.()\n                    }\n                }\n\n                ws.onclose = (ev) => {\n                    if (connectTimer) clearTimeout(connectTimer)\n                    const code = ev.code ?? 1006\n                    const reason = String(ev.reason ?? '')\n                    this.logger.info('WebSocket closed', { code, reason })\n                    this.emit(TransportEvent.Close, code, reason)\n                    if (this._closed || !this.shouldReconnect) return\n                    if (this._reconnect.isExhausted()) {\n                        this.logger.warn('Max reconnect attempts reached', {\n                            attempts: this._reconnect.attempt,\n                        })\n                        this._exhausted = true\n                        const exhaustedErr = new Error('Max reconnect attempts reached')\n                        this.emit(TransportEvent.Error, exhaustedErr)\n                        if (!settled) {\n                            settled = true\n                            onError?.(exhaustedErr)\n                        }\n                        return\n                    }\n                    this.scheduleReconnect()\n                }\n\n                ws.onmessage = (ev) => {\n                    try {\n                        const parsed: unknown = JSON.parse(String(ev.data))\n                        const result = ServerMessageSchema.safeParse(parsed)\n                        if (!result.success) return\n                        const msg = result.data\n                        if (msg.type === MessageType.Ping) {\n                            this.send({ type: MessageType.Pong })\n                            return\n                        }\n                        this.emit(TransportEvent.Message, msg)\n                    } catch (err) {\n                        this.emit(TransportEvent.Error, toError(err))\n                    }\n                }\n\n                ws.onerror = () => {\n                    if (connectTimer) clearTimeout(connectTimer)\n                    const err = new Error('WebSocket error')\n                    this.logger.error('WebSocket error', { url: this.url })\n                    this.emit(TransportEvent.Error, err)\n                    if (!settled) {\n                        settled = true\n                        onError?.(err)\n                    }\n                }\n            })\n            .catch",
+                    "lineNumber": 84
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.getWsClass()\n            .then",
+                    "lineNumber": 84
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.getWsClass",
+                    "lineNumber": 84
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "setTimeout",
+                    "lineNumber": 96
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "ws.close",
+                    "lineNumber": 97
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onError",
+                    "lineNumber": 100
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "clearTimeout",
+                    "lineNumber": 106
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this._reconnect.reset",
+                    "lineNumber": 107
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.logger.info",
+                    "lineNumber": 108
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 109
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onOpen",
+                    "lineNumber": 112
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "clearTimeout",
+                    "lineNumber": 117
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "String",
+                    "lineNumber": 119
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.logger.info",
+                    "lineNumber": 120
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 121
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this._reconnect.isExhausted",
+                    "lineNumber": 123
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.logger.warn",
+                    "lineNumber": 124
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 129
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onError",
+                    "lineNumber": 132
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.scheduleReconnect",
+                    "lineNumber": 136
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "JSON.parse",
+                    "lineNumber": 141
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "String",
+                    "lineNumber": 141
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "ServerMessageSchema.safeParse",
+                    "lineNumber": 142
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.send",
+                    "lineNumber": 146
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 149
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 151
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "toError",
+                    "lineNumber": 151
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "clearTimeout",
+                    "lineNumber": 156
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.logger.error",
+                    "lineNumber": 158
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 159
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onError",
+                    "lineNumber": 162
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "onError",
+                    "lineNumber": 169
+                },
+                {
+                    "caller": "initSocket",
+                    "callee": "this.emit",
+                    "lineNumber": 171
+                },
+                {
+                    "caller": "scheduleReconnect",
+                    "callee": "clearTimeout",
+                    "lineNumber": 177
+                },
+                {
+                    "caller": "scheduleReconnect",
+                    "callee": "this._reconnect.nextDelay",
+                    "lineNumber": 178
+                },
+                {
+                    "caller": "scheduleReconnect",
+                    "callee": "this.logger.info",
+                    "lineNumber": 179
+                },
+                {
+                    "caller": "scheduleReconnect",
+                    "callee": "this.emit",
+                    "lineNumber": 180
+                },
+                {
+                    "caller": "scheduleReconnect",
+                    "callee": "this._armReconnectTimer",
+                    "lineNumber": 181
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "setTimeout",
+                    "lineNumber": 185
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this._armReconnectTimer",
+                    "lineNumber": 189
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.tokenRefresh()\n                    .then((newToken) => {\n                        const u = new URL(this.url)\n                        u.searchParams.set('token', newToken)\n                        this.url = u.toString()\n                        this.initSocket()\n                    })\n                    .catch",
+                    "lineNumber": 193
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.tokenRefresh()\n                    .then",
+                    "lineNumber": 193
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.tokenRefresh",
+                    "lineNumber": 193
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "u.searchParams.set",
+                    "lineNumber": 196
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "u.toString",
+                    "lineNumber": 197
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.initSocket",
+                    "lineNumber": 198
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.logger.warn",
+                    "lineNumber": 201
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.initSocket",
+                    "lineNumber": 202
+                },
+                {
+                    "caller": "_armReconnectTimer",
+                    "callee": "this.initSocket",
+                    "lineNumber": 205
+                },
+                {
+                    "caller": "getWsClass",
+                    "callee": "import",
+                    "lineNumber": 219
+                }
+            ],
+            "metrics": {
+                "importCount": 9,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/sdk/src/protocol.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 78,
+            "nonEmptyLines": 72,
+            "exports": [
+                {
+                    "name": "MessageType",
+                    "line": 3,
+                    "isDefault": false
+                },
+                {
+                    "name": "ServerMessageSchema",
+                    "line": 20,
+                    "isDefault": false
+                },
+                {
+                    "name": "ClientMessageSchema",
+                    "line": 68,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 3,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/sdk/src/types.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 141,
+            "nonEmptyLines": 114,
+            "exports": [
+                {
+                    "name": "noopLogger",
+                    "line": 7,
+                    "isDefault": false
+                },
+                {
+                    "name": "Logger",
+                    "line": 8,
+                    "isDefault": false
+                },
+                {
+                    "name": "ConnectionState",
+                    "line": 47,
+                    "isDefault": false
+                },
+                {
+                    "name": "RoomEvent",
+                    "line": 105,
+                    "isDefault": false
+                },
+                {
+                    "name": "ClientEvent",
+                    "line": 112,
+                    "isDefault": false
+                },
+                {
+                    "name": "TransportEvent",
+                    "line": 121,
+                    "isDefault": false
+                },
+                {
+                    "name": "CloseCode",
+                    "line": 131,
+                    "isDefault": false
+                },
+                {
+                    "name": "CloseReason",
+                    "line": 137,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 4,
+                "exportCount": 8,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        }
+    ]
+}

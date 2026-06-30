@@ -1,9 +1,9 @@
 import type { Server } from 'node:http'
 import { Metric, noopLogger, noopMetrics } from '@rtcforge/core'
-import type { Logger, MetricsCollector } from '@rtcforge/core'
+import type { Logger, Membership, MetricsCollector, NodeInfo } from '@rtcforge/core'
 import { z } from 'zod'
 
-export type { Logger, MetricsCollector }
+export type { Logger, MetricsCollector, Membership, NodeInfo }
 export { noopLogger, noopMetrics, Metric }
 
 export const AuthPayloadSchema = z.object({
@@ -18,6 +18,7 @@ export type AuthPayload = z.infer<typeof AuthPayloadSchema>
 export type AuthFunction = (token: string) => Promise<AuthPayload>
 
 export const RoomState = {
+    Creating: 'creating',
     Active: 'active',
     Closing: 'closing',
     Closed: 'closed',
@@ -49,6 +50,7 @@ export const PeerEvent = {
     Broadcast: 'broadcast',
     Error: 'error',
     RateLimitExceeded: 'rate-limit-exceeded',
+    Pong: 'pong',
 } as const
 
 export type PeerEvent = (typeof PeerEvent)[keyof typeof PeerEvent]
@@ -70,6 +72,7 @@ export const CloseReason = {
     ServerStopping: 'Server stopping',
     Kicked: 'Kicked from room',
     RoomFull: 'Room is full',
+    WrongNode: 'Room owned by another node — reconnect to owner',
 } as const
 
 export type CloseReason = (typeof CloseReason)[keyof typeof CloseReason]
@@ -115,4 +118,9 @@ export interface SignalingServerOptions {
         peerId: string,
         roomId: string,
     ) => IceServerConfig[] | null | undefined | Promise<IceServerConfig[] | null | undefined>
+    cluster?: {
+        selfId: string
+        membership: Membership
+    }
+    onRedirect?: (peerId: string, roomId: string, owner: NodeInfo | undefined) => void
 }

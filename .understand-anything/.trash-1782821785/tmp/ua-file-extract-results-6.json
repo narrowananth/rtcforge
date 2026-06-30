@@ -1,0 +1,2011 @@
+{
+    "scriptCompleted": true,
+    "filesAnalyzed": 25,
+    "filesSkipped": [],
+    "results": [
+        {
+            "path": ".husky/pre-commit",
+            "language": "unknown",
+            "fileCategory": "code",
+            "totalLines": 1,
+            "nonEmptyLines": 1,
+            "metrics": {}
+        },
+        {
+            "path": ".understand-anything/.understandignore",
+            "language": "unknown",
+            "fileCategory": "code",
+            "totalLines": 56,
+            "nonEmptyLines": 49,
+            "metrics": {}
+        },
+        {
+            "path": ".understand-anything/intermediate/scan-result.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 771,
+            "nonEmptyLines": 771,
+            "sections": [
+                {
+                    "heading": "scriptCompleted",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "totalFiles",
+                    "level": 1,
+                    "line": 491
+                },
+                {
+                    "heading": "filteredByIgnore",
+                    "level": 1,
+                    "line": 492
+                },
+                {
+                    "heading": "estimatedComplexity",
+                    "level": 1,
+                    "line": 493
+                },
+                {
+                    "heading": "stats",
+                    "level": 1,
+                    "line": 494
+                },
+                {
+                    "heading": "importMap",
+                    "level": 1,
+                    "line": 506
+                },
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 757
+                },
+                {
+                    "heading": "projectName",
+                    "level": 1,
+                    "line": 758
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 759
+                },
+                {
+                    "heading": "rawDescription",
+                    "level": 1,
+                    "line": 760
+                },
+                {
+                    "heading": "languages",
+                    "level": 1,
+                    "line": 761
+                },
+                {
+                    "heading": "frameworks",
+                    "level": 1,
+                    "line": 764
+                },
+                {
+                    "heading": "complexity",
+                    "level": 1,
+                    "line": 770
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 14
+            }
+        },
+        {
+            "path": "package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 34,
+            "nonEmptyLines": 34,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "private",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "type",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "workspaces",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "devDependencies",
+                    "level": 1,
+                    "line": 18
+                },
+                {
+                    "heading": "lint-staged",
+                    "level": 1,
+                    "line": 22
+                },
+                {
+                    "heading": "engines",
+                    "level": 1,
+                    "line": 31
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 10
+            }
+        },
+        {
+            "path": "packages/adapter-udp/package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 27,
+            "nonEmptyLines": 27,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "main",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "module",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "types",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "exports",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 15
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 16
+                },
+                {
+                    "heading": "keywords",
+                    "level": 1,
+                    "line": 19
+                },
+                {
+                    "heading": "license",
+                    "level": 1,
+                    "line": 20
+                },
+                {
+                    "heading": "dependencies",
+                    "level": 1,
+                    "line": 21
+                },
+                {
+                    "heading": "publishConfig",
+                    "level": 1,
+                    "line": 24
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 13
+            }
+        },
+        {
+            "path": "packages/adapter-udp/src/index.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 2,
+            "nonEmptyLines": 2,
+            "exports": [
+                {
+                    "name": "UdpGossipTransport",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "UdpGossipTransportOptions",
+                    "line": 2,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 2,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/adapter-udp/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 11,
+            "nonEmptyLines": 11,
+            "sections": [
+                {
+                    "heading": "extends",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "compilerOptions",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "include",
+                    "level": 1,
+                    "line": 10
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 3
+            }
+        },
+        {
+            "path": "packages/core/package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 24,
+            "nonEmptyLines": 24,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "main",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "module",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "types",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "exports",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 15
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 16
+                },
+                {
+                    "heading": "keywords",
+                    "level": 1,
+                    "line": 19
+                },
+                {
+                    "heading": "license",
+                    "level": 1,
+                    "line": 20
+                },
+                {
+                    "heading": "publishConfig",
+                    "level": 1,
+                    "line": 21
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 12
+            }
+        },
+        {
+            "path": "packages/core/src/errors.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 20,
+            "nonEmptyLines": 17,
+            "functions": [
+                {
+                    "name": "isRtcForgeError",
+                    "startLine": 18,
+                    "endLine": 20,
+                    "params": ["err", "code"]
+                }
+            ],
+            "classes": [
+                {
+                    "name": "RtcForgeError",
+                    "startLine": 1,
+                    "endLine": 10,
+                    "methods": ["constructor"],
+                    "properties": ["code"]
+                },
+                {
+                    "name": "InvalidArgumentError",
+                    "startLine": 12,
+                    "endLine": 16,
+                    "methods": ["constructor"],
+                    "properties": []
+                }
+            ],
+            "exports": [
+                {
+                    "name": "RtcForgeError",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "InvalidArgumentError",
+                    "line": 12,
+                    "isDefault": false
+                },
+                {
+                    "name": "isRtcForgeError",
+                    "line": 18,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "constructor",
+                    "callee": "super",
+                    "lineNumber": 5
+                },
+                {
+                    "caller": "constructor",
+                    "callee": "super",
+                    "lineNumber": 14
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 3,
+                "functionCount": 1,
+                "classCount": 2
+            }
+        },
+        {
+            "path": "packages/core/src/EventEmitter.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 64,
+            "nonEmptyLines": 55,
+            "classes": [
+                {
+                    "name": "EventEmitter",
+                    "startLine": 9,
+                    "endLine": 64,
+                    "methods": [
+                        "on",
+                        "once",
+                        "off",
+                        "emit",
+                        "removeAllListeners",
+                        "listenerCount",
+                        "_add"
+                    ],
+                    "properties": ["_events"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "EventEmitter",
+                    "line": 9,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "on",
+                    "callee": "this._add",
+                    "lineNumber": 13
+                },
+                {
+                    "caller": "on",
+                    "callee": "String",
+                    "lineNumber": 13
+                },
+                {
+                    "caller": "invoke",
+                    "callee": "this.off",
+                    "lineNumber": 19
+                },
+                {
+                    "caller": "invoke",
+                    "callee": "listener",
+                    "lineNumber": 20
+                },
+                {
+                    "caller": "once",
+                    "callee": "this._add",
+                    "lineNumber": 22
+                },
+                {
+                    "caller": "once",
+                    "callee": "String",
+                    "lineNumber": 22
+                },
+                {
+                    "caller": "off",
+                    "callee": "String",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "off",
+                    "callee": "this._events.get",
+                    "lineNumber": 28
+                },
+                {
+                    "caller": "off",
+                    "callee": "arr.findIndex",
+                    "lineNumber": 30
+                },
+                {
+                    "caller": "off",
+                    "callee": "arr.splice",
+                    "lineNumber": 32
+                },
+                {
+                    "caller": "off",
+                    "callee": "this._events.delete",
+                    "lineNumber": 33
+                },
+                {
+                    "caller": "emit",
+                    "callee": "this._events.get",
+                    "lineNumber": 40
+                },
+                {
+                    "caller": "emit",
+                    "callee": "String",
+                    "lineNumber": 40
+                },
+                {
+                    "caller": "emit",
+                    "callee": "arr.slice",
+                    "lineNumber": 42
+                },
+                {
+                    "caller": "emit",
+                    "callee": "reg.invoke",
+                    "lineNumber": 42
+                },
+                {
+                    "caller": "removeAllListeners",
+                    "callee": "this._events.delete",
+                    "lineNumber": 47
+                },
+                {
+                    "caller": "removeAllListeners",
+                    "callee": "String",
+                    "lineNumber": 47
+                },
+                {
+                    "caller": "removeAllListeners",
+                    "callee": "this._events.clear",
+                    "lineNumber": 48
+                },
+                {
+                    "caller": "listenerCount",
+                    "callee": "this._events.get",
+                    "lineNumber": 53
+                },
+                {
+                    "caller": "listenerCount",
+                    "callee": "String",
+                    "lineNumber": 53
+                },
+                {
+                    "caller": "_add",
+                    "callee": "this._events.get",
+                    "lineNumber": 57
+                },
+                {
+                    "caller": "_add",
+                    "callee": "this._events.set",
+                    "lineNumber": 60
+                },
+                {
+                    "caller": "_add",
+                    "callee": "arr.push",
+                    "lineNumber": 62
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/core/src/HashRing.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 87,
+            "nonEmptyLines": 75,
+            "functions": [
+                {
+                    "name": "cyrb53",
+                    "startLine": 6,
+                    "endLine": 19,
+                    "params": ["str", "seed"]
+                }
+            ],
+            "classes": [
+                {
+                    "name": "HashRing",
+                    "startLine": 23,
+                    "endLine": 87,
+                    "methods": [
+                        "constructor",
+                        "add",
+                        "remove",
+                        "has",
+                        "size",
+                        "nodeIds",
+                        "_score",
+                        "get",
+                        "getN"
+                    ],
+                    "properties": ["_nodes"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "HashRing",
+                    "line": 23,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "cyrb53",
+                    "callee": "str.charCodeAt",
+                    "lineNumber": 10
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 11
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 12
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 14
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 15
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 16
+                },
+                {
+                    "caller": "cyrb53",
+                    "callee": "Math.imul",
+                    "lineNumber": 17
+                },
+                {
+                    "caller": "constructor",
+                    "callee": "this.add",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "add",
+                    "callee": "this._nodes.set",
+                    "lineNumber": 32
+                },
+                {
+                    "caller": "add",
+                    "callee": "this._nodes.set",
+                    "lineNumber": 38
+                },
+                {
+                    "caller": "remove",
+                    "callee": "this._nodes.delete",
+                    "lineNumber": 42
+                },
+                {
+                    "caller": "has",
+                    "callee": "this._nodes.has",
+                    "lineNumber": 46
+                },
+                {
+                    "caller": "nodeIds",
+                    "callee": "this._nodes.keys",
+                    "lineNumber": 54
+                },
+                {
+                    "caller": "_score",
+                    "callee": "cyrb53",
+                    "lineNumber": 58
+                },
+                {
+                    "caller": "_score",
+                    "callee": "Math.log",
+                    "lineNumber": 62
+                },
+                {
+                    "caller": "get",
+                    "callee": "this._score",
+                    "lineNumber": 69
+                },
+                {
+                    "caller": "getN",
+                    "callee": "scored.push",
+                    "lineNumber": 82
+                },
+                {
+                    "caller": "getN",
+                    "callee": "this._score",
+                    "lineNumber": 82
+                },
+                {
+                    "caller": "getN",
+                    "callee": "scored.sort",
+                    "lineNumber": 84
+                },
+                {
+                    "caller": "getN",
+                    "callee": "scored.slice(0, n).map",
+                    "lineNumber": 85
+                },
+                {
+                    "caller": "getN",
+                    "callee": "scored.slice",
+                    "lineNumber": 85
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 1,
+                "functionCount": 1,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/core/src/IdGenerator.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 16,
+            "nonEmptyLines": 14,
+            "classes": [
+                {
+                    "name": "SequentialId",
+                    "startLine": 9,
+                    "endLine": 16,
+                    "methods": ["constructor", "next"],
+                    "properties": ["_n"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "randomId",
+                    "line": 5,
+                    "isDefault": false
+                },
+                {
+                    "name": "SequentialId",
+                    "line": 9,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 2,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/core/src/MessageBus.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 31,
+            "nonEmptyLines": 27,
+            "classes": [
+                {
+                    "name": "LocalMessageBus",
+                    "startLine": 8,
+                    "endLine": 31,
+                    "methods": ["publish", "subscribe"],
+                    "properties": ["_topics"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "LocalMessageBus",
+                    "line": 8,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "publish",
+                    "callee": "this._topics.get",
+                    "lineNumber": 12
+                },
+                {
+                    "caller": "publish",
+                    "callee": "handler",
+                    "lineNumber": 14
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "this._topics.get",
+                    "lineNumber": 18
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "this._topics.set",
+                    "lineNumber": 21
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "set.add",
+                    "lineNumber": 23
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "this._topics.get",
+                    "lineNumber": 25
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "current.delete",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "subscribe",
+                    "callee": "this._topics.delete",
+                    "lineNumber": 28
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 1,
+                "functionCount": 0,
+                "classCount": 1
+            }
+        },
+        {
+            "path": "packages/core/src/types.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 56,
+            "nonEmptyLines": 48,
+            "functions": [
+                {
+                    "name": "toError",
+                    "startLine": 46,
+                    "endLine": 48,
+                    "params": ["err"]
+                }
+            ],
+            "exports": [
+                {
+                    "name": "noopLogger",
+                    "line": 9,
+                    "isDefault": false
+                },
+                {
+                    "name": "noopMetrics",
+                    "line": 24,
+                    "isDefault": false
+                },
+                {
+                    "name": "Metric",
+                    "line": 31,
+                    "isDefault": false
+                },
+                {
+                    "name": "toError",
+                    "line": 46,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "toError",
+                    "callee": "String",
+                    "lineNumber": 47
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 4,
+                "functionCount": 1,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/core/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 9,
+            "nonEmptyLines": 9,
+            "sections": [
+                {
+                    "heading": "extends",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "compilerOptions",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "include",
+                    "level": 1,
+                    "line": 8
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 3
+            }
+        },
+        {
+            "path": "packages/media/package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 45,
+            "nonEmptyLines": 45,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "main",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "module",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "types",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "exports",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "browser",
+                    "level": 1,
+                    "line": 11
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 22
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 23
+                },
+                {
+                    "heading": "keywords",
+                    "level": 1,
+                    "line": 26
+                },
+                {
+                    "heading": "license",
+                    "level": 1,
+                    "line": 27
+                },
+                {
+                    "heading": "dependencies",
+                    "level": 1,
+                    "line": 28
+                },
+                {
+                    "heading": "peerDependencies",
+                    "level": 1,
+                    "line": 32
+                },
+                {
+                    "heading": "devDependencies",
+                    "level": 1,
+                    "line": 37
+                },
+                {
+                    "heading": "publishConfig",
+                    "level": 1,
+                    "line": 42
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 16
+            }
+        },
+        {
+            "path": "packages/media/src/browser.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 18,
+            "nonEmptyLines": 18,
+            "exports": [
+                {
+                    "name": "Call",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "getUserMedia",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getDisplayMedia",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getUserMediaWithOptions",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "enumerateDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getAudioDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getVideoDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "onDeviceChange",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "checkPermissions",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "PeerConnection",
+                    "line": 12,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaEvent",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "ConnectionEvent",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "turnConfigToIceServer",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "CallOptions",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "TurnConfig",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "PeerConnectionFactory",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "noopLogger",
+                    "line": 15,
+                    "isDefault": false
+                },
+                {
+                    "name": "Logger",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "MetricsCollector",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "SignalKind",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "SignalType",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaSignal",
+                    "line": 18,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 22,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/media/src/index.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 36,
+            "nonEmptyLines": 36,
+            "exports": [
+                {
+                    "name": "Call",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "getUserMedia",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getDisplayMedia",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getUserMediaWithOptions",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "enumerateDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getAudioDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "getVideoDevices",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "onDeviceChange",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "checkPermissions",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "PeerConnection",
+                    "line": 12,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaEvent",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "ConnectionEvent",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "turnConfigToIceServer",
+                    "line": 13,
+                    "isDefault": false
+                },
+                {
+                    "name": "CallOptions",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "TurnConfig",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaServiceOptions",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "PeerConnectionFactory",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "WorkerSettings",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "WebRtcTransportConfig",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "WebRtcTransportParams",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "PipeTransportParams",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "PipeProducerParams",
+                    "line": 14,
+                    "isDefault": false
+                },
+                {
+                    "name": "DEFAULT_MEDIA_CODECS",
+                    "line": 25,
+                    "isDefault": false
+                },
+                {
+                    "name": "DEFAULT_LISTEN_INFOS",
+                    "line": 25,
+                    "isDefault": false
+                },
+                {
+                    "name": "noopLogger",
+                    "line": 26,
+                    "isDefault": false
+                },
+                {
+                    "name": "Logger",
+                    "line": 27,
+                    "isDefault": false
+                },
+                {
+                    "name": "MetricsCollector",
+                    "line": 27,
+                    "isDefault": false
+                },
+                {
+                    "name": "SignalKind",
+                    "line": 28,
+                    "isDefault": false
+                },
+                {
+                    "name": "SignalType",
+                    "line": 28,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaSignal",
+                    "line": 29,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaEntity",
+                    "line": 30,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaEntityEvent",
+                    "line": 30,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaEntityRole",
+                    "line": 31,
+                    "isDefault": false
+                },
+                {
+                    "name": "Producer",
+                    "line": 32,
+                    "isDefault": false
+                },
+                {
+                    "name": "Consumer",
+                    "line": 33,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaRouter",
+                    "line": 34,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaRouterEvent",
+                    "line": 34,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaService",
+                    "line": 35,
+                    "isDefault": false
+                },
+                {
+                    "name": "MediaServiceEvent",
+                    "line": 35,
+                    "isDefault": false
+                },
+                {
+                    "name": "WorkerPool",
+                    "line": 36,
+                    "isDefault": false
+                },
+                {
+                    "name": "WorkerPoolEvent",
+                    "line": 36,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 41,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/media/src/MediaManager.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 52,
+            "nonEmptyLines": 45,
+            "functions": [
+                {
+                    "name": "getUserMedia",
+                    "startLine": 1,
+                    "endLine": 5,
+                    "params": ["constraints"]
+                },
+                {
+                    "name": "getDisplayMedia",
+                    "startLine": 7,
+                    "endLine": 9,
+                    "params": ["constraints"]
+                },
+                {
+                    "name": "getUserMediaWithOptions",
+                    "startLine": 11,
+                    "endLine": 24,
+                    "params": ["opts"]
+                },
+                {
+                    "name": "enumerateDevices",
+                    "startLine": 26,
+                    "endLine": 28,
+                    "params": []
+                },
+                {
+                    "name": "getAudioDevices",
+                    "startLine": 30,
+                    "endLine": 32,
+                    "params": []
+                },
+                {
+                    "name": "getVideoDevices",
+                    "startLine": 34,
+                    "endLine": 36,
+                    "params": []
+                },
+                {
+                    "name": "onDeviceChange",
+                    "startLine": 38,
+                    "endLine": 41,
+                    "params": ["handler"]
+                },
+                {
+                    "name": "checkPermissions",
+                    "startLine": 43,
+                    "endLine": 52,
+                    "params": []
+                }
+            ],
+            "exports": [
+                {
+                    "name": "getUserMedia",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "getDisplayMedia",
+                    "line": 7,
+                    "isDefault": false
+                },
+                {
+                    "name": "getUserMediaWithOptions",
+                    "line": 11,
+                    "isDefault": false
+                },
+                {
+                    "name": "enumerateDevices",
+                    "line": 26,
+                    "isDefault": false
+                },
+                {
+                    "name": "getAudioDevices",
+                    "line": 30,
+                    "isDefault": false
+                },
+                {
+                    "name": "getVideoDevices",
+                    "line": 34,
+                    "isDefault": false
+                },
+                {
+                    "name": "onDeviceChange",
+                    "line": 38,
+                    "isDefault": false
+                },
+                {
+                    "name": "checkPermissions",
+                    "line": 43,
+                    "isDefault": false
+                }
+            ],
+            "callGraph": [
+                {
+                    "caller": "getUserMedia",
+                    "callee": "navigator.mediaDevices.getUserMedia",
+                    "lineNumber": 4
+                },
+                {
+                    "caller": "getDisplayMedia",
+                    "callee": "navigator.mediaDevices.getDisplayMedia",
+                    "lineNumber": 8
+                },
+                {
+                    "caller": "getUserMediaWithOptions",
+                    "callee": "navigator.mediaDevices.getUserMedia",
+                    "lineNumber": 20
+                },
+                {
+                    "caller": "enumerateDevices",
+                    "callee": "navigator.mediaDevices.enumerateDevices",
+                    "lineNumber": 27
+                },
+                {
+                    "caller": "getAudioDevices",
+                    "callee": "(await enumerateDevices()).filter",
+                    "lineNumber": 31
+                },
+                {
+                    "caller": "getAudioDevices",
+                    "callee": "enumerateDevices",
+                    "lineNumber": 31
+                },
+                {
+                    "caller": "getVideoDevices",
+                    "callee": "(await enumerateDevices()).filter",
+                    "lineNumber": 35
+                },
+                {
+                    "caller": "getVideoDevices",
+                    "callee": "enumerateDevices",
+                    "lineNumber": 35
+                },
+                {
+                    "caller": "onDeviceChange",
+                    "callee": "navigator.mediaDevices.addEventListener",
+                    "lineNumber": 39
+                },
+                {
+                    "caller": "onDeviceChange",
+                    "callee": "navigator.mediaDevices.removeEventListener",
+                    "lineNumber": 40
+                },
+                {
+                    "caller": "checkPermissions",
+                    "callee": "Promise.all",
+                    "lineNumber": 47
+                },
+                {
+                    "caller": "checkPermissions",
+                    "callee": "navigator.permissions.query",
+                    "lineNumber": 48
+                },
+                {
+                    "caller": "checkPermissions",
+                    "callee": "navigator.permissions.query",
+                    "lineNumber": 49
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 8,
+                "functionCount": 8,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/media/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 15,
+            "nonEmptyLines": 15,
+            "sections": [
+                {
+                    "heading": "extends",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "compilerOptions",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "include",
+                    "level": 1,
+                    "line": 14
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 3
+            }
+        },
+        {
+            "path": "packages/sdk/package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 34,
+            "nonEmptyLines": 34,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "main",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "module",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "types",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "exports",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 15
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 16
+                },
+                {
+                    "heading": "keywords",
+                    "level": 1,
+                    "line": 19
+                },
+                {
+                    "heading": "license",
+                    "level": 1,
+                    "line": 20
+                },
+                {
+                    "heading": "publishConfig",
+                    "level": 1,
+                    "line": 21
+                },
+                {
+                    "heading": "dependencies",
+                    "level": 1,
+                    "line": 24
+                },
+                {
+                    "heading": "optionalDependencies",
+                    "level": 1,
+                    "line": 28
+                },
+                {
+                    "heading": "devDependencies",
+                    "level": 1,
+                    "line": 31
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 15
+            }
+        },
+        {
+            "path": "packages/sdk/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 13,
+            "nonEmptyLines": 13,
+            "sections": [
+                {
+                    "heading": "extends",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "compilerOptions",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "include",
+                    "level": 1,
+                    "line": 12
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 3
+            }
+        },
+        {
+            "path": "packages/sfu/package.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 27,
+            "nonEmptyLines": 27,
+            "sections": [
+                {
+                    "heading": "name",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "version",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "description",
+                    "level": 1,
+                    "line": 4
+                },
+                {
+                    "heading": "main",
+                    "level": 1,
+                    "line": 5
+                },
+                {
+                    "heading": "module",
+                    "level": 1,
+                    "line": 6
+                },
+                {
+                    "heading": "types",
+                    "level": 1,
+                    "line": 7
+                },
+                {
+                    "heading": "exports",
+                    "level": 1,
+                    "line": 8
+                },
+                {
+                    "heading": "files",
+                    "level": 1,
+                    "line": 15
+                },
+                {
+                    "heading": "scripts",
+                    "level": 1,
+                    "line": 16
+                },
+                {
+                    "heading": "keywords",
+                    "level": 1,
+                    "line": 19
+                },
+                {
+                    "heading": "license",
+                    "level": 1,
+                    "line": 20
+                },
+                {
+                    "heading": "dependencies",
+                    "level": 1,
+                    "line": 21
+                },
+                {
+                    "heading": "publishConfig",
+                    "level": 1,
+                    "line": 24
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 13
+            }
+        },
+        {
+            "path": "packages/sfu/src/index.ts",
+            "language": "typescript",
+            "fileCategory": "code",
+            "totalLines": 33,
+            "nonEmptyLines": 33,
+            "exports": [
+                {
+                    "name": "SfuNode",
+                    "line": 1,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuCluster",
+                    "line": 2,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadingRouter",
+                    "line": 3,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuBridge",
+                    "line": 4,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeBridge",
+                    "line": 5,
+                    "isDefault": false
+                },
+                {
+                    "name": "LeastLoadedStrategy",
+                    "line": 6,
+                    "isDefault": false
+                },
+                {
+                    "name": "HashRingStrategy",
+                    "line": 6,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeTree",
+                    "line": 7,
+                    "isDefault": false
+                },
+                {
+                    "name": "planCascadeTree",
+                    "line": 7,
+                    "isDefault": false
+                },
+                {
+                    "name": "NodeFailureTracker",
+                    "line": 8,
+                    "isDefault": false
+                },
+                {
+                    "name": "NoAvailableNodeError",
+                    "line": 9,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadePlan",
+                    "line": 10,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadePlanNode",
+                    "line": 10,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeLink",
+                    "line": 10,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeRole",
+                    "line": 10,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuNodeEvent",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuClusterEvent",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadingRouterEvent",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeTreeEvent",
+                    "line": 16,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuMediaInterface",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadePipeInterface",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuNodeOptions",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "SfuClusterOptions",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadingRouterOptions",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "BandwidthEstimator",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "BandwidthQuality",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "PlacementStrategy",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "SimpleBandwidthEstimatorOptions",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "CascadeTreeOptions",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "Logger",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "NetworkStats",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "Membership",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "NodeInfo",
+                    "line": 17,
+                    "isDefault": false
+                },
+                {
+                    "name": "SimpleBandwidthEstimator",
+                    "line": 33,
+                    "isDefault": false
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 34,
+                "functionCount": 0,
+                "classCount": 0
+            }
+        },
+        {
+            "path": "packages/sfu/tsconfig.json",
+            "language": "json",
+            "fileCategory": "config",
+            "totalLines": 11,
+            "nonEmptyLines": 11,
+            "sections": [
+                {
+                    "heading": "extends",
+                    "level": 1,
+                    "line": 2
+                },
+                {
+                    "heading": "compilerOptions",
+                    "level": 1,
+                    "line": 3
+                },
+                {
+                    "heading": "include",
+                    "level": 1,
+                    "line": 10
+                }
+            ],
+            "metrics": {
+                "importCount": 0,
+                "exportCount": 0,
+                "functionCount": 0,
+                "classCount": 0,
+                "sectionCount": 3
+            }
+        }
+    ]
+}

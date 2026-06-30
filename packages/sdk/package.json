@@ -23,7 +23,12 @@
     },
     "dependencies": {
         "@rtcforge/core": "*",
-        "@rtcforge/whiteboard": "*",
         "zod": "^4.4.3"
+    },
+    "optionalDependencies": {
+        "ws": "^8.18.0"
+    },
+    "devDependencies": {
+        "@types/ws": "^8.5.12"
     }
 }

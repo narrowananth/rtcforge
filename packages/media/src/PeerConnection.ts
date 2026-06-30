@@ -1,5 +1,5 @@
 import { EventEmitter, noopLogger } from '@rtcforge/core'
-import type { Logger } from '@rtcforge/core'
+import type { Logger, MediaKind } from '@rtcforge/core'
 import { ConnectionEvent } from './types.js'
 import type { CallOptions } from './types.js'
 
@@ -15,7 +15,6 @@ type PeerConnectionEvents = {
 export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     private readonly pc: RTCPeerConnection
     private static readonly MAX_PENDING_CANDIDATES = 100
-    private static readonly _capsCache = new Map<string, RTCRtpCapabilities | null>()
     private readonly polite: boolean
     private makingOffer = false
     private _offerGeneration = 0
@@ -34,7 +33,8 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
             ...opts.rtcConfig,
             iceServers: opts.iceServers ?? [],
         }
-        this.pc = new RTCPeerConnection(config)
+        const createPc = opts.peerConnectionFactory ?? ((c) => new RTCPeerConnection(c))
+        this.pc = createPc(config)
 
         this.pc.onnegotiationneeded = async () => {
             if (this.makingOffer) return
@@ -80,8 +80,8 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
             if (offerCollision) {
                 if (!this.polite) return null
-                ++this._offerGeneration // invalidate T1's in-flight offer
-                this.makingOffer = false // safe — T1's finally won't touch makingOffer (gen mismatch)
+                ++this._offerGeneration
+                this.makingOffer = false
                 await this.pc.setLocalDescription({ type: 'rollback' })
             }
 
@@ -185,13 +185,10 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     private applyCodecPreference(sender: RTCRtpSender): void {
         if (!this.opts.codec) return
         const codec = this.opts.codec
-        const kind = sender.track?.kind as 'audio' | 'video' | undefined
+        const kind = sender.track?.kind as MediaKind | undefined
         if (!kind) return
 
-        if (!PeerConnection._capsCache.has(kind)) {
-            PeerConnection._capsCache.set(kind, RTCRtpSender.getCapabilities(kind))
-        }
-        const capabilities = PeerConnection._capsCache.get(kind)
+        const capabilities = RTCRtpSender.getCapabilities(kind)
         if (!capabilities) return
 
         const lowerCodec = codec.toLowerCase()

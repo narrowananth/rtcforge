@@ -1,5 +1,5 @@
 import { RoomEvent, ServerEvent, SignalingServer } from '@rtcforge/signaling'
-import type { AuditEvent } from '@rtcforge/signaling'
+import type { AuditEvent, Peer } from '@rtcforge/signaling'
 
 const PORT = 3003
 
@@ -15,9 +15,13 @@ const server = new SignalingServer({
 server.on(ServerEvent.RoomCreated, (room) => {
     console.log(`[room] created: ${room.id}`)
 
-    room.on(RoomEvent.PeerJoined, (peer) => {
+    const onPeerJoined = (peer: Peer) => {
         console.log(`[room:${room.id}] peer joined: ${peer.id} (${peer.role})`)
-    })
+    }
+    room.on(RoomEvent.PeerJoined, onPeerJoined)
+    // The founding peer's PeerJoined fired synchronously during room creation, before this
+    // handler registered its listener — replay current peers so the founder is not skipped.
+    for (const peer of room.getPeers()) onPeerJoined(peer)
 
     room.on(RoomEvent.PeerLeft, (peer) => {
         console.log(`[room:${room.id}] peer left: ${peer.id}`)

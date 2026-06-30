@@ -1,0 +1,2951 @@
+{
+    "version": "1.0.0",
+    "gitCommitHash": "b6023f03fa0a06682e966a01ad3e1a1a0e224093",
+    "generatedAt": "2026-06-30T12:16:16.745Z",
+    "files": {
+        ".husky/pre-commit": {
+            "filePath": ".husky/pre-commit",
+            "contentHash": "e2b7c9733375d7182af2033bda9a7d2a05d0db5eef5be53d26eb7b5f3df8fbc3",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 2,
+            "hasStructuralAnalysis": false
+        },
+        ".understand-anything/.understandignore": {
+            "filePath": ".understand-anything/.understandignore",
+            "contentHash": "8a11e1e3a795103e7fdb2353936800e9703ecf135aea61675ad6578488d40a50",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 57,
+            "hasStructuralAnalysis": false
+        },
+        ".understand-anything/intermediate/scan-result.json": {
+            "filePath": ".understand-anything/intermediate/scan-result.json",
+            "contentHash": "e13025f458143cce28cd033bee1dd2c45ae26c184c5e37fd0c25df9ab05788c2",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 771,
+            "hasStructuralAnalysis": true
+        },
+        "package.json": {
+            "filePath": "package.json",
+            "contentHash": "515ee15df1ce3f2d710e840e4b624b2105df151ef6a7adab93c4faaca6bc0af8",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 35,
+            "hasStructuralAnalysis": true
+        },
+        "packages/adapter-udp/package.json": {
+            "filePath": "packages/adapter-udp/package.json",
+            "contentHash": "f31717740ddee9e4e0e3fdbc388dba588f18e809dd88be27e7d94f725567a814",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 28,
+            "hasStructuralAnalysis": true
+        },
+        "packages/adapter-udp/src/index.ts": {
+            "filePath": "packages/adapter-udp/src/index.ts",
+            "contentHash": "5b966eed48b7d23f67912752aff22c8a9415ee9f1f325f1ffe3292a41cfca92b",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": ["UdpGossipTransport", "UdpGossipTransportOptions"],
+            "totalLines": 3,
+            "hasStructuralAnalysis": true
+        },
+        "packages/adapter-udp/src/UdpGossipTransport.ts": {
+            "filePath": "packages/adapter-udp/src/UdpGossipTransport.ts",
+            "contentHash": "adc958b38ebdc24bba67d0400e5b8b7bdab8fa202aacaf5c02a356e512db815e",
+            "functions": [
+                {
+                    "name": "sanitizeGossipMessage",
+                    "params": ["parsed"],
+                    "returnType": "GossipMessage | null",
+                    "exported": false,
+                    "lineCount": 24
+                },
+                {
+                    "name": "isStringRecord",
+                    "params": ["v"],
+                    "exported": false,
+                    "lineCount": 4
+                },
+                {
+                    "name": "parseAddress",
+                    "params": ["address"],
+                    "returnType": "{ host: string; port: number | undefined }",
+                    "exported": false,
+                    "lineCount": 7
+                }
+            ],
+            "classes": [
+                {
+                    "name": "UdpGossipTransport",
+                    "methods": [
+                        "constructor",
+                        "address",
+                        "listen",
+                        "send",
+                        "onReceive",
+                        "close",
+                        "_onDatagram"
+                    ],
+                    "properties": [
+                        "_socket",
+                        "_bindHost",
+                        "_advertiseHost",
+                        "_logger",
+                        "_port",
+                        "_handler",
+                        "_closed",
+                        "_lastMsg",
+                        "_lastPayload"
+                    ],
+                    "exported": true,
+                    "lineCount": 97
+                }
+            ],
+            "imports": [
+                {
+                    "source": "node:dgram",
+                    "specifiers": ["dgram"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["GossipMessage", "GossipTransport"]
+                }
+            ],
+            "exports": ["UdpGossipTransport"],
+            "totalLines": 149,
+            "hasStructuralAnalysis": true
+        },
+        "packages/adapter-udp/tsconfig.json": {
+            "filePath": "packages/adapter-udp/tsconfig.json",
+            "contentHash": "9ba3b083c0e5966cc1f9c922a75b7029ce41aec3244e198634067de7829a908b",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 12,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/package.json": {
+            "filePath": "packages/core/package.json",
+            "contentHash": "da6b853a7d30576a1d40f9e34d8b9db710d584cfe9848bf0f3ed117c49676941",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 25,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/Clock.ts": {
+            "filePath": "packages/core/src/Clock.ts",
+            "contentHash": "c79c72f9072caf83876773553142b92d14537fac25e8bf298d3b5248afb9e122",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "ManualClock",
+                    "methods": ["constructor", "now", "setTimeout", "clearTimeout", "advance"],
+                    "properties": ["_now", "_nextId", "_tasks"],
+                    "exported": true,
+                    "lineCount": 38
+                }
+            ],
+            "imports": [],
+            "exports": ["systemClock", "ManualClock"],
+            "totalLines": 57,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/errors.ts": {
+            "filePath": "packages/core/src/errors.ts",
+            "contentHash": "a0619e2f9357b0580aa288db936420179d25bee24bd6cf7166ccba0e915ab10c",
+            "functions": [
+                {
+                    "name": "isRtcForgeError",
+                    "params": ["err", "code"],
+                    "exported": true,
+                    "lineCount": 3
+                }
+            ],
+            "classes": [
+                {
+                    "name": "RtcForgeError",
+                    "methods": ["constructor"],
+                    "properties": ["code"],
+                    "exported": true,
+                    "lineCount": 10
+                },
+                {
+                    "name": "InvalidArgumentError",
+                    "methods": ["constructor"],
+                    "properties": [],
+                    "exported": true,
+                    "lineCount": 5
+                }
+            ],
+            "imports": [],
+            "exports": ["RtcForgeError", "InvalidArgumentError", "isRtcForgeError"],
+            "totalLines": 21,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/EventEmitter.ts": {
+            "filePath": "packages/core/src/EventEmitter.ts",
+            "contentHash": "ad140a0704cd25afaf6b0bc190ac7b68c64157fa077006ff05619777d5788b9b",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "EventEmitter",
+                    "methods": [
+                        "on",
+                        "once",
+                        "off",
+                        "emit",
+                        "removeAllListeners",
+                        "listenerCount",
+                        "_add"
+                    ],
+                    "properties": ["_events"],
+                    "exported": true,
+                    "lineCount": 56
+                }
+            ],
+            "imports": [],
+            "exports": ["EventEmitter"],
+            "totalLines": 65,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/Gossip.ts": {
+            "filePath": "packages/core/src/Gossip.ts",
+            "contentHash": "9a4c3e3e5dac596c25fb80b4fb1e4e1c0edd7d62629f28a3409d9e622d378436",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "GossipMembership",
+                    "methods": [
+                        "constructor",
+                        "start",
+                        "stop",
+                        "register",
+                        "deregister",
+                        "list",
+                        "watch",
+                        "_scheduleTick",
+                        "_tick",
+                        "_gossip",
+                        "_pickTargets",
+                        "_onReceive",
+                        "_merge",
+                        "_sweep",
+                        "_aliveInfos",
+                        "_notify"
+                    ],
+                    "properties": [
+                        "_self",
+                        "_transport",
+                        "_clock",
+                        "_intervalMs",
+                        "_fanout",
+                        "_deadMs",
+                        "_tombstoneMs",
+                        "_seeds",
+                        "_members",
+                        "_watchers",
+                        "_timer",
+                        "_running"
+                    ],
+                    "exported": true,
+                    "lineCount": 231
+                },
+                {
+                    "name": "GossipNetwork",
+                    "methods": ["register", "unregister", "deliver", "partition", "heal"],
+                    "properties": ["_handlers", "_partitioned"],
+                    "exported": true,
+                    "lineCount": 25
+                },
+                {
+                    "name": "InMemoryGossipTransport",
+                    "methods": ["constructor", "send", "onReceive", "close"],
+                    "properties": ["_handler"],
+                    "exported": true,
+                    "lineCount": 22
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Clock.js",
+                    "specifiers": ["Clock", "systemClock"]
+                },
+                {
+                    "source": "./Membership.js",
+                    "specifiers": ["Membership", "NodeInfo"]
+                }
+            ],
+            "exports": ["GossipMembership", "GossipNetwork", "InMemoryGossipTransport"],
+            "totalLines": 322,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/HashRing.ts": {
+            "filePath": "packages/core/src/HashRing.ts",
+            "contentHash": "7736dd17c62a18fdb679eadbafee3ff514a0abf17a1e5b10928aaa29b75ac117",
+            "functions": [
+                {
+                    "name": "cyrb53",
+                    "params": ["str", "seed"],
+                    "returnType": "number",
+                    "exported": false,
+                    "lineCount": 14
+                }
+            ],
+            "classes": [
+                {
+                    "name": "HashRing",
+                    "methods": [
+                        "constructor",
+                        "add",
+                        "remove",
+                        "has",
+                        "size",
+                        "nodeIds",
+                        "_score",
+                        "get",
+                        "getN"
+                    ],
+                    "properties": ["_nodes"],
+                    "exported": true,
+                    "lineCount": 65
+                }
+            ],
+            "imports": [],
+            "exports": ["HashRing"],
+            "totalLines": 88,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/IdGenerator.ts": {
+            "filePath": "packages/core/src/IdGenerator.ts",
+            "contentHash": "9876c490a97451386590c0c22f6a532595927932d82280546b162e8704f3acb9",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SequentialId",
+                    "methods": ["constructor", "next"],
+                    "properties": ["_n"],
+                    "exported": true,
+                    "lineCount": 8
+                }
+            ],
+            "imports": [],
+            "exports": ["randomId", "SequentialId"],
+            "totalLines": 17,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/index.ts": {
+            "filePath": "packages/core/src/index.ts",
+            "contentHash": "2dfc59344b182ee1568b9c863066e49562ddd688cf0afa4797ef7948e96decfb",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "EventEmitter",
+                "RtcForgeError",
+                "InvalidArgumentError",
+                "isRtcForgeError",
+                "noopLogger",
+                "noopMetrics",
+                "Metric",
+                "toError",
+                "Logger",
+                "MetricsCollector",
+                "MediaKind",
+                "NetworkStats",
+                "HashRing",
+                "RingNode",
+                "systemClock",
+                "ManualClock",
+                "Clock",
+                "randomId",
+                "SequentialId",
+                "IdGenerator",
+                "MemoryStateStore",
+                "StateStore",
+                "LocalMessageBus",
+                "MessageBus",
+                "Unsubscribe",
+                "noopLock",
+                "MemoryLock",
+                "Lock",
+                "MemoryMembership",
+                "Membership",
+                "NodeInfo",
+                "MembershipReconciler",
+                "MembershipReconcilerHandlers",
+                "GossipMembership",
+                "GossipNetwork",
+                "InMemoryGossipTransport",
+                "GossipTransport",
+                "GossipMessage",
+                "GossipEntry",
+                "GossipMembershipOptions"
+            ],
+            "totalLines": 28,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/Lock.ts": {
+            "filePath": "packages/core/src/Lock.ts",
+            "contentHash": "63b488818b9dbfcce7294b589b7acb18222c7bef02c37cf8ea630564d16f376a",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "MemoryLock",
+                    "methods": ["constructor", "acquire", "release"],
+                    "properties": ["_held", "_seq"],
+                    "exported": true,
+                    "lineCount": 22
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Clock.js",
+                    "specifiers": ["Clock", "systemClock"]
+                }
+            ],
+            "exports": ["noopLock", "MemoryLock"],
+            "totalLines": 40,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/Membership.ts": {
+            "filePath": "packages/core/src/Membership.ts",
+            "contentHash": "44790b0781f24672e4e5da43ad7c3e2313eafc8a2df3ba4dbfd76008259777a3",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "MemoryMembership",
+                    "methods": [
+                        "constructor",
+                        "_prune",
+                        "_snapshot",
+                        "_notify",
+                        "register",
+                        "deregister",
+                        "list",
+                        "watch"
+                    ],
+                    "properties": ["_nodes", "_watchers"],
+                    "exported": true,
+                    "lineCount": 48
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Clock.js",
+                    "specifiers": ["Clock", "systemClock"]
+                }
+            ],
+            "exports": ["MemoryMembership"],
+            "totalLines": 70,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/MembershipReconciler.ts": {
+            "filePath": "packages/core/src/MembershipReconciler.ts",
+            "contentHash": "49bd7c5be60c99e76b18f7b0a3802e96c87f4208bd0d0b1836245a018919f234",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "MembershipReconciler",
+                    "methods": ["constructor", "start", "trackedIds", "_sync", "dispose"],
+                    "properties": ["_ids", "_seen", "_unwatch"],
+                    "exported": true,
+                    "lineCount": 49
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Membership.js",
+                    "specifiers": ["Membership", "NodeInfo"]
+                }
+            ],
+            "exports": ["MembershipReconciler"],
+            "totalLines": 58,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/MessageBus.ts": {
+            "filePath": "packages/core/src/MessageBus.ts",
+            "contentHash": "0a2953029f80f898c88d04824b7c461922fdd4ad4f5cf2e7bbf445a785134d92",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "LocalMessageBus",
+                    "methods": ["publish", "subscribe"],
+                    "properties": ["_topics"],
+                    "exported": true,
+                    "lineCount": 24
+                }
+            ],
+            "imports": [],
+            "exports": ["LocalMessageBus"],
+            "totalLines": 32,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/StateStore.ts": {
+            "filePath": "packages/core/src/StateStore.ts",
+            "contentHash": "eee688d1446621378738bb4ec966891dcb32c3a6dd1dae6cf0769451e81e0110",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "MemoryStateStore",
+                    "methods": ["constructor", "_live", "get", "set", "delete", "has", "keys"],
+                    "properties": ["_map"],
+                    "exported": true,
+                    "lineCount": 43
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Clock.js",
+                    "specifiers": ["Clock", "systemClock"]
+                }
+            ],
+            "exports": ["MemoryStateStore"],
+            "totalLines": 59,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/src/types.ts": {
+            "filePath": "packages/core/src/types.ts",
+            "contentHash": "cc04e3958ac6ad9ccfc971bdec46978b98586bbf17cbb0a8a49874f7b455e3d0",
+            "functions": [
+                {
+                    "name": "toError",
+                    "params": ["err"],
+                    "returnType": "Error",
+                    "exported": true,
+                    "lineCount": 3
+                }
+            ],
+            "classes": [],
+            "imports": [],
+            "exports": ["noopLogger", "noopMetrics", "Metric", "toError"],
+            "totalLines": 57,
+            "hasStructuralAnalysis": true
+        },
+        "packages/core/tsconfig.json": {
+            "filePath": "packages/core/tsconfig.json",
+            "contentHash": "7d70e281d11f0d1fd01d146665f84f702cf115694f3beca72421c5e0c82a61cf",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 10,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/package.json": {
+            "filePath": "packages/media/package.json",
+            "contentHash": "99e4d373db8a0756275dc3f6a0ec86597be92b40868d383c088e5cbea3d499ce",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 46,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/ActiveSpeakerDetector.ts": {
+            "filePath": "packages/media/src/ActiveSpeakerDetector.ts",
+            "contentHash": "735e4142184def661ec3752f29f0a0662b88dc57cfd2899598a8583a75ac4a72",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "ActiveSpeakerDetector",
+                    "methods": ["constructor", "start", "stop", "_tick", "_detect"],
+                    "properties": ["_timer", "_current", "_ticking"],
+                    "exported": true,
+                    "lineCount": 68
+                }
+            ],
+            "imports": [],
+            "exports": ["ActiveSpeakerDetector"],
+            "totalLines": 73,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/browser.ts": {
+            "filePath": "packages/media/src/browser.ts",
+            "contentHash": "efcbc72d9bae3309e5f5eae2c1125b0d7621edcc6458c54f2bc3cb477e7b4945",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "Call",
+                "getUserMedia",
+                "getDisplayMedia",
+                "getUserMediaWithOptions",
+                "enumerateDevices",
+                "getAudioDevices",
+                "getVideoDevices",
+                "onDeviceChange",
+                "checkPermissions",
+                "PeerConnection",
+                "MediaEvent",
+                "ConnectionEvent",
+                "turnConfigToIceServer",
+                "CallOptions",
+                "TurnConfig",
+                "PeerConnectionFactory",
+                "noopLogger",
+                "Logger",
+                "MetricsCollector",
+                "SignalKind",
+                "SignalType",
+                "MediaSignal"
+            ],
+            "totalLines": 19,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/Call.ts": {
+            "filePath": "packages/media/src/Call.ts",
+            "contentHash": "14ff4f18714b6adbbcc4d7933bc352dfe8a9a74e2ab42cd00a6938a591892cf1",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Call",
+                    "methods": [
+                        "constructor",
+                        "start",
+                        "addTrack",
+                        "replaceTrack",
+                        "addScreenTrack",
+                        "createDataChannel",
+                        "getStats",
+                        "startActiveSpeakerDetection",
+                        "stopActiveSpeakerDetection",
+                        "removeTrack",
+                        "muteAudio",
+                        "unmuteAudio",
+                        "muteVideo",
+                        "unmuteVideo",
+                        "isAudioMuted",
+                        "isVideoMuted",
+                        "restart",
+                        "close",
+                        "_teardownConnections",
+                        "_detachRoomListeners",
+                        "_clearPeerTimer",
+                        "_dropConnection",
+                        "getOrCreateConnection",
+                        "_wireConnection"
+                    ],
+                    "properties": [
+                        "room",
+                        "opts",
+                        "logger",
+                        "connections",
+                        "_negTimers",
+                        "tracks",
+                        "started",
+                        "closed",
+                        "_activeSpeaker",
+                        "handleRoomRefreshed",
+                        "handlePeerJoined",
+                        "handlePeerLeft",
+                        "handleRoomSignal"
+                    ],
+                    "exported": true,
+                    "lineCount": 315
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "noopLogger", "toError"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger"]
+                },
+                {
+                    "source": "@rtcforge/sdk",
+                    "specifiers": ["MessageType", "RoomEvent"]
+                },
+                {
+                    "source": "@rtcforge/sdk",
+                    "specifiers": ["Room"]
+                },
+                {
+                    "source": "./ActiveSpeakerDetector.js",
+                    "specifiers": ["ActiveSpeakerDetector"]
+                },
+                {
+                    "source": "./LocalTrackRegistry.js",
+                    "specifiers": ["LocalTrackRegistry"]
+                },
+                {
+                    "source": "./PeerConnection.js",
+                    "specifiers": ["PeerConnection"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["SignalKind", "SignalType", "isMediaSignal"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MediaSignal"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["ConnectionEvent", "MediaEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CallOptions"]
+                }
+            ],
+            "exports": ["Call"],
+            "totalLines": 338,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/Consumer.ts": {
+            "filePath": "packages/media/src/Consumer.ts",
+            "contentHash": "1c1ad7e23affaef36ac2057936c33bd9df79573f5bf117816e33a559d587aa7f",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Consumer",
+                    "methods": ["constructor", "rtpParameters"],
+                    "properties": ["role", "producerId"],
+                    "exported": true,
+                    "lineCount": 18
+                }
+            ],
+            "imports": [
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                },
+                {
+                    "source": "./MediaEntity.js",
+                    "specifiers": ["MediaEntity"]
+                }
+            ],
+            "exports": ["Consumer"],
+            "totalLines": 22,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/index.ts": {
+            "filePath": "packages/media/src/index.ts",
+            "contentHash": "3c9b6fa60bede972e51e8471e772d5c387e1ba133a58b5c6b1a5ffa8614de123",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "Call",
+                "getUserMedia",
+                "getDisplayMedia",
+                "getUserMediaWithOptions",
+                "enumerateDevices",
+                "getAudioDevices",
+                "getVideoDevices",
+                "onDeviceChange",
+                "checkPermissions",
+                "PeerConnection",
+                "MediaEvent",
+                "ConnectionEvent",
+                "turnConfigToIceServer",
+                "CallOptions",
+                "TurnConfig",
+                "MediaServiceOptions",
+                "PeerConnectionFactory",
+                "WorkerSettings",
+                "WebRtcTransportConfig",
+                "WebRtcTransportParams",
+                "PipeTransportParams",
+                "PipeProducerParams",
+                "DEFAULT_MEDIA_CODECS",
+                "DEFAULT_LISTEN_INFOS",
+                "noopLogger",
+                "Logger",
+                "MetricsCollector",
+                "SignalKind",
+                "SignalType",
+                "MediaSignal",
+                "MediaEntity",
+                "MediaEntityEvent",
+                "MediaEntityRole",
+                "Producer",
+                "Consumer",
+                "MediaRouter",
+                "MediaRouterEvent",
+                "MediaService",
+                "MediaServiceEvent",
+                "WorkerPool",
+                "WorkerPoolEvent"
+            ],
+            "totalLines": 37,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/LocalTrackRegistry.ts": {
+            "filePath": "packages/media/src/LocalTrackRegistry.ts",
+            "contentHash": "7aa4fb5c62fb5d078decbf18fb412910fa6ab0981c06a2b795e1eeabfde78d63",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "LocalTrackRegistry",
+                    "methods": [
+                        "constructor",
+                        "entries",
+                        "add",
+                        "remove",
+                        "replace",
+                        "clear",
+                        "setKindEnabled",
+                        "isKindMuted"
+                    ],
+                    "properties": ["_tracks"],
+                    "exported": true,
+                    "lineCount": 49
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["MediaKind"]
+                }
+            ],
+            "exports": ["LocalTrackRegistry"],
+            "totalLines": 57,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/MediaEntity.ts": {
+            "filePath": "packages/media/src/MediaEntity.ts",
+            "contentHash": "49ffcfdc8e1b6291b1a5b5df6bc01810e93403de4277d797db19617c60889ddf",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["MediaKind"]
+                }
+            ],
+            "exports": ["MediaEntityEvent"],
+            "totalLines": 87,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/MediaManager.ts": {
+            "filePath": "packages/media/src/MediaManager.ts",
+            "contentHash": "a44a8c1101e81b6ca97f902f8b2e36620066ac481297e945cb42c6911983a682",
+            "functions": [
+                {
+                    "name": "getUserMedia",
+                    "params": ["constraints"],
+                    "returnType": "Promise<MediaStream>",
+                    "exported": true,
+                    "lineCount": 5
+                },
+                {
+                    "name": "getDisplayMedia",
+                    "params": ["constraints"],
+                    "returnType": "Promise<MediaStream>",
+                    "exported": true,
+                    "lineCount": 3
+                },
+                {
+                    "name": "getUserMediaWithOptions",
+                    "params": ["opts"],
+                    "returnType": "Promise<MediaStream>",
+                    "exported": true,
+                    "lineCount": 14
+                },
+                {
+                    "name": "enumerateDevices",
+                    "params": [],
+                    "returnType": "Promise<MediaDeviceInfo[]>",
+                    "exported": true,
+                    "lineCount": 3
+                },
+                {
+                    "name": "getAudioDevices",
+                    "params": [],
+                    "returnType": "Promise<MediaDeviceInfo[]>",
+                    "exported": true,
+                    "lineCount": 3
+                },
+                {
+                    "name": "getVideoDevices",
+                    "params": [],
+                    "returnType": "Promise<MediaDeviceInfo[]>",
+                    "exported": true,
+                    "lineCount": 3
+                },
+                {
+                    "name": "onDeviceChange",
+                    "params": ["handler"],
+                    "returnType": "() => void",
+                    "exported": true,
+                    "lineCount": 4
+                },
+                {
+                    "name": "checkPermissions",
+                    "params": [],
+                    "returnType": "Promise<{\n    camera: PermissionState\n    microphone: PermissionState\n}>",
+                    "exported": true,
+                    "lineCount": 10
+                }
+            ],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "getUserMedia",
+                "getDisplayMedia",
+                "getUserMediaWithOptions",
+                "enumerateDevices",
+                "getAudioDevices",
+                "getVideoDevices",
+                "onDeviceChange",
+                "checkPermissions"
+            ],
+            "totalLines": 53,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/MediaRouter.ts": {
+            "filePath": "packages/media/src/MediaRouter.ts",
+            "contentHash": "3a09539cba554c7bde14a2ffd53f95132e86ac34a86592e831c6750635825fa2",
+            "functions": [
+                {
+                    "name": "requireFrom",
+                    "params": ["map", "id", "label"],
+                    "returnType": "T",
+                    "exported": false,
+                    "lineCount": 5
+                }
+            ],
+            "classes": [
+                {
+                    "name": "MediaRouter",
+                    "methods": [
+                        "constructor",
+                        "rtpCapabilities",
+                        "producerCount",
+                        "consumerCount",
+                        "createWebRtcTransport",
+                        "connectTransport",
+                        "produce",
+                        "consume",
+                        "resumeConsumer",
+                        "pipeProducerTo",
+                        "_hasProducer",
+                        "_internalRouter",
+                        "_acceptPipedProducer",
+                        "createPipeTransport",
+                        "connectPipeTransport",
+                        "pipeConsume",
+                        "pipeProduce",
+                        "closeTransportsForPeer",
+                        "close",
+                        "_registerProducer",
+                        "_assertOpen",
+                        "_requireTransport",
+                        "_requirePipeTransport"
+                    ],
+                    "properties": [
+                        "id",
+                        "_router",
+                        "_config",
+                        "_logger",
+                        "_transports",
+                        "_pipeTransports",
+                        "_producers",
+                        "_consumers",
+                        "_closed"
+                    ],
+                    "exported": true,
+                    "lineCount": 243
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "MediaKind"]
+                },
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                },
+                {
+                    "source": "./Consumer.js",
+                    "specifiers": ["Consumer"]
+                },
+                {
+                    "source": "./MediaEntity.js",
+                    "specifiers": ["MediaEntityEvent"]
+                },
+                {
+                    "source": "./Producer.js",
+                    "specifiers": ["Producer"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["DEFAULT_LISTEN_INFOS"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "PipeProducerParams",
+                        "PipeTransportParams",
+                        "WebRtcTransportConfig",
+                        "WebRtcTransportParams"
+                    ]
+                }
+            ],
+            "exports": ["MediaRouterEvent", "MediaRouter"],
+            "totalLines": 280,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/MediaService.ts": {
+            "filePath": "packages/media/src/MediaService.ts",
+            "contentHash": "484d7ed971cc868ce4cfd9b849738bf1e18fd011c62984ba2680c06f5811476f",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "MediaService",
+                    "methods": [
+                        "constructor",
+                        "init",
+                        "routerCount",
+                        "attachRoom",
+                        "_createRouter",
+                        "getRouter",
+                        "pipeProducerToRoom",
+                        "closeAll",
+                        "_detach"
+                    ],
+                    "properties": [
+                        "_pool",
+                        "_routers",
+                        "_pending",
+                        "_detachers",
+                        "_logger",
+                        "_mediaCodecs",
+                        "_webRtcConfig",
+                        "_started"
+                    ],
+                    "exported": true,
+                    "lineCount": 111
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger"]
+                },
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                },
+                {
+                    "source": "./MediaRouter.js",
+                    "specifiers": ["MediaRouter"]
+                },
+                {
+                    "source": "./WorkerPool.js",
+                    "specifiers": ["WorkerPool", "WorkerPoolEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["DEFAULT_MEDIA_CODECS", "RoomLikeEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "MediaServiceOptions",
+                        "RoomLike",
+                        "RoomMemberLike",
+                        "WebRtcTransportConfig"
+                    ]
+                }
+            ],
+            "exports": ["MediaServiceEvent", "MediaService"],
+            "totalLines": 135,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/PeerConnection.ts": {
+            "filePath": "packages/media/src/PeerConnection.ts",
+            "contentHash": "fe310c7b98c04f6c4835608e681974014434afb54fc0337c8d145f9f64774913",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "PeerConnection",
+                    "methods": [
+                        "constructor",
+                        "handleOffer",
+                        "handleAnswer",
+                        "addIceCandidate",
+                        "addTrack",
+                        "replaceTrack",
+                        "createDataChannel",
+                        "removeTrack",
+                        "restartIce",
+                        "getStats",
+                        "close",
+                        "applyCodecPreference",
+                        "drainCandidates"
+                    ],
+                    "properties": [
+                        "pc",
+                        "MAX_PENDING_CANDIDATES",
+                        "polite",
+                        "makingOffer",
+                        "_offerGeneration",
+                        "pendingCandidates",
+                        "_eocBuffered",
+                        "opts",
+                        "_logger",
+                        "_senderMap"
+                    ],
+                    "exported": true,
+                    "lineCount": 210
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "MediaKind"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["ConnectionEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CallOptions"]
+                }
+            ],
+            "exports": ["PeerConnection"],
+            "totalLines": 225,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/Producer.ts": {
+            "filePath": "packages/media/src/Producer.ts",
+            "contentHash": "36b0b0a90e77a7eea62c2f644a2ffabc22e5672a1c8a8432a851a136ee7fbb29",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Producer",
+                    "methods": ["constructor", "transportId"],
+                    "properties": ["role"],
+                    "exported": true,
+                    "lineCount": 16
+                }
+            ],
+            "imports": [
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                },
+                {
+                    "source": "./MediaEntity.js",
+                    "specifiers": ["MediaEntity"]
+                }
+            ],
+            "exports": ["Producer"],
+            "totalLines": 20,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/protocol.ts": {
+            "filePath": "packages/media/src/protocol.ts",
+            "contentHash": "408dde0c9e2a3a9d6f1fce1e8f06383d39cdda03a88e6c5b8d169449e8a7c24e",
+            "functions": [
+                {
+                    "name": "isMediaSignal",
+                    "params": ["value"],
+                    "exported": true,
+                    "lineCount": 5
+                }
+            ],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "zod",
+                    "specifiers": ["z"]
+                }
+            ],
+            "exports": ["SignalKind", "SignalType", "MediaSignalSchema", "isMediaSignal"],
+            "totalLines": 51,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/types.ts": {
+            "filePath": "packages/media/src/types.ts",
+            "contentHash": "d36fb7b5ed328e2cb7729a322e92205a57394852c5189640884511a3ea1320fa",
+            "functions": [
+                {
+                    "name": "turnConfigToIceServer",
+                    "params": ["config"],
+                    "returnType": "RTCIceServer",
+                    "exported": true,
+                    "lineCount": 7
+                }
+            ],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "MediaKind", "MetricsCollector"]
+                },
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                }
+            ],
+            "exports": [
+                "RoomLikeEvent",
+                "MediaEvent",
+                "ConnectionEvent",
+                "DEFAULT_MEDIA_CODECS",
+                "DEFAULT_LISTEN_INFOS",
+                "turnConfigToIceServer"
+            ],
+            "totalLines": 150,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/src/WorkerPool.ts": {
+            "filePath": "packages/media/src/WorkerPool.ts",
+            "contentHash": "b5b71facffc02fe304db0aacfc147bf1021ae4a3f4202a66c7dfcd185954bff4",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "WorkerPool",
+                    "methods": [
+                        "constructor",
+                        "size",
+                        "start",
+                        "createRouter",
+                        "close",
+                        "_leastLoaded",
+                        "_spawn"
+                    ],
+                    "properties": ["_load", "_started", "_starting"],
+                    "exported": true,
+                    "lineCount": 80
+                }
+            ],
+            "imports": [
+                {
+                    "source": "node:os",
+                    "specifiers": ["os"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger"]
+                },
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["* as mediasoup"]
+                },
+                {
+                    "source": "mediasoup",
+                    "specifiers": ["MsTypes"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["WorkerSettings"]
+                }
+            ],
+            "exports": ["WorkerPoolEvent", "WorkerPool"],
+            "totalLines": 98,
+            "hasStructuralAnalysis": true
+        },
+        "packages/media/tsconfig.json": {
+            "filePath": "packages/media/tsconfig.json",
+            "contentHash": "4919a2f4c1ef54b35e898576d34a24c473e3d78a54ec706a9a81a769a4e3b628",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 16,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/package.json": {
+            "filePath": "packages/sdk/package.json",
+            "contentHash": "a9465197942ec8592c91445486415ffb25741857914ed478fc594053d30758cf",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 35,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/index.ts": {
+            "filePath": "packages/sdk/src/index.ts",
+            "contentHash": "de889e31c19446c53cdb9acf7df5ee4eb71aa4f63d37947a6c5507816106f70c",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "RTCForgeClient",
+                "Room",
+                "RoomMediaEvent",
+                "EventEmitter",
+                "ClientEvent",
+                "RoomEvent",
+                "TransportEvent",
+                "noopLogger",
+                "MessageType",
+                "RTCForgeClientOptions",
+                "ConnectionState",
+                "Logger",
+                "CallInterface",
+                "CallTrackControl",
+                "CallMuteControl",
+                "CallStatsProvider",
+                "CallDataChannelFactory",
+                "RemoteStreamSource",
+                "CallLifecycle",
+                "BoundCall",
+                "IceServerConfig",
+                "TransportOptions",
+                "TransportFactory",
+                "ServerMessage",
+                "ClientMessage",
+                "PeerInfo",
+                "RoomMediaEventType",
+                "WebSocketTransport",
+                "Transport",
+                "TransportEvents",
+                "SendQueue",
+                "MessageQueue",
+                "ReconnectStrategy",
+                "BackoffStrategy",
+                "JoinHandshake"
+            ],
+            "totalLines": 32,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/JoinHandshake.ts": {
+            "filePath": "packages/sdk/src/JoinHandshake.ts",
+            "contentHash": "9845353540f6fb887c71a1e7a1578bdab0d0d2870dc84e8a6a2e935a92e3a771",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "JoinHandshake",
+                    "methods": ["constructor", "run", "cancel", "_settle"],
+                    "properties": ["_settled", "_timer", "_onMessage", "_reject"],
+                    "exported": true,
+                    "lineCount": 55
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./Transport.js",
+                    "specifiers": ["Transport"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["TransportEvent"]
+                }
+            ],
+            "exports": ["JoinHandshake"],
+            "totalLines": 63,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/protocol.ts": {
+            "filePath": "packages/sdk/src/protocol.ts",
+            "contentHash": "17763eaeccb0c2bc44ae6375d26a0a9b8c02eb43b21a20578a85250c9f687ca7",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "zod",
+                    "specifiers": ["z"]
+                }
+            ],
+            "exports": ["MessageType", "ServerMessageSchema", "ClientMessageSchema"],
+            "totalLines": 79,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/ReconnectStrategy.ts": {
+            "filePath": "packages/sdk/src/ReconnectStrategy.ts",
+            "contentHash": "d178f868b1d0612a390f4a9726b57bc329af3618005762a9849c73ac0b86ab0d",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "ReconnectStrategy",
+                    "methods": ["constructor", "attempt", "reset", "isExhausted", "nextDelay"],
+                    "properties": ["_attempt"],
+                    "exported": true,
+                    "lineCount": 27
+                }
+            ],
+            "imports": [],
+            "exports": ["ReconnectStrategy"],
+            "totalLines": 35,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/Room.ts": {
+            "filePath": "packages/sdk/src/Room.ts",
+            "contentHash": "ff5da208375e9dd589b16b1f359ef63ff4ab6fbd31a830434fe61c2f8eaa6ef1",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Room",
+                    "methods": [
+                        "constructor",
+                        "create",
+                        "localPeerRole",
+                        "iceServers",
+                        "peers",
+                        "isClosed",
+                        "hasPeer",
+                        "getPeerRole",
+                        "getPeerMetadata",
+                        "getPeerInfo",
+                        "getPeerInfoAll",
+                        "sendSignal",
+                        "broadcast",
+                        "_trySend",
+                        "bindCall",
+                        "_unbindCall",
+                        "_handleMessage",
+                        "_initRoles",
+                        "_initMeta",
+                        "_refresh",
+                        "_close",
+                        "_seedPeers"
+                    ],
+                    "properties": [
+                        "id",
+                        "localPeerId",
+                        "_peers",
+                        "_peerRoles",
+                        "_peerMeta",
+                        "_transport",
+                        "_call",
+                        "_callStreamHandler",
+                        "_closed",
+                        "_localPeerRole",
+                        "_iceServers"
+                    ],
+                    "exported": true,
+                    "lineCount": 184
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "toError"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ClientMessage", "ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["RoomEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["BoundCall", "IceServerConfig"]
+                }
+            ],
+            "exports": ["RoomMediaEvent", "Room"],
+            "totalLines": 253,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/RTCForgeClient.ts": {
+            "filePath": "packages/sdk/src/RTCForgeClient.ts",
+            "contentHash": "d2acf8f8fac3189119967fb4b5e0be5628fc32f63cf11792fb39b7f46ea90c4b",
+            "functions": [
+                {
+                    "name": "defaultTransportFactory",
+                    "params": ["url", "options"],
+                    "exported": false,
+                    "lineCount": 2
+                }
+            ],
+            "classes": [
+                {
+                    "name": "RTCForgeClient",
+                    "methods": [
+                        "constructor",
+                        "connectionState",
+                        "joinRoom",
+                        "leave",
+                        "_setState",
+                        "_wireLifecycle",
+                        "_attachSteadyState",
+                        "buildUrl"
+                    ],
+                    "properties": [
+                        "opts",
+                        "_transportFactory",
+                        "transport",
+                        "room",
+                        "control",
+                        "_handshake",
+                        "_cleanups",
+                        "_connectionState"
+                    ],
+                    "exported": true,
+                    "lineCount": 161
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "./JoinHandshake.js",
+                    "specifiers": ["JoinHandshake"]
+                },
+                {
+                    "source": "./Room.js",
+                    "specifiers": ["Room"]
+                },
+                {
+                    "source": "./Room.js",
+                    "specifiers": ["RoomControl"]
+                },
+                {
+                    "source": "./Transport.js",
+                    "specifiers": ["Transport"]
+                },
+                {
+                    "source": "./WebSocketTransport.js",
+                    "specifiers": ["WebSocketTransport"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["ClientEvent", "ConnectionState", "TransportEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["RTCForgeClientOptions", "TransportFactory"]
+                }
+            ],
+            "exports": ["RTCForgeClient"],
+            "totalLines": 194,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/SendQueue.ts": {
+            "filePath": "packages/sdk/src/SendQueue.ts",
+            "contentHash": "6cf780f3f96cd4c368377f37754a0e869209b2beccdaf968e33f69b65cbc2acd",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SendQueue",
+                    "methods": ["constructor", "size", "enqueue", "drain", "clear"],
+                    "properties": ["_items"],
+                    "exported": true,
+                    "lineCount": 26
+                }
+            ],
+            "imports": [],
+            "exports": ["SendQueue"],
+            "totalLines": 34,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/Transport.ts": {
+            "filePath": "packages/sdk/src/Transport.ts",
+            "contentHash": "3510ac336e7511b33b386b1b0e9a21ccb3c79564201accb4c13844acb37d217d",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ClientMessage", "ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["TransportEvent"]
+                }
+            ],
+            "exports": [],
+            "totalLines": 19,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/types.ts": {
+            "filePath": "packages/sdk/src/types.ts",
+            "contentHash": "7b4f7982d4f7d59ab6fe12dab7c061ccd0e7531b47f61cd7ee7501434460e036",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger"]
+                },
+                {
+                    "source": "./ReconnectStrategy.js",
+                    "specifiers": ["BackoffStrategy"]
+                },
+                {
+                    "source": "./SendQueue.js",
+                    "specifiers": ["MessageQueue"]
+                },
+                {
+                    "source": "./Transport.js",
+                    "specifiers": ["Transport"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ClientMessage"]
+                }
+            ],
+            "exports": [
+                "noopLogger",
+                "Logger",
+                "ConnectionState",
+                "RoomEvent",
+                "ClientEvent",
+                "TransportEvent",
+                "CloseCode",
+                "CloseReason"
+            ],
+            "totalLines": 142,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/src/WebSocketTransport.ts": {
+            "filePath": "packages/sdk/src/WebSocketTransport.ts",
+            "contentHash": "af1b2360971221f35fcfd2b3ac5d3a19fa8358b9eb93090ed343e0fefc1de59a",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "WebSocketTransport",
+                    "methods": [
+                        "constructor",
+                        "isTerminal",
+                        "connect",
+                        "send",
+                        "flush",
+                        "close",
+                        "initSocket",
+                        "scheduleReconnect",
+                        "_armReconnectTimer",
+                        "getWsClass"
+                    ],
+                    "properties": [
+                        "ws",
+                        "reconnectTimer",
+                        "_closed",
+                        "_exhausted",
+                        "_connecting",
+                        "url",
+                        "shouldReconnect",
+                        "connectTimeoutMs",
+                        "logger",
+                        "tokenRefresh",
+                        "_queue",
+                        "_reconnect",
+                        "_wsClass"
+                    ],
+                    "exported": true,
+                    "lineCount": 215
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "toError"]
+                },
+                {
+                    "source": "./ReconnectStrategy.js",
+                    "specifiers": ["ReconnectStrategy"]
+                },
+                {
+                    "source": "./ReconnectStrategy.js",
+                    "specifiers": ["BackoffStrategy"]
+                },
+                {
+                    "source": "./SendQueue.js",
+                    "specifiers": ["SendQueue"]
+                },
+                {
+                    "source": "./SendQueue.js",
+                    "specifiers": ["MessageQueue"]
+                },
+                {
+                    "source": "./Transport.js",
+                    "specifiers": ["Transport", "TransportEvents"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType", "ServerMessageSchema"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ClientMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CloseCode", "CloseReason", "TransportEvent", "noopLogger"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["Logger", "TransportOptions"]
+                }
+            ],
+            "exports": ["WebSocketTransport"],
+            "totalLines": 229,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sdk/tsconfig.json": {
+            "filePath": "packages/sdk/tsconfig.json",
+            "contentHash": "9309fab29b58ad64fe73aa31d337fc3c4d034a52a1ad2c04b16a76b0baae8ff4",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 14,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/package.json": {
+            "filePath": "packages/sfu/package.json",
+            "contentHash": "1631347c51813b99e1f0abe3a48785f591f49ced21323bdaeef30114da2dcb46",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 28,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/CascadeBridge.ts": {
+            "filePath": "packages/sfu/src/CascadeBridge.ts",
+            "contentHash": "86712fbfc9b0f84b4ea92d764741e684292244902056aad263b57b02ebee20ce",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "CascadeBridge",
+                    "methods": ["constructor", "attach", "detach"],
+                    "properties": [
+                        "_tree",
+                        "_media",
+                        "_attached",
+                        "_links",
+                        "_onLinkCreated",
+                        "_onLinkDropped",
+                        "_onTreeDropped"
+                    ],
+                    "exported": true,
+                    "lineCount": 57
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./CascadeTree.js",
+                    "specifiers": ["cascadeLinkKey"]
+                },
+                {
+                    "source": "./CascadeTree.js",
+                    "specifiers": ["CascadeTree"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadeTreeEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadePipeInterface"]
+                }
+            ],
+            "exports": ["CascadeBridge"],
+            "totalLines": 63,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/CascadeTree.ts": {
+            "filePath": "packages/sfu/src/CascadeTree.ts",
+            "contentHash": "52fda1e97682b0427feb94354831dfebd2f5bd904a7ef7959bbbd58b33218a1c",
+            "functions": [
+                {
+                    "name": "planCascadeTree",
+                    "params": ["params"],
+                    "returnType": "CascadePlan",
+                    "exported": true,
+                    "lineCount": 77
+                },
+                {
+                    "name": "cascadeLinkKey",
+                    "params": ["from", "to"],
+                    "returnType": "string",
+                    "exported": true,
+                    "lineCount": 1
+                },
+                {
+                    "name": "linkKey",
+                    "params": ["l"],
+                    "returnType": "string",
+                    "exported": false,
+                    "lineCount": 1
+                }
+            ],
+            "classes": [
+                {
+                    "name": "CascadeTree",
+                    "methods": [
+                        "constructor",
+                        "_onNodeGone",
+                        "dispose",
+                        "_activePool",
+                        "build",
+                        "_diff",
+                        "_nodeIndex",
+                        "detach",
+                        "getPlan"
+                    ],
+                    "properties": [
+                        "_cluster",
+                        "_fanout",
+                        "_viewersPerNode",
+                        "_logger",
+                        "_rooms",
+                        "_failures"
+                    ],
+                    "exported": true,
+                    "lineCount": 113
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "InvalidArgumentError"]
+                },
+                {
+                    "source": "./NodeFailureTracker.js",
+                    "specifiers": ["NodeFailureTracker"]
+                },
+                {
+                    "source": "./SfuCluster.js",
+                    "specifiers": ["SfuCluster"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadeTreeEvent", "noopLogger"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadeTreeOptions", "Logger"]
+                }
+            ],
+            "exports": ["planCascadeTree", "cascadeLinkKey", "CascadeTree"],
+            "totalLines": 243,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/CascadingRouter.ts": {
+            "filePath": "packages/sfu/src/CascadingRouter.ts",
+            "contentHash": "cd52e0f925e88a02c4cc860493a5ba046617306740de0c68b4d3b5a33b3e7deb",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "CascadingRouter",
+                    "methods": [
+                        "constructor",
+                        "_handleNodeGone",
+                        "dispose",
+                        "assignmentCount",
+                        "attachRoom",
+                        "detachRoom",
+                        "getAssignment",
+                        "getCascadeNodes"
+                    ],
+                    "properties": [
+                        "_cluster",
+                        "_assignments",
+                        "_cascadeLinks",
+                        "_logger",
+                        "_failures"
+                    ],
+                    "exported": true,
+                    "lineCount": 103
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "./NodeFailureTracker.js",
+                    "specifiers": ["NodeFailureTracker"]
+                },
+                {
+                    "source": "./SfuCluster.js",
+                    "specifiers": ["SfuCluster"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./errors.js",
+                    "specifiers": ["NoAvailableNodeError"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadingRouterEvent", "noopLogger"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadingRouterOptions", "Logger"]
+                }
+            ],
+            "exports": ["CascadingRouter"],
+            "totalLines": 119,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/errors.ts": {
+            "filePath": "packages/sfu/src/errors.ts",
+            "contentHash": "929f5752f01c6359879bdd15246eac03f593bae1489fffa758bfe505a8f9b8f1",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "NoAvailableNodeError",
+                    "methods": ["constructor"],
+                    "properties": [],
+                    "exported": true,
+                    "lineCount": 5
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["RtcForgeError"]
+                }
+            ],
+            "exports": ["NoAvailableNodeError"],
+            "totalLines": 8,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/HealthChecker.ts": {
+            "filePath": "packages/sfu/src/HealthChecker.ts",
+            "contentHash": "41b5a4a4035d55e9415a359790c81c082407634b270df1c5e7a042d86b1af43e",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "HealthChecker",
+                    "methods": ["constructor", "start", "stop", "_tick"],
+                    "properties": ["_timer", "_running", "_inFlight"],
+                    "exported": true,
+                    "lineCount": 45
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                }
+            ],
+            "exports": ["HealthChecker"],
+            "totalLines": 56,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/index.ts": {
+            "filePath": "packages/sfu/src/index.ts",
+            "contentHash": "4d714ed9833dd9ca97b1397ff93ab7e2e253e8619ec8bdb56e5672cf5cd88bce",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "SfuNode",
+                "SfuCluster",
+                "CascadingRouter",
+                "SfuBridge",
+                "CascadeBridge",
+                "LeastLoadedStrategy",
+                "HashRingStrategy",
+                "CascadeTree",
+                "planCascadeTree",
+                "NodeFailureTracker",
+                "NoAvailableNodeError",
+                "CascadePlan",
+                "CascadePlanNode",
+                "CascadeLink",
+                "CascadeRole",
+                "SfuNodeEvent",
+                "SfuClusterEvent",
+                "CascadingRouterEvent",
+                "CascadeTreeEvent",
+                "SfuMediaInterface",
+                "CascadePipeInterface",
+                "SfuNodeOptions",
+                "SfuClusterOptions",
+                "CascadingRouterOptions",
+                "BandwidthEstimator",
+                "BandwidthQuality",
+                "PlacementStrategy",
+                "SimpleBandwidthEstimatorOptions",
+                "CascadeTreeOptions",
+                "Logger",
+                "NetworkStats",
+                "Membership",
+                "NodeInfo",
+                "SimpleBandwidthEstimator"
+            ],
+            "totalLines": 34,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/NodeFailureTracker.ts": {
+            "filePath": "packages/sfu/src/NodeFailureTracker.ts",
+            "contentHash": "a95f0cd12eac0df0a53e0db06e80c3857f2c32944d63822dab3281f9df0b1b8e",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "NodeFailureTracker",
+                    "methods": ["constructor", "_fireGone", "_attach", "_detach", "dispose"],
+                    "properties": ["_listeners", "_gone", "_onNodeAdded", "_onNodeRemoved"],
+                    "exported": true,
+                    "lineCount": 53
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./SfuCluster.js",
+                    "specifiers": ["SfuCluster"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["SfuClusterEvent", "SfuNodeEvent"]
+                }
+            ],
+            "exports": ["NodeFailureTracker"],
+            "totalLines": 63,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/PlacementStrategy.ts": {
+            "filePath": "packages/sfu/src/PlacementStrategy.ts",
+            "contentHash": "0d650fd17c5d90da8630b8c9940f3441463a3c5df17c85810032dcb9deda6369",
+            "functions": [
+                {
+                    "name": "regionalPool",
+                    "params": ["candidates", "region"],
+                    "returnType": "SfuNode[]",
+                    "exported": false,
+                    "lineCount": 5
+                }
+            ],
+            "classes": [
+                {
+                    "name": "LeastLoadedStrategy",
+                    "methods": ["select"],
+                    "properties": [],
+                    "exported": true,
+                    "lineCount": 7
+                },
+                {
+                    "name": "HashRingStrategy",
+                    "methods": ["select", "_ringFor"],
+                    "properties": ["_ring", "_ringSig"],
+                    "exported": true,
+                    "lineCount": 27
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["HashRing"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["PlacementStrategy"]
+                }
+            ],
+            "exports": ["LeastLoadedStrategy", "HashRingStrategy"],
+            "totalLines": 46,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/SfuBridge.ts": {
+            "filePath": "packages/sfu/src/SfuBridge.ts",
+            "contentHash": "adb1148042c2040286c94260d6a69c4083a9546b7967d6d6aa994633ab796cd0",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SfuBridge",
+                    "methods": ["constructor", "attach", "detach"],
+                    "properties": [
+                        "_router",
+                        "_media",
+                        "_attached",
+                        "_assignedRooms",
+                        "_cascadeRoutes",
+                        "_onRoomAssigned",
+                        "_onCascadeCreated",
+                        "_onRoomDetached",
+                        "_onCascadeDropped"
+                    ],
+                    "exported": true,
+                    "lineCount": 75
+                }
+            ],
+            "imports": [
+                {
+                    "source": "./CascadingRouter.js",
+                    "specifiers": ["CascadingRouter"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CascadingRouterEvent"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["SfuMediaInterface"]
+                }
+            ],
+            "exports": ["SfuMediaInterface", "SfuBridge"],
+            "totalLines": 83,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/SfuCluster.ts": {
+            "filePath": "packages/sfu/src/SfuCluster.ts",
+            "contentHash": "eb1b05034a43f724e8c002b8f565ab2be0333993c25d7869cfefe1eeb233c7d1",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SfuCluster",
+                    "methods": [
+                        "constructor",
+                        "dispose",
+                        "nodes",
+                        "getActiveNodes",
+                        "addNode",
+                        "removeNode",
+                        "assignNode",
+                        "startHealthChecks",
+                        "stopHealthChecks",
+                        "_onHealthResult",
+                        "rebalance",
+                        "_checkAllOverloaded"
+                    ],
+                    "properties": [
+                        "_nodes",
+                        "_logger",
+                        "_opts",
+                        "_placement",
+                        "_healthChecker",
+                        "_membership",
+                        "_nodeFactory",
+                        "_reconciler"
+                    ],
+                    "exported": true,
+                    "lineCount": 130
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "MembershipReconciler"]
+                },
+                {
+                    "source": "./HealthChecker.js",
+                    "specifiers": ["HealthChecker"]
+                },
+                {
+                    "source": "./PlacementStrategy.js",
+                    "specifiers": ["LeastLoadedStrategy"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["SfuClusterEvent", "SfuNodeEvent", "noopLogger"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "Logger",
+                        "Membership",
+                        "NodeInfo",
+                        "PlacementStrategy",
+                        "SfuClusterOptions"
+                    ]
+                }
+            ],
+            "exports": ["SfuCluster"],
+            "totalLines": 147,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/SfuNode.ts": {
+            "filePath": "packages/sfu/src/SfuNode.ts",
+            "contentHash": "2d19118b5140ecf1b6430d5c9db9ffe7dc6f3fde948dbf76e5ac1ccf87eeedbc",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SfuNode",
+                    "methods": [
+                        "constructor",
+                        "load",
+                        "isFailed",
+                        "isDraining",
+                        "isOverloaded",
+                        "reportLoad",
+                        "markFailed",
+                        "markRecovered",
+                        "trackRoom",
+                        "untrackRoom",
+                        "roomCount",
+                        "drain",
+                        "startStatsCollection",
+                        "stopStatsCollection",
+                        "_reportBandwidthQuality"
+                    ],
+                    "properties": [
+                        "id",
+                        "region",
+                        "capacity",
+                        "_load",
+                        "_failed",
+                        "_draining",
+                        "_logger",
+                        "_statsCollector",
+                        "_rooms",
+                        "_drainResolvers"
+                    ],
+                    "exported": true,
+                    "lineCount": 140
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["NetworkStats"]
+                },
+                {
+                    "source": "./StatsCollector.js",
+                    "specifiers": ["StatsCollector"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["SfuNodeEvent", "noopLogger"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "BandwidthEstimator",
+                        "BandwidthQuality",
+                        "Logger",
+                        "SfuNodeOptions"
+                    ]
+                }
+            ],
+            "exports": ["SfuNode"],
+            "totalLines": 159,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/SimpleBandwidthEstimator.ts": {
+            "filePath": "packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "contentHash": "0098f9007ba32f24489954f483ad0d42af481269b32457d8b2ad5fd712693045",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SimpleBandwidthEstimator",
+                    "methods": ["constructor", "estimate", "reset"],
+                    "properties": ["opts", "_streak", "_pendingDir", "_lastQuality"],
+                    "exported": true,
+                    "lineCount": 73
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["NetworkStats"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "BandwidthEstimator",
+                        "BandwidthQuality",
+                        "SimpleBandwidthEstimatorOptions"
+                    ]
+                }
+            ],
+            "exports": ["SimpleBandwidthEstimator"],
+            "totalLines": 81,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/StatsCollector.ts": {
+            "filePath": "packages/sfu/src/StatsCollector.ts",
+            "contentHash": "a72c54de0bd3add7e97aec9d045c8897d722ce61231d8172eee712ec3863f5cb",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "StatsCollector",
+                    "methods": ["constructor", "start", "stop", "_collect"],
+                    "properties": ["_timer", "_collecting"],
+                    "exported": true,
+                    "lineCount": 36
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["NetworkStats"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["BandwidthEstimator", "BandwidthQuality"]
+                }
+            ],
+            "exports": ["StatsCollector"],
+            "totalLines": 40,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/src/types.ts": {
+            "filePath": "packages/sfu/src/types.ts",
+            "contentHash": "24df792c3cfac05ec50598ff7ca2ff4ef6c866ccab256827e0b1c9200c467588",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["noopLogger"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "Membership", "NetworkStats", "NodeInfo"]
+                },
+                {
+                    "source": "./SfuNode.js",
+                    "specifiers": ["SfuNode"]
+                }
+            ],
+            "exports": [
+                "Logger",
+                "NetworkStats",
+                "Membership",
+                "NodeInfo",
+                "noopLogger",
+                "SfuNodeEvent",
+                "SfuClusterEvent",
+                "CascadingRouterEvent",
+                "CascadeTreeEvent"
+            ],
+            "totalLines": 108,
+            "hasStructuralAnalysis": true
+        },
+        "packages/sfu/tsconfig.json": {
+            "filePath": "packages/sfu/tsconfig.json",
+            "contentHash": "9ba3b083c0e5966cc1f9c922a75b7029ce41aec3244e198634067de7829a908b",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 12,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/package.json": {
+            "filePath": "packages/signaling/package.json",
+            "contentHash": "34f31deaa8cc409de0847340696ab137f1e1916d9dc38ed1d88fe84368216076",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 33,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/Authenticator.ts": {
+            "filePath": "packages/signaling/src/Authenticator.ts",
+            "contentHash": "b8aaa2bb7dcec3972109278b4f0a347b7246fa1930b4b20181e70346aa71d6fa",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Authenticator",
+                    "methods": ["constructor", "resolve"],
+                    "properties": [],
+                    "exported": true,
+                    "lineCount": 58
+                }
+            ],
+            "imports": [
+                {
+                    "source": "node:crypto",
+                    "specifiers": ["randomUUID"]
+                },
+                {
+                    "source": "node:http",
+                    "specifiers": ["IncomingMessage"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["toError"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "MetricsCollector"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["AuthPayloadSchema", "CloseCode", "CloseReason", "Metric"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["AuthFunction"]
+                }
+            ],
+            "exports": ["Authenticator"],
+            "totalLines": 84,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/HeartbeatMonitor.ts": {
+            "filePath": "packages/signaling/src/HeartbeatMonitor.ts",
+            "contentHash": "76908b7d78193f381dc5bcafd188967d4ecd0460cade8ff947cfa038c48b36ca",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "HeartbeatMonitor",
+                    "methods": ["constructor", "start", "stop", "_tick"],
+                    "properties": ["_timer"],
+                    "exported": true,
+                    "lineCount": 34
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger"]
+                },
+                {
+                    "source": "./Room.js",
+                    "specifiers": ["Room"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CloseCode", "CloseReason"]
+                }
+            ],
+            "exports": ["HeartbeatMonitor"],
+            "totalLines": 46,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/index.ts": {
+            "filePath": "packages/signaling/src/index.ts",
+            "contentHash": "c577203a2092687ca3b345293136927c1c07a471e0c5853abe8496d82e8a2e24",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [
+                "SignalingServer",
+                "Room",
+                "Peer",
+                "RoomRouter",
+                "RoomRouterOptions",
+                "ServerEvent",
+                "RoomEvent",
+                "PeerEvent",
+                "RoomState",
+                "CloseCode",
+                "CloseReason",
+                "Metric",
+                "noopLogger",
+                "noopMetrics",
+                "SignalingServerOptions",
+                "AuthFunction",
+                "AuthPayload",
+                "Logger",
+                "MetricsCollector",
+                "AuditEvent",
+                "AuditEventType",
+                "IceServerConfig",
+                "ServerStats",
+                "MessageType",
+                "ServerMessage",
+                "ClientMessage"
+            ],
+            "totalLines": 30,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/Peer.ts": {
+            "filePath": "packages/signaling/src/Peer.ts",
+            "contentHash": "aa09ddc9f1db26782571520d562f7c7506a29b1278287b455ec02f045dbe922c",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Peer",
+                    "methods": [
+                        "constructor",
+                        "role",
+                        "lastPong",
+                        "setRole",
+                        "isAlive",
+                        "send",
+                        "ping",
+                        "disconnect",
+                        "handleMessage"
+                    ],
+                    "properties": [
+                        "id",
+                        "metadata",
+                        "_role",
+                        "_lastPong",
+                        "ws",
+                        "onSignal",
+                        "_rateLimiter"
+                    ],
+                    "exported": true,
+                    "lineCount": 106
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "toError"]
+                },
+                {
+                    "source": "ws",
+                    "specifiers": ["WebSocket"]
+                },
+                {
+                    "source": "./RateLimiter.js",
+                    "specifiers": ["RateLimiter"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ClientMessageSchema", "MessageType"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["PeerEvent"]
+                }
+            ],
+            "exports": ["Peer"],
+            "totalLines": 132,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/protocol.ts": {
+            "filePath": "packages/signaling/src/protocol.ts",
+            "contentHash": "8ed33bab03892d8a389ab3ab487b0e85cbb6c2cd8a9a4afe6636e091fd746075",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "zod",
+                    "specifiers": ["z"]
+                }
+            ],
+            "exports": ["MessageType", "ClientMessageSchema", "ServerMessageSchema"],
+            "totalLines": 83,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/RateLimiter.ts": {
+            "filePath": "packages/signaling/src/RateLimiter.ts",
+            "contentHash": "e0c8b37b83c8f16829aeea543bf8bb0d4535dadb75112637b4e216efe6602d41",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "RateLimiter",
+                    "methods": ["constructor", "allow"],
+                    "properties": ["_hits"],
+                    "exported": true,
+                    "lineCount": 19
+                }
+            ],
+            "imports": [],
+            "exports": ["RateLimiter"],
+            "totalLines": 20,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/Room.ts": {
+            "filePath": "packages/signaling/src/Room.ts",
+            "contentHash": "fc7629023e446380e753ea069df1f54735a9e3c3324be0c3852fd5e59980b4d6",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "Room",
+                    "methods": [
+                        "constructor",
+                        "state",
+                        "_transitionTo",
+                        "getPeers",
+                        "getPeerCount",
+                        "getPeerIds",
+                        "getPeer",
+                        "addPeer",
+                        "kickPeer",
+                        "relay",
+                        "broadcast",
+                        "broadcastExcept",
+                        "_sendToAll",
+                        "removePeer",
+                        "markActivity",
+                        "getPeerMetadata",
+                        "setPeerRole",
+                        "dispose",
+                        "_clearTimers",
+                        "_resetIdleTimer",
+                        "_forceClose"
+                    ],
+                    "properties": [
+                        "id",
+                        "_state",
+                        "_peers",
+                        "maxPeers",
+                        "_peerMeta",
+                        "_idleTimeoutMs",
+                        "_durationTimer",
+                        "_idleTimer",
+                        "_keepAliveOnEmpty"
+                    ],
+                    "exported": true,
+                    "lineCount": 247
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter", "toError"]
+                },
+                {
+                    "source": "./Peer.js",
+                    "specifiers": ["Peer"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["ServerMessage"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "CloseCode",
+                        "CloseReason",
+                        "PeerEvent",
+                        "RoomEvent",
+                        "RoomState"
+                    ]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["IceServerConfig"]
+                }
+            ],
+            "exports": ["Room"],
+            "totalLines": 270,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/RoomRegistry.ts": {
+            "filePath": "packages/signaling/src/RoomRegistry.ts",
+            "contentHash": "2a3ecff85d38a1303bcf54899c06eaa527d8f06ad1fe1048a08267e0fcc206ec",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "RoomRegistry",
+                    "methods": [
+                        "constructor",
+                        "size",
+                        "get",
+                        "rooms",
+                        "totalPeers",
+                        "getOrCreate",
+                        "rollbackIfEmpty",
+                        "disconnectAll"
+                    ],
+                    "properties": ["_rooms"],
+                    "exported": true,
+                    "lineCount": 57
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "./Room.js",
+                    "specifiers": ["Room"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["CloseCode", "RoomEvent"]
+                }
+            ],
+            "exports": ["RoomRegistryEvent", "RoomRegistry"],
+            "totalLines": 78,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/RoomRouter.ts": {
+            "filePath": "packages/signaling/src/RoomRouter.ts",
+            "contentHash": "14af61048e508fbf2621638a8afd23037116ed95b1a38b2c81e25037069781cb",
+            "functions": [
+                {
+                    "name": "nodeWeight",
+                    "params": ["n"],
+                    "returnType": "number",
+                    "exported": false,
+                    "lineCount": 3
+                }
+            ],
+            "classes": [
+                {
+                    "name": "RoomRouter",
+                    "methods": [
+                        "constructor",
+                        "_upsert",
+                        "route",
+                        "ownerId",
+                        "owner",
+                        "isLocal",
+                        "nodeIds",
+                        "dispose"
+                    ],
+                    "properties": ["_selfId", "_ring", "_byId", "_weights", "_reconciler"],
+                    "exported": true,
+                    "lineCount": 61
+                }
+            ],
+            "imports": [
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["HashRing", "MembershipReconciler"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["Membership", "NodeInfo"]
+                }
+            ],
+            "exports": ["RoomRouter"],
+            "totalLines": 74,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/SignalingServer.ts": {
+            "filePath": "packages/signaling/src/SignalingServer.ts",
+            "contentHash": "c98aa7f412ea74e35a891dd54ac989d1edee3bec89dd110be418268fcc814803",
+            "functions": [],
+            "classes": [
+                {
+                    "name": "SignalingServer",
+                    "methods": [
+                        "constructor",
+                        "start",
+                        "stop",
+                        "getRoom",
+                        "getOwner",
+                        "getStats",
+                        "attachHealthEndpoint",
+                        "onRoomClosed",
+                        "onPeerKicked",
+                        "handleConnection"
+                    ],
+                    "properties": [
+                        "opts",
+                        "logger",
+                        "metrics",
+                        "registry",
+                        "authenticator",
+                        "heartbeat",
+                        "router",
+                        "wss",
+                        "ownServer",
+                        "startedAt",
+                        "_stopped"
+                    ],
+                    "exported": true,
+                    "lineCount": 250
+                }
+            ],
+            "imports": [
+                {
+                    "source": "node:http",
+                    "specifiers": ["http"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["EventEmitter"]
+                },
+                {
+                    "source": "ws",
+                    "specifiers": ["WebSocketServer"]
+                },
+                {
+                    "source": "ws",
+                    "specifiers": ["WebSocket"]
+                },
+                {
+                    "source": "./Authenticator.js",
+                    "specifiers": ["Authenticator"]
+                },
+                {
+                    "source": "./HeartbeatMonitor.js",
+                    "specifiers": ["HeartbeatMonitor"]
+                },
+                {
+                    "source": "./Peer.js",
+                    "specifiers": ["Peer"]
+                },
+                {
+                    "source": "./Room.js",
+                    "specifiers": ["Room"]
+                },
+                {
+                    "source": "./RoomRegistry.js",
+                    "specifiers": ["RoomRegistry", "RoomRegistryEvent"]
+                },
+                {
+                    "source": "./RoomRouter.js",
+                    "specifiers": ["RoomRouter"]
+                },
+                {
+                    "source": "./protocol.js",
+                    "specifiers": ["MessageType"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": ["NodeInfo"]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "CloseCode",
+                        "CloseReason",
+                        "Metric",
+                        "PeerEvent",
+                        "ServerEvent",
+                        "noopLogger",
+                        "noopMetrics"
+                    ]
+                },
+                {
+                    "source": "./types.js",
+                    "specifiers": [
+                        "IceServerConfig",
+                        "Logger",
+                        "MetricsCollector",
+                        "SignalingServerOptions"
+                    ]
+                }
+            ],
+            "exports": ["SignalingServer"],
+            "totalLines": 286,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/src/types.ts": {
+            "filePath": "packages/signaling/src/types.ts",
+            "contentHash": "b1e0da6613a7fcfe115f8ed6a27fd35a3fac9a7cbf69ca147f8881edf4c2bcdb",
+            "functions": [],
+            "classes": [],
+            "imports": [
+                {
+                    "source": "node:http",
+                    "specifiers": ["Server"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Metric", "noopLogger", "noopMetrics"]
+                },
+                {
+                    "source": "@rtcforge/core",
+                    "specifiers": ["Logger", "Membership", "MetricsCollector", "NodeInfo"]
+                },
+                {
+                    "source": "zod",
+                    "specifiers": ["z"]
+                }
+            ],
+            "exports": [
+                "Logger",
+                "MetricsCollector",
+                "Membership",
+                "NodeInfo",
+                "noopLogger",
+                "noopMetrics",
+                "Metric",
+                "AuthPayloadSchema",
+                "RoomState",
+                "RoomEvent",
+                "ServerEvent",
+                "PeerEvent",
+                "CloseCode",
+                "CloseReason"
+            ],
+            "totalLines": 127,
+            "hasStructuralAnalysis": true
+        },
+        "packages/signaling/tsconfig.json": {
+            "filePath": "packages/signaling/tsconfig.json",
+            "contentHash": "de8a09150936560cbf277f06624d30870dc0b8b81d926c338da88f4bd3d96bbe",
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "exports": [],
+            "totalLines": 11,
+            "hasStructuralAnalysis": true
+        }
+    }
+}

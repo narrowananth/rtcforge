@@ -1,0 +1,303 @@
+{
+    "nodes": [
+        {
+            "id": "file:packages/core/src/Clock.ts",
+            "type": "file",
+            "name": "Clock.ts",
+            "filePath": "packages/core/src/Clock.ts",
+            "summary": "Defines the Clock abstraction used throughout @rtcforge/core for time and timer access, providing the real systemClock and a deterministic ManualClock for testing time-dependent logic.",
+            "tags": ["abstraction", "time", "test-utility", "type-definition"],
+            "complexity": "simple",
+            "languageNotes": "Dependency-injectable clock pattern lets every primitive (membership, locks, state store) be tested deterministically by advancing a ManualClock."
+        },
+        {
+            "id": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "class",
+            "name": "ManualClock",
+            "filePath": "packages/core/src/Clock.ts",
+            "lineRange": [19, 56],
+            "summary": "Deterministic Clock implementation whose now() only advances via advance(), draining due scheduled timers in fire order so timing-sensitive code can be unit tested without real delays.",
+            "tags": ["test-utility", "time", "scheduler", "fake"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/Gossip.ts",
+            "type": "file",
+            "name": "Gossip.ts",
+            "filePath": "packages/core/src/Gossip.ts",
+            "summary": "Implements an epidemic gossip-based cluster membership protocol with incarnation numbers, alive/dead/tombstone lifecycle, and a fanout-limited transport, enabling multi-node RTCForge deployments to discover and track peers without a central registry.",
+            "tags": ["distributed-systems", "membership", "gossip", "clustering", "service"],
+            "complexity": "complex",
+            "languageNotes": "SWIM-style gossip: incarnation numbers resolve conflicting state, periodic ticks gossip a digest to a random subset of peers, and dead members are swept after deadTimeoutMs then garbage-collected after tombstoneMs."
+        },
+        {
+            "id": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "type": "class",
+            "name": "GossipMembership",
+            "filePath": "packages/core/src/Gossip.ts",
+            "lineRange": [42, 272],
+            "summary": "Membership implementation that maintains a peer map by periodically gossiping a member digest over a GossipTransport, merging incoming state by incarnation, and notifying watchers of the live node set.",
+            "tags": ["membership", "gossip", "distributed-systems", "event-emitter"],
+            "complexity": "complex"
+        },
+        {
+            "id": "class:packages/core/src/Gossip.ts:GossipNetwork",
+            "type": "class",
+            "name": "GossipNetwork",
+            "filePath": "packages/core/src/Gossip.ts",
+            "lineRange": [274, 298],
+            "summary": "In-process message router for testing gossip: registers per-address handlers, delivers messages between them, and can simulate network partitions and healing.",
+            "tags": ["test-utility", "networking", "router", "fake"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/core/src/Gossip.ts:InMemoryGossipTransport",
+            "type": "class",
+            "name": "InMemoryGossipTransport",
+            "filePath": "packages/core/src/Gossip.ts",
+            "lineRange": [300, 321],
+            "summary": "GossipTransport backed by a shared in-memory GossipNetwork, used to wire multiple GossipMembership instances together in tests without real sockets.",
+            "tags": ["test-utility", "transport", "networking", "adapter"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/Lock.ts",
+            "type": "file",
+            "name": "Lock.ts",
+            "filePath": "packages/core/src/Lock.ts",
+            "summary": "Defines the distributed Lock interface for TTL-based leader/resource coordination, with a noopLock for single-node mode and an in-memory MemoryLock for local development and tests.",
+            "tags": ["distributed-systems", "locking", "coordination", "type-definition"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/core/src/Lock.ts:MemoryLock",
+            "type": "class",
+            "name": "MemoryLock",
+            "filePath": "packages/core/src/Lock.ts",
+            "lineRange": [18, 39],
+            "summary": "In-memory Lock implementation that grants a token while a key's TTL has not expired and only releases when the matching token is presented, providing mutual exclusion within a single process.",
+            "tags": ["locking", "coordination", "in-memory", "concurrency"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/core/src/Membership.ts",
+            "type": "file",
+            "name": "Membership.ts",
+            "filePath": "packages/core/src/Membership.ts",
+            "summary": "Defines the NodeInfo and Membership interfaces for cluster node registration and discovery, plus MemoryMembership, a TTL-pruned in-memory roster with watch notifications.",
+            "tags": ["distributed-systems", "membership", "discovery", "type-definition"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/core/src/Membership.ts:MemoryMembership",
+            "type": "class",
+            "name": "MemoryMembership",
+            "filePath": "packages/core/src/Membership.ts",
+            "lineRange": [22, 69],
+            "summary": "In-memory Membership that tracks nodes with TTL expiry, prunes stale entries on list(), and notifies watchers whenever the node set changes.",
+            "tags": ["membership", "in-memory", "event-emitter", "ttl"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "file:packages/core/src/MembershipReconciler.ts",
+            "type": "file",
+            "name": "MembershipReconciler.ts",
+            "filePath": "packages/core/src/MembershipReconciler.ts",
+            "summary": "Diffs successive Membership snapshots and fires onAdd/onRemove/onUpdate handlers, letting consumers react incrementally to nodes joining and leaving the cluster.",
+            "tags": ["distributed-systems", "membership", "reconciliation", "event-handler"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/core/src/MembershipReconciler.ts:MembershipReconciler",
+            "type": "class",
+            "name": "MembershipReconciler",
+            "filePath": "packages/core/src/MembershipReconciler.ts",
+            "lineRange": [9, 57],
+            "summary": "Subscribes to a Membership, tracks known node ids, and translates each snapshot into add/update/remove callbacks, guarding against spurious removals before the first watch event lands.",
+            "tags": ["reconciliation", "membership", "event-handler", "diff"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "file:packages/core/src/StateStore.ts",
+            "type": "file",
+            "name": "StateStore.ts",
+            "filePath": "packages/core/src/StateStore.ts",
+            "summary": "Defines the StateStore key-value interface with optional TTL and prefix scans, plus MemoryStateStore, a process-local implementation used as the default backing store for shared session state.",
+            "tags": ["distributed-systems", "state", "key-value", "type-definition"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/core/src/StateStore.ts:MemoryStateStore",
+            "type": "class",
+            "name": "MemoryStateStore",
+            "filePath": "packages/core/src/StateStore.ts",
+            "lineRange": [16, 58],
+            "summary": "In-memory StateStore with lazy TTL expiry on access, supporting get/set/delete/has and prefix-filtered key listing for namespaced state.",
+            "tags": ["state", "key-value", "in-memory", "ttl"],
+            "complexity": "moderate"
+        }
+    ],
+    "edges": [
+        {
+            "source": "file:packages/core/src/Clock.ts",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Clock.ts",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "file:packages/core/src/Membership.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipNetwork",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:InMemoryGossipTransport",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipNetwork",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:InMemoryGossipTransport",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "class:packages/core/src/Lock.ts:MemoryLock",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "class:packages/core/src/Lock.ts:MemoryLock",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "class:packages/core/src/Membership.ts:MemoryMembership",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "class:packages/core/src/Membership.ts:MemoryMembership",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "file:packages/core/src/Membership.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "class:packages/core/src/MembershipReconciler.ts:MembershipReconciler",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "class:packages/core/src/MembershipReconciler.ts:MembershipReconciler",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "class:packages/core/src/StateStore.ts:MemoryStateStore",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "class:packages/core/src/StateStore.ts:MemoryStateStore",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        }
+    ]
+}

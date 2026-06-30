@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Peer } from '../src/Peer.js'
 import { Room } from '../src/Room.js'
 import { MessageType } from '../src/protocol.js'
@@ -13,7 +13,7 @@ class MockWs extends EventEmitter {
 
 function makePeer(id: string): { peer: Peer; ws: MockWs } {
     const ws = new MockWs()
-    const peer = new Peer(id, 'participant', ws as never, vi.fn())
+    const peer = new Peer({ id, role: 'participant', ws: ws as never, onSignal: vi.fn() })
     return { peer, ws }
 }
 
@@ -26,6 +26,10 @@ describe('Room', () => {
 
     beforeEach(() => {
         room = new Room('r1')
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
     })
 
     describe('addPeer', () => {
@@ -97,7 +101,7 @@ describe('Room', () => {
 
         it('removes peer from _peers when RoomJoined send fails', () => {
             const { peer: p1, ws: ws1 } = makePeer('p1')
-            ws1.readyState = 3 // CLOSED before join
+            ws1.readyState = 3
             expect(() => room.addPeer(p1)).toThrow()
             expect(room.getPeerCount()).toBe(0)
         })
@@ -138,7 +142,7 @@ describe('Room', () => {
             const { peer: p2, ws: ws2 } = makePeer('p2')
             room.addPeer(p1)
             room.addPeer(p2)
-            ws2.readyState = 3 // CLOSED
+            ws2.readyState = 3
             const errorListener = vi.fn()
             room.on(RoomEvent.PeerError, errorListener)
             room.relay('p1', 'p2', { sdp: 'v=0' })
@@ -264,7 +268,7 @@ describe('Room', () => {
         it('still disconnects peer and emits peerKicked when Kicked send fails', () => {
             const { peer: p1, ws: ws1 } = makePeer('p1')
             room.addPeer(p1)
-            ws1.readyState = 3 // CLOSED before kick
+            ws1.readyState = 3
             const kicked = vi.fn()
             room.on(RoomEvent.PeerKicked, kicked)
             const result = room.kickPeer('p1', 'ban')
@@ -353,26 +357,25 @@ describe('Room', () => {
     })
 
     describe('_resetIdleTimer — S1 guard', () => {
-        it('does not create idle timer when room is closing', () => {
+        it('does not fire the idle timeout after the room has closed', () => {
             vi.useFakeTimers()
             const idleRoom = new Room('idle-room', { idleTimeoutMs: 100 })
-            const { peer: p1 } = makePeer('p1')
-            const { peer: p2 } = makePeer('p2')
+            const { peer: p1, ws: ws1 } = makePeer('p1')
             idleRoom.addPeer(p1)
-            idleRoom.addPeer(p2)
-
-            // Force close — sets state to Closing then Closed before broadcast
             const closedFn = vi.fn()
             idleRoom.on(RoomEvent.Closed, closedFn)
 
-            // Advance past maxDurationMs via a forceClose-like path:
-            // use a short maxDurationMs room instead
-            vi.useRealTimers()
+            simulateDisconnect(ws1)
+            expect(idleRoom.state).toBe(RoomState.Closed)
+            expect(closedFn).toHaveBeenCalledTimes(1)
+
+            vi.advanceTimersByTime(1000)
+            expect(closedFn).toHaveBeenCalledTimes(1)
         })
 
         it('does not reschedule idle timer during _forceClose broadcast', () => {
             vi.useFakeTimers()
-            // room with short idleTimeoutMs and maxDurationMs to trigger _forceClose
+
             const idleRoom = new Room('idle-room', {
                 idleTimeoutMs: 500,
                 maxDurationMs: 100,
@@ -380,19 +383,15 @@ describe('Room', () => {
             const { peer: p1 } = makePeer('p1')
             idleRoom.addPeer(p1)
 
-            // Trigger an activity to start idle timer
             idleRoom.broadcast({ type: MessageType.Ping })
 
             const closedFn = vi.fn()
             idleRoom.on(RoomEvent.Closed, closedFn)
 
-            // Fire maxDurationMs — calls _forceClose which calls broadcast
             vi.advanceTimersByTime(101)
 
-            // Room should be closed exactly once
             expect(closedFn).toHaveBeenCalledOnce()
 
-            // Advance past idleTimeoutMs to confirm no stray timer re-fires _forceClose
             vi.advanceTimersByTime(600)
             expect(closedFn).toHaveBeenCalledOnce()
 

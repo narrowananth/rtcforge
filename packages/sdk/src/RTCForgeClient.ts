@@ -1,10 +1,13 @@
 import { EventEmitter } from '@rtcforge/core'
+import { JoinHandshake } from './JoinHandshake.js'
 import { Room } from './Room.js'
+import type { RoomControl } from './Room.js'
+import type { Transport } from './Transport.js'
 import { WebSocketTransport } from './WebSocketTransport.js'
 import { MessageType } from './protocol.js'
 import type { ServerMessage } from './protocol.js'
 import { ClientEvent, ConnectionState, TransportEvent } from './types.js'
-import type { RTCForgeClientOptions } from './types.js'
+import type { RTCForgeClientOptions, TransportFactory } from './types.js'
 
 type ClientEvents = {
     [ClientEvent.Connected]: []
@@ -13,32 +16,48 @@ type ClientEvents = {
     [ClientEvent.Error]: [err: Error]
 }
 
+const defaultTransportFactory: TransportFactory = (url, options) =>
+    new WebSocketTransport(url, options)
+
+const LEGAL_TRANSITIONS: Record<ConnectionState, readonly ConnectionState[]> = {
+    [ConnectionState.Disconnected]: [ConnectionState.Connecting, ConnectionState.Reconnecting],
+    [ConnectionState.Connecting]: [
+        ConnectionState.Connected,
+        ConnectionState.Disconnected,
+        ConnectionState.Reconnecting,
+    ],
+    [ConnectionState.Connected]: [ConnectionState.Reconnecting, ConnectionState.Disconnected],
+    [ConnectionState.Reconnecting]: [ConnectionState.Connected, ConnectionState.Disconnected],
+}
+
 export class RTCForgeClient extends EventEmitter<ClientEvents> {
     private readonly opts: RTCForgeClientOptions
-    private transport: WebSocketTransport | null = null
+    private readonly _transportFactory: TransportFactory
+    private transport: Transport | null = null
     private room: Room | null = null
-    private _transportCleanups: Array<() => void> = []
+    private control: RoomControl | null = null
+    private _handshake: JoinHandshake | null = null
+    private _cleanups: Array<() => void> = []
     private _connectionState: ConnectionState = ConnectionState.Disconnected
-    private _joinRoomReject: ((err: Error) => void) | null = null
 
     constructor(opts: RTCForgeClientOptions) {
         super()
         this.opts = opts
+        this._transportFactory = opts.transportFactory ?? defaultTransportFactory
     }
 
     get connectionState(): ConnectionState {
         return this._connectionState
     }
 
-    joinRoom(roomId: string): Promise<Room> {
+    async joinRoom(roomId: string): Promise<Room> {
         if (this._connectionState === ConnectionState.Connecting)
             throw new Error('joinRoom already in progress')
         if (this.transport !== null) throw new Error('Already in a room — call leave() first')
-        this._connectionState = ConnectionState.Connecting
 
-        const url = this.buildUrl(roomId)
+        this._setState(ConnectionState.Connecting)
 
-        const transport = new WebSocketTransport(url, {
+        const transport = this._transportFactory(this.buildUrl(roomId), {
             reconnect: this.opts.reconnect ?? true,
             maxReconnectDelay: this.opts.maxReconnectDelay ?? 32_000,
             maxReconnectAttempts: this.opts.maxReconnectAttempts,
@@ -48,143 +67,117 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
             tokenRefresh: this.opts.tokenRefresh,
         })
         this.transport = transport
+        this._wireLifecycle(transport)
 
-        const onClose = (code: number, reason: string) => {
-            this._connectionState = ConnectionState.Disconnected
-            this.emit(ClientEvent.Disconnected, code, reason)
-        }
-        const onReconnecting = (attempt: number) => {
-            this._connectionState = ConnectionState.Reconnecting
-            this.emit(ClientEvent.Reconnecting, attempt)
-        }
-        const onError = (err: Error) => {
-            this.emit(ClientEvent.Error, err)
-        }
-        transport.on(TransportEvent.Close, onClose)
-        transport.on(TransportEvent.Reconnecting, onReconnecting)
-        transport.on(TransportEvent.Error, onError)
+        const handshake = new JoinHandshake(transport, this.opts.joinTimeoutMs ?? 30_000)
+        this._handshake = handshake
 
-        return new Promise<Room>((resolve, reject) => {
-            this._joinRoomReject = reject
-            let settled = false
-            let joinTimer: ReturnType<typeof setTimeout> | null = null
+        try {
+            const joined = await handshake.run()
+            this._handshake = null
 
-            const settle = (fn: () => void) => {
-                if (settled) return
-                settled = true
-                this._joinRoomReject = null
-                if (joinTimer) {
-                    clearTimeout(joinTimer)
-                    joinTimer = null
-                }
-                fn()
+            if (this.transport !== transport) {
+                transport.close()
+                throw new Error('joinRoom cancelled by leave()')
             }
 
-            const handleMessage = (msg: ServerMessage) => {
-                if (!settled) {
-                    if (msg.type === MessageType.RoomJoined) {
-                        settle(() => {
-                            if (this.transport !== transport) {
-                                transport.close()
-                                reject(new Error('joinRoom cancelled by leave()'))
-                                return
-                            }
-                            this._connectionState = ConnectionState.Connected
-                            this.room = new Room(
-                                msg.roomId,
-                                msg.peerId,
-                                msg.peers,
-                                transport,
-                                msg.localRole,
-                                msg.iceServers,
-                            )
-                            if (msg.peerRoles) this.room._initRoles(msg.peerRoles)
-                            if (msg.peerMetadata) this.room._initMeta(msg.peerMetadata)
-                            transport.flush()
-                            this.emit(ClientEvent.Connected)
-                            resolve(this.room)
-                        })
-                    } else if (msg.type === MessageType.Error) {
-                        settle(() => {
-                            this._connectionState = ConnectionState.Disconnected
-                            transport.close()
-                            this.transport = null
-                            reject(new Error(msg.message))
-                        })
-                    }
-                    return
-                }
-
-                if (!this.room) return
-
-                if (msg.type === MessageType.RoomJoined) {
-                    this._connectionState = ConnectionState.Connected
-                    this.room._refresh(
-                        msg.peerId,
-                        msg.peers,
-                        msg.peerRoles,
-                        msg.localRole,
-                        msg.iceServers,
-                        msg.peerMetadata,
-                    )
-                    transport.flush()
-                    this.emit(ClientEvent.Connected)
-                    return
-                }
-
-                if (msg.type === MessageType.Error) {
-                    this.emit(ClientEvent.Error, new Error(msg.message))
-                    return
-                }
-
-                this.room._handleMessage(msg)
-            }
-
-            transport.on(TransportEvent.Message, handleMessage)
-            this._transportCleanups = [
-                () => transport.off(TransportEvent.Message, handleMessage),
-                () => transport.off(TransportEvent.Close, onClose),
-                () => transport.off(TransportEvent.Reconnecting, onReconnecting),
-                () => transport.off(TransportEvent.Error, onError),
-            ]
-
-            const effectiveJoinTimeout = this.opts.joinTimeoutMs ?? 30_000
-            if (effectiveJoinTimeout > 0) {
-                transport.once(TransportEvent.Open, () => {
-                    if (!settled) {
-                        joinTimer = setTimeout(() => {
-                            settle(() => {
-                                this._connectionState = ConnectionState.Disconnected
-                                transport.close()
-                                this.transport = null
-                                reject(new Error('joinRoom timeout: no RoomJoined received'))
-                            })
-                        }, effectiveJoinTimeout)
-                    }
-                })
-            }
-
-            transport.connect().catch((err: Error) => {
-                settle(() => {
-                    this._connectionState = ConnectionState.Disconnected
-                    transport.close()
-                    this.transport = null
-                    reject(err)
-                })
+            this._setState(ConnectionState.Connected)
+            const { room, control } = Room.create({
+                id: joined.roomId,
+                localPeerId: joined.peerId,
+                peers: joined.peers,
+                transport,
+                localRole: joined.localRole,
+                iceServers: joined.iceServers,
+                peerRoles: joined.peerRoles,
+                peerMetadata: joined.peerMetadata,
             })
-        })
+            this.room = room
+            this.control = control
+            this._attachSteadyState(transport, control)
+            transport.flush()
+            this.emit(ClientEvent.Connected)
+            return room
+        } catch (err) {
+            this._handshake = null
+            this._setState(ConnectionState.Disconnected)
+            for (const cleanup of this._cleanups) cleanup()
+            this._cleanups = []
+            transport.close()
+            if (this.transport === transport) this.transport = null
+            throw err
+        }
     }
 
     async leave(): Promise<void> {
-        this._joinRoomReject?.(new Error('joinRoom cancelled by leave()'))
-        this._joinRoomReject = null
-        this._connectionState = ConnectionState.Disconnected
-        for (const cleanup of this._transportCleanups) cleanup()
-        this._transportCleanups = []
-        this.room?._close()
+        this._handshake?.cancel('joinRoom cancelled by leave()')
+        this._handshake = null
+        this._setState(ConnectionState.Disconnected)
+        for (const cleanup of this._cleanups) cleanup()
+        this._cleanups = []
+        this.control?.close()
+        this.control = null
         this.room = null
         this.transport?.close()
         this.transport = null
+    }
+
+    private _setState(next: ConnectionState): boolean {
+        if (this._connectionState === next) return true
+        if (!LEGAL_TRANSITIONS[this._connectionState].includes(next)) {
+            this.opts.logger?.warn?.('Ignoring illegal connection-state transition', {
+                from: this._connectionState,
+                to: next,
+            })
+            return false
+        }
+        this._connectionState = next
+        return true
+    }
+
+    private _wireLifecycle(transport: Transport): void {
+        const onClose = (code: number, reason: string) => {
+            this._setState(ConnectionState.Disconnected)
+            this.emit(ClientEvent.Disconnected, code, reason)
+        }
+        const onReconnecting = (attempt: number) => {
+            this._setState(ConnectionState.Reconnecting)
+            this.emit(ClientEvent.Reconnecting, attempt)
+        }
+        const onError = (err: Error) => this.emit(ClientEvent.Error, err)
+
+        transport.on(TransportEvent.Close, onClose)
+        transport.on(TransportEvent.Reconnecting, onReconnecting)
+        transport.on(TransportEvent.Error, onError)
+        this._cleanups.push(
+            () => transport.off(TransportEvent.Close, onClose),
+            () => transport.off(TransportEvent.Reconnecting, onReconnecting),
+            () => transport.off(TransportEvent.Error, onError),
+        )
+    }
+
+    private _attachSteadyState(transport: Transport, control: RoomControl): void {
+        const onMessage = (msg: ServerMessage) => {
+            if (msg.type === MessageType.RoomJoined) {
+                if (!this._setState(ConnectionState.Connected)) return
+                control.refresh({
+                    localPeerId: msg.peerId,
+                    peers: msg.peers,
+                    peerRoles: msg.peerRoles,
+                    localRole: msg.localRole,
+                    iceServers: msg.iceServers,
+                    peerMetadata: msg.peerMetadata,
+                })
+                transport.flush()
+                this.emit(ClientEvent.Connected)
+            } else if (msg.type === MessageType.Error) {
+                this.emit(ClientEvent.Error, new Error(msg.message))
+            } else {
+                control.handleMessage(msg)
+            }
+        }
+        transport.on(TransportEvent.Message, onMessage)
+        this._cleanups.push(() => transport.off(TransportEvent.Message, onMessage))
     }
 
     private buildUrl(roomId: string): string {

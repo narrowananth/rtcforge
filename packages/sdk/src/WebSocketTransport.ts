@@ -1,55 +1,46 @@
 import { EventEmitter, toError } from '@rtcforge/core'
+import { ReconnectStrategy } from './ReconnectStrategy.js'
+import type { BackoffStrategy } from './ReconnectStrategy.js'
+import { SendQueue } from './SendQueue.js'
+import type { MessageQueue } from './SendQueue.js'
+import type { Transport, TransportEvents } from './Transport.js'
 import { MessageType, ServerMessageSchema } from './protocol.js'
-import type { ClientMessage, ServerMessage } from './protocol.js'
+import type { ClientMessage } from './protocol.js'
 import { CloseCode, CloseReason, TransportEvent, noopLogger } from './types.js'
-import type { Logger } from './types.js'
+import type { Logger, TransportOptions } from './types.js'
 
-type TransportEvents = {
-    [TransportEvent.Open]: []
-    [TransportEvent.Close]: [code: number, reason: string]
-    [TransportEvent.Message]: [data: ServerMessage]
-    [TransportEvent.Error]: [err: Error]
-    [TransportEvent.Reconnecting]: [attempt: number]
-}
+const WS_OPEN = 1
 
-export class WebSocketTransport extends EventEmitter<TransportEvents> {
+export class WebSocketTransport extends EventEmitter<TransportEvents> implements Transport {
     private ws: WebSocket | null = null
-    private reconnectAttempt = 0
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null
     private _closed = false
+    private _exhausted = false
     private _connecting = false
 
     private url: string
     private readonly shouldReconnect: boolean
-    private readonly maxReconnectDelay: number
-    private readonly maxReconnectAttempts: number | undefined
     private readonly connectTimeoutMs: number | undefined
     private readonly logger: Logger
     private readonly tokenRefresh: (() => Promise<string>) | undefined
-    private readonly _maxQueueSize: number | undefined
-    private readonly _sendQueue: ClientMessage[] = []
+    private readonly _queue: MessageQueue<ClientMessage>
+    private readonly _reconnect: BackoffStrategy
 
-    constructor(
-        url: string,
-        options: {
-            reconnect?: boolean
-            maxReconnectDelay?: number
-            maxReconnectAttempts?: number
-            connectTimeoutMs?: number
-            logger?: Logger
-            tokenRefresh?: () => Promise<string>
-            maxQueueSize?: number
-        } = {},
-    ) {
+    constructor(url: string, options: TransportOptions = {}) {
         super()
         this.url = url
         this.shouldReconnect = options.reconnect ?? false
-        this.maxReconnectDelay = options.maxReconnectDelay ?? 32_000
-        this.maxReconnectAttempts = options.maxReconnectAttempts
         this.connectTimeoutMs = options.connectTimeoutMs
         this.logger = options.logger ?? noopLogger
         this.tokenRefresh = options.tokenRefresh
-        this._maxQueueSize = options.maxQueueSize
+        this._queue = options.sendQueue ?? new SendQueue(options.maxQueueSize ?? 100)
+        this._reconnect =
+            options.reconnectStrategy ??
+            new ReconnectStrategy(options.maxReconnectDelay ?? 32_000, options.maxReconnectAttempts)
+    }
+
+    private get isTerminal(): boolean {
+        return this._closed || this._exhausted
     }
 
     connect(): Promise<void> {
@@ -58,42 +49,30 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
         })
     }
 
-    private static readonly WS_OPEN = 1
-
     send(msg: ClientMessage): void {
-        if (this._closed) return
-        if (this.ws?.readyState === WebSocketTransport.WS_OPEN) {
-            if (this._sendQueue.length > 0) this._flushQueue()
+        if (this.isTerminal) return
+        if (this.ws?.readyState === WS_OPEN) {
+            if (this._queue.size > 0) this.flush()
             this.ws.send(JSON.stringify(msg))
-        } else {
-            if (this._sendQueue.length >= (this._maxQueueSize ?? 100)) {
-                this.emit(TransportEvent.Error, new Error('Send queue full'))
-                return
-            }
-            this._sendQueue.push(msg)
+        } else if (!this._queue.enqueue(msg)) {
+            this.emit(TransportEvent.Error, new Error('Send queue full'))
         }
     }
 
-    private _flushQueue(): void {
-        if (this.ws?.readyState !== WebSocketTransport.WS_OPEN) return
-        for (const msg of this._sendQueue) {
-            this.ws.send(JSON.stringify(msg))
-        }
-        this._sendQueue.length = 0
+    flush(): void {
+        if (this.ws?.readyState !== WS_OPEN) return
+        const ws = this.ws
+        this._queue.drain((m) => ws.send(JSON.stringify(m)))
     }
 
     close(): void {
         this._closed = true
-        this._sendQueue.length = 0
+        this._queue.clear()
         if (this.reconnectTimer !== null) {
             clearTimeout(this.reconnectTimer)
             this.reconnectTimer = null
         }
         this.ws?.close(CloseCode.Normal, CloseReason.ClientClosed)
-    }
-
-    flush(): void {
-        this._flushQueue()
     }
 
     private initSocket(onOpen?: () => void, onError?: (err: Error) => void): void {
@@ -125,7 +104,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
 
                 ws.onopen = () => {
                     if (connectTimer) clearTimeout(connectTimer)
-                    this.reconnectAttempt = 0
+                    this._reconnect.reset()
                     this.logger.info('WebSocket connected', { url: this.url })
                     this.emit(TransportEvent.Open)
                     if (!settled) {
@@ -135,29 +114,26 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
                 }
 
                 ws.onclose = (ev) => {
+                    if (connectTimer) clearTimeout(connectTimer)
                     const code = ev.code ?? 1006
                     const reason = String(ev.reason ?? '')
                     this.logger.info('WebSocket closed', { code, reason })
                     this.emit(TransportEvent.Close, code, reason)
-                    if (!this._closed && this.shouldReconnect) {
-                        if (
-                            this.maxReconnectAttempts !== undefined &&
-                            this.reconnectAttempt >= this.maxReconnectAttempts
-                        ) {
-                            this.logger.warn('Max reconnect attempts reached', {
-                                attempts: this.reconnectAttempt,
-                            })
-                            this._closed = true
-                            const exhaustedErr = new Error('Max reconnect attempts reached')
-                            this.emit(TransportEvent.Error, exhaustedErr)
-                            if (!settled) {
-                                settled = true
-                                onError?.(exhaustedErr)
-                            }
-                            return
+                    if (this._closed || !this.shouldReconnect) return
+                    if (this._reconnect.isExhausted()) {
+                        this.logger.warn('Max reconnect attempts reached', {
+                            attempts: this._reconnect.attempt,
+                        })
+                        this._exhausted = true
+                        const exhaustedErr = new Error('Max reconnect attempts reached')
+                        this.emit(TransportEvent.Error, exhaustedErr)
+                        if (!settled) {
+                            settled = true
+                            onError?.(exhaustedErr)
                         }
-                        this.scheduleReconnect()
+                        return
                     }
+                    this.scheduleReconnect()
                 }
 
                 ws.onmessage = (ev) => {
@@ -198,15 +174,21 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> {
     }
 
     private scheduleReconnect(): void {
-        if (this.reconnectTimer !== null) {
-            clearTimeout(this.reconnectTimer)
-        }
-        const base = Math.min(1000 * 2 ** this.reconnectAttempt, this.maxReconnectDelay)
-        const delay = base + base * 0.3 * Math.random()
-        this.reconnectAttempt++
-        this.logger.info('Reconnecting', { attempt: this.reconnectAttempt, delay })
-        this.emit(TransportEvent.Reconnecting, this.reconnectAttempt)
+        if (this.reconnectTimer !== null) clearTimeout(this.reconnectTimer)
+        const delay = this._reconnect.nextDelay()
+        this.logger.info('Reconnecting', { attempt: this._reconnect.attempt, delay })
+        this.emit(TransportEvent.Reconnecting, this._reconnect.attempt)
+        this._armReconnectTimer(delay)
+    }
+
+    private _armReconnectTimer(delay: number): void {
         this.reconnectTimer = setTimeout(() => {
+            if (this.isTerminal) return
+
+            if (this._connecting) {
+                this._armReconnectTimer(delay)
+                return
+            }
             if (this.tokenRefresh) {
                 this.tokenRefresh()
                     .then((newToken) => {

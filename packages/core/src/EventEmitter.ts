@@ -1,76 +1,64 @@
 // biome-ignore lint/suspicious/noExplicitAny: internal listener storage requires any
 type AnyListener = (...args: any[]) => void
 
+interface Registration {
+    readonly listener: AnyListener
+    readonly invoke: AnyListener
+}
+
 export class EventEmitter<Events extends Record<string, unknown[]>> {
-    private readonly _listeners = new Map<string, AnyListener[]>()
-    private readonly _onceWrappers = new Map<string, Map<AnyListener, AnyListener>>()
+    private readonly _events = new Map<string, Registration[]>()
 
     on<K extends keyof Events>(event: K, listener: (...args: Events[K]) => void): this {
-        const key = String(event)
-        let arr = this._listeners.get(key)
-        if (!arr) {
-            arr = []
-            this._listeners.set(key, arr)
-        }
-        arr.push(listener as AnyListener)
+        this._add(String(event), listener as AnyListener, listener as AnyListener)
         return this
     }
 
     once<K extends keyof Events>(event: K, listener: (...args: Events[K]) => void): this {
-        const key = String(event)
-        const wrappedListener = (...args: Events[K]) => {
+        const invoke = (...args: Events[K]) => {
             this.off(event, listener)
             listener(...args)
         }
-        let keyMap = this._onceWrappers.get(key)
-        if (!keyMap) {
-            keyMap = new Map<AnyListener, AnyListener>()
-            this._onceWrappers.set(key, keyMap)
-        }
-        keyMap.set(listener as AnyListener, wrappedListener as AnyListener)
-        return this.on(event, wrappedListener)
+        this._add(String(event), listener as AnyListener, invoke as AnyListener)
+        return this
     }
 
     off<K extends keyof Events>(event: K, listener: (...args: Events[K]) => void): this {
         const key = String(event)
-        const arr = this._listeners.get(key)
+        const arr = this._events.get(key)
         if (arr) {
-            const keyMap = this._onceWrappers.get(key)
-            const wrapper = keyMap?.get(listener as AnyListener)
-            const toRemove = wrapper ?? (listener as AnyListener)
-            const idx = arr.indexOf(toRemove)
+            const idx = arr.findIndex((r) => r.listener === (listener as AnyListener))
             if (idx !== -1) {
                 arr.splice(idx, 1)
-                if (wrapper) {
-                    keyMap?.delete(listener as AnyListener)
-                    if (keyMap?.size === 0) this._onceWrappers.delete(key)
-                }
+                if (arr.length === 0) this._events.delete(key)
             }
         }
         return this
     }
 
     emit<K extends keyof Events>(event: K, ...args: Events[K]): boolean {
-        const key = String(event)
-        const arr = this._listeners.get(key)
+        const arr = this._events.get(String(event))
         if (!arr || arr.length === 0) return false
-        for (const listener of arr.slice()) listener(...args)
+        for (const reg of arr.slice()) reg.invoke(...args)
         return true
     }
 
     removeAllListeners(event?: keyof Events): this {
-        if (event !== undefined) {
-            const key = String(event)
-            this._listeners.delete(key)
-            this._onceWrappers.delete(key)
-        } else {
-            this._listeners.clear()
-            this._onceWrappers.clear()
-        }
+        if (event !== undefined) this._events.delete(String(event))
+        else this._events.clear()
         return this
     }
 
     listenerCount<K extends keyof Events>(event: K): number {
-        return this._listeners.get(String(event))?.length ?? 0
+        return this._events.get(String(event))?.length ?? 0
+    }
+
+    private _add(key: string, listener: AnyListener, invoke: AnyListener): void {
+        let arr = this._events.get(key)
+        if (!arr) {
+            arr = []
+            this._events.set(key, arr)
+        }
+        arr.push({ listener, invoke })
     }
 }

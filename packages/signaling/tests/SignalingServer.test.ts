@@ -19,8 +19,6 @@ function connect(url: string): Promise<TestClient> {
         const queue: unknown[] = []
         const waiters: Array<(msg: unknown) => void> = []
 
-        // Register message listener immediately — before 'open' fires —
-        // so we never miss a message that arrives in the same TCP frame as the 101.
         ws.on('message', (data) => {
             const msg = JSON.parse(data.toString())
             const waiter = waiters.shift()
@@ -95,7 +93,7 @@ describe('SignalingServer', () => {
     it('second peer receives peers list with first peer ID', async () => {
         const c1 = await connect(url('r1', 'p1'))
         openClients.push(c1.ws)
-        await c1.nextMessage() // room-joined for p1
+        await c1.nextMessage()
 
         const c2 = await connect(url('r1', 'p2'))
         openClients.push(c2.ws)
@@ -113,13 +111,13 @@ describe('SignalingServer', () => {
     it('first peer receives peer-joined when second peer connects', async () => {
         const c1 = await connect(url('r1', 'p1'))
         openClients.push(c1.ws)
-        await c1.nextMessage() // consume room-joined
+        await c1.nextMessage()
 
         const c2 = await connect(url('r1', 'p2'))
         openClients.push(c2.ws)
-        await c2.nextMessage() // consume room-joined
+        await c2.nextMessage()
 
-        const msg = await c1.nextMessage() // peer-joined notification
+        const msg = await c1.nextMessage()
         expect(msg).toMatchObject({ type: MessageType.PeerJoined, peerId: 'p2' })
         c1.close()
         c2.close()
@@ -139,9 +137,9 @@ describe('SignalingServer', () => {
         const c1 = await connect(url('r1', 'p1'))
         const c2 = await connect(url('r1', 'p2'))
         openClients.push(c1.ws, c2.ws)
-        await c1.nextMessage() // room-joined
-        await c2.nextMessage() // room-joined
-        await c1.nextMessage() // peer-joined for p2
+        await c1.nextMessage()
+        await c2.nextMessage()
+        await c1.nextMessage()
 
         c1.ws.send(
             JSON.stringify({ type: MessageType.Signal, to: 'p2', data: { candidate: 'ice' } }),
@@ -372,14 +370,13 @@ describe('SignalingServer — presence & moderation', () => {
     it('broadcasts presence-online when a peer joins', async () => {
         const c1 = await connect(url('r1', 'p1'))
         openClients.push(c1.ws)
-        await c1.nextMessage() // room-joined
+        await c1.nextMessage()
 
         const c2 = await connect(url('r1', 'p2'))
         openClients.push(c2.ws)
-        await c2.nextMessage() // room-joined for p2
+        await c2.nextMessage()
 
-        // c1 should receive peer-joined then presence-online
-        await c1.nextMessage() // peer-joined
+        await c1.nextMessage()
         const presence = await c1.nextMessage()
         expect(presence).toMatchObject({ type: MessageType.PresenceOnline, peerId: 'p2' })
 
@@ -391,13 +388,13 @@ describe('SignalingServer — presence & moderation', () => {
         const c1 = await connect(url('r1', 'p1'))
         const c2 = await connect(url('r1', 'p2'))
         openClients.push(c1.ws, c2.ws)
-        await c1.nextMessage() // room-joined p1
-        await c2.nextMessage() // room-joined p2
-        await c1.nextMessage() // peer-joined p2
-        await c1.nextMessage() // presence-online p2
+        await c1.nextMessage()
+        await c2.nextMessage()
+        await c1.nextMessage()
+        await c1.nextMessage()
 
         c2.close()
-        await c1.nextMessage() // peer-left
+        await c1.nextMessage()
         const presenceOffline = await c1.nextMessage()
         expect(presenceOffline).toMatchObject({ type: MessageType.PresenceOffline, peerId: 'p2' })
 
@@ -407,14 +404,13 @@ describe('SignalingServer — presence & moderation', () => {
     it('kicks peer when kickPeer is called on Room', async () => {
         const c1 = await connect(url('r1', 'p1'))
         openClients.push(c1.ws)
-        await c1.nextMessage() // room-joined
+        await c1.nextMessage()
 
         let capturedRoom: import('../src/Room.js').Room | undefined
         server.on(ServerEvent.RoomCreated, (room) => {
             capturedRoom = room
         })
 
-        // Second peer triggers room creation listener... re-use with another room
         const kickServer = new SignalingServer({ port: 0 })
         await kickServer.start()
         const kickPort = (

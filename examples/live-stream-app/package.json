@@ -3,16 +3,18 @@
     "version": "0.0.0",
     "private": true,
     "type": "module",
-    "description": "Example: live streaming with host/viewer roles using @rtcforge/streaming",
+    "description": "Example: live streaming with host/viewer roles + 1M-viewer cascade fan-out tree (@rtcforge/sfu CascadeTree/CascadeBridge)",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "server": "tsx server.ts"
     },
     "dependencies": {
+        "@rtcforge/core": "*",
         "@rtcforge/media": "*",
         "@rtcforge/sdk": "*",
-        "@rtcforge/signaling": "*"
+        "@rtcforge/signaling": "*",
+        "@rtcforge/sfu": "*"
     },
     "devDependencies": {
         "tsx": "^4",

@@ -1,23 +1,25 @@
-import { randomUUID } from 'node:crypto'
 import http from 'node:http'
 import { EventEmitter } from '@rtcforge/core'
 import { WebSocketServer } from 'ws'
 import type { WebSocket } from 'ws'
+import { Authenticator } from './Authenticator.js'
+import { HeartbeatMonitor } from './HeartbeatMonitor.js'
 import { Peer } from './Peer.js'
-import { Room } from './Room.js'
+import type { Room } from './Room.js'
+import { RoomRegistry, RoomRegistryEvent } from './RoomRegistry.js'
+import { RoomRouter } from './RoomRouter.js'
 import { MessageType } from './protocol.js'
+import type { NodeInfo } from './types.js'
 import {
-    AuthPayloadSchema,
     CloseCode,
     CloseReason,
     Metric,
     PeerEvent,
-    RoomEvent,
     ServerEvent,
     noopLogger,
     noopMetrics,
 } from './types.js'
-import type { AuthPayload, Logger, MetricsCollector, SignalingServerOptions } from './types.js'
+import type { IceServerConfig, Logger, MetricsCollector, SignalingServerOptions } from './types.js'
 
 export interface ServerStats {
     rooms: number
@@ -35,23 +37,51 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private readonly opts: SignalingServerOptions
     private readonly logger: Logger
     private readonly metrics: MetricsCollector
+    private readonly registry: RoomRegistry
+    private readonly authenticator: Authenticator
+    private readonly heartbeat: HeartbeatMonitor
+    private readonly router?: RoomRouter
+
     private wss?: WebSocketServer
     private ownServer?: http.Server
-    private heartbeatTimer?: ReturnType<typeof setInterval>
-    private readonly rooms = new Map<string, Room>()
     private startedAt = 0
     private _stopped = false
-
-    private readonly PING_INTERVAL: number
-    private readonly PONG_TIMEOUT: number
 
     constructor(opts: SignalingServerOptions = {}) {
         super()
         this.opts = opts
         this.logger = opts.logger ?? noopLogger
         this.metrics = opts.metrics ?? noopMetrics
-        this.PING_INTERVAL = opts.pingInterval ?? 30_000
-        this.PONG_TIMEOUT = opts.pongTimeout ?? 60_000
+
+        this.registry = new RoomRegistry({
+            maxPeers: opts.maxPeersPerRoom,
+            maxDurationMs: opts.roomMaxDurationMs,
+            idleTimeoutMs: opts.roomIdleTimeoutMs,
+        })
+        this.authenticator = new Authenticator({
+            auth: opts.auth,
+            serverAssignedPeerId: opts.serverAssignedPeerId,
+            logger: this.logger,
+            metrics: this.metrics,
+        })
+        this.heartbeat = new HeartbeatMonitor({
+            rooms: () => this.registry.rooms(),
+            pingIntervalMs: opts.pingInterval ?? 30_000,
+            pongTimeoutMs: opts.pongTimeout ?? 60_000,
+            logger: this.logger,
+        })
+
+        if (opts.cluster) {
+            this.router = new RoomRouter({
+                selfId: opts.cluster.selfId,
+                membership: opts.cluster.membership,
+            })
+        }
+
+        this.registry.on(RoomRegistryEvent.RoomClosed, (roomId) => this.onRoomClosed(roomId))
+        this.registry.on(RoomRegistryEvent.PeerKicked, (roomId, peerId, reason) =>
+            this.onPeerKicked(roomId, peerId, reason),
+        )
     }
 
     async start(): Promise<void> {
@@ -80,7 +110,7 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             this.logger.error('WebSocket server error', { err: err.message })
             this.emit(ServerEvent.Error, err)
         })
-        this.startHeartbeat()
+        this.heartbeat.start()
 
         const addr = this.ownServer?.address()
         const port = addr && typeof addr === 'object' ? addr.port : (this.opts.port ?? 3000)
@@ -92,17 +122,9 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         this._stopped = true
         this.logger.info('SignalingServer stopping')
 
-        if (this.heartbeatTimer !== undefined) {
-            clearInterval(this.heartbeatTimer)
-            this.heartbeatTimer = undefined
-        }
-
-        for (const room of this.rooms.values()) {
-            for (const peer of room.getPeers()) {
-                peer.disconnect(CloseCode.Normal, CloseReason.ServerStopping)
-            }
-        }
-        this.rooms.clear()
+        this.heartbeat.stop()
+        this.router?.dispose()
+        this.registry.disconnectAll(CloseReason.ServerStopping)
 
         await new Promise<void>((resolve, reject) => {
             if (!this.wss) return resolve()
@@ -120,13 +142,17 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     }
 
     getRoom(roomId: string): Room | undefined {
-        return this.rooms.get(roomId)
+        return this.registry.get(roomId)
+    }
+
+    getOwner(roomId: string): NodeInfo | undefined {
+        return this.router?.owner(roomId)
     }
 
     getStats(): ServerStats {
         return {
-            rooms: this.rooms.size,
-            peers: this.activePeerCount(),
+            rooms: this.registry.size,
+            peers: this.registry.totalPeers(),
             uptime: this.startedAt > 0 ? Date.now() - this.startedAt : 0,
         }
     }
@@ -142,109 +168,73 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         })
     }
 
-    private activePeerCount(): number {
-        let count = 0
-        for (const room of this.rooms.values()) count += room.getPeerCount()
-        return count
+    private onRoomClosed(roomId: string): void {
+        this.emit(ServerEvent.RoomClosed, roomId)
+        this.logger.info('Room closed', { roomId })
+        this.metrics.increment(Metric.RoomsClosed)
+        this.metrics.gauge(Metric.ActiveRooms, this.registry.size)
+        this.opts.auditLog?.({ type: 'room-closed', roomId, ts: Date.now() })
     }
 
-    private _rollbackNewRoom(roomId: string, isNewRoom: boolean, room: Room): void {
-        if (isNewRoom && room.getPeerCount() === 0) {
-            this.rooms.delete(roomId)
-        }
+    private onPeerKicked(roomId: string, peerId: string, reason: string | undefined): void {
+        this.logger.info('Peer kicked', { peerId, roomId, reason })
+        this.metrics.increment(Metric.PeersKicked)
+        this.opts.auditLog?.({
+            type: 'peer-kicked',
+            roomId,
+            peerId,
+            ts: Date.now(),
+            detail: reason ? { reason } : undefined,
+        })
     }
 
     private async handleConnection(ws: WebSocket, req: http.IncomingMessage): Promise<void> {
-        const url = new URL(req.url ?? '/', 'ws://localhost')
-        const token = url.searchParams.get('token') ?? ''
-
-        let payload: AuthPayload
-
-        if (this.opts.auth) {
-            try {
-                const raw = await this.opts.auth(token)
-                const result = AuthPayloadSchema.safeParse(raw)
-                if (!result.success) {
-                    this.logger.warn('Auth failed: invalid payload', { token })
-                    this.metrics.increment(Metric.AuthErrors, { reason: 'invalid_payload' })
-                    ws.close(CloseCode.PolicyViolation, CloseReason.InvalidAuthPayload)
-                    return
-                }
-                payload = result.data
-            } catch (err) {
-                const reason = err instanceof Error ? err.message : CloseReason.AuthFailed
-                this.logger.warn('Auth failed', { reason })
-                this.metrics.increment(Metric.AuthErrors, { reason: 'auth_exception' })
-                ws.close(CloseCode.PolicyViolation, reason)
-                return
-            }
-        } else {
-            const roomId = url.searchParams.get('roomId')
-            const peerId = url.searchParams.get('peerId')
-            if (!roomId || !peerId) {
-                this.logger.warn('Auth failed: missing roomId or peerId')
-                this.metrics.increment(Metric.AuthErrors, { reason: 'missing_params' })
-                ws.close(CloseCode.PolicyViolation, CloseReason.MissingRoomOrPeer)
-                return
-            }
-            payload = { roomId, peerId, role: '' }
+        const result = await this.authenticator.resolve(req)
+        if (!result.ok) {
+            ws.close(result.code, result.reason)
+            return
         }
 
-        const { roomId, role } = payload
-        const peerId = this.opts.serverAssignedPeerId ? randomUUID() : payload.peerId
+        const { roomId, peerId, role, metadata } = result.auth
 
-        let room = this.rooms.get(roomId)
-        const isNewRoom = !room
-
-        if (!room) {
-            room = new Room(roomId, {
-                maxPeers: this.opts.maxPeersPerRoom,
-                maxDurationMs: this.opts.roomMaxDurationMs,
-                idleTimeoutMs: this.opts.roomIdleTimeoutMs,
+        const route = this.router?.route(roomId)
+        if (route && !route.isLocal) {
+            const owner = route.owner
+            this.logger.info('Redirecting peer to room owner', {
+                peerId,
+                roomId,
+                owner: owner?.id,
             })
-            this.rooms.set(roomId, room)
-            room.on(RoomEvent.Closed, () => {
-                this.rooms.delete(roomId)
-                this.emit(ServerEvent.RoomClosed, roomId)
-                this.logger.info('Room closed', { roomId })
-                this.metrics.increment(Metric.RoomsClosed)
-                this.metrics.gauge(Metric.ActiveRooms, this.rooms.size)
-                this.opts.auditLog?.({ type: 'room-closed', roomId, ts: Date.now() })
-            })
-            room.on(RoomEvent.PeerKicked, (kickedPeerId, reason) => {
-                this.logger.info('Peer kicked', { peerId: kickedPeerId, roomId, reason })
-                this.metrics.increment(Metric.PeersKicked)
-                this.opts.auditLog?.({
-                    type: 'peer-kicked',
-                    roomId,
-                    peerId: kickedPeerId,
-                    ts: Date.now(),
-                    detail: reason ? { reason } : undefined,
-                })
-            })
+            this.metrics.increment(Metric.SignalsRelayed, { kind: 'redirect' })
+            this.opts.onRedirect?.(peerId, roomId, owner)
+            ws.close(CloseCode.PolicyViolation, CloseReason.WrongNode)
+            return
         }
 
-        const activeRoom = room
+        const { room, isNew } = this.registry.getOrCreate(roomId)
+
         const onSignal = (to: string, data: unknown) => {
-            if (activeRoom.relay(peerId, to, data)) {
-                this.metrics.increment(Metric.SignalsRelayed)
-            }
+            if (room.relay(peerId, to, data)) this.metrics.increment(Metric.SignalsRelayed)
         }
-        const peer = new Peer(
-            peerId,
+        const peer = new Peer({
+            id: peerId,
             role,
             ws,
             onSignal,
-            payload.metadata ?? {},
-            this.opts.rateLimit?.maxMessagesPerSecond,
-        )
+            metadata,
+            maxMessagesPerSecond: this.opts.rateLimit?.maxMessagesPerSecond,
+        })
 
         peer.on(PeerEvent.Error, (err) => {
             this.logger.warn('Peer error', { peerId: peer.id, err: err.message })
         })
 
+        peer.on(PeerEvent.Pong, () => room.markActivity())
+        peer.on(PeerEvent.RateLimitExceeded, () => {
+            this.logger.warn('Peer rate limit exceeded — message dropped', { peerId, roomId })
+        })
         peer.on(PeerEvent.Broadcast, (channel: string, data: unknown) => {
-            activeRoom.broadcastExcept(peerId, {
+            room.broadcastExcept(peerId, {
                 type: MessageType.Broadcast,
                 from: peerId,
                 channel,
@@ -254,59 +244,42 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             this.metrics.increment(Metric.BroadcastsRelayed)
         })
 
-        let iceServers: import('./types.js').IceServerConfig[] | undefined
+        let iceServers: IceServerConfig[] | undefined
+        let added: boolean
         try {
             iceServers = this.opts.iceServersHook
                 ? ((await this.opts.iceServersHook(peerId, roomId)) ?? undefined)
                 : undefined
+            added = room.addPeer(peer, iceServers)
         } catch (err) {
-            this._rollbackNewRoom(roomId, isNewRoom, room)
+            this.registry.rollbackIfEmpty(roomId, isNew)
             throw err
         }
-        try {
-            room.addPeer(peer, iceServers)
-        } catch (err) {
-            this._rollbackNewRoom(roomId, isNewRoom, room)
-            throw err
+
+        if (!added) {
+            this.registry.rollbackIfEmpty(roomId, isNew)
+            return
         }
+
         this.opts.auditLog?.({ type: 'peer-joined', roomId, peerId, ts: Date.now() })
 
         peer.once(PeerEvent.Disconnected, () => {
             this.logger.info('Peer left', { peerId, roomId })
             this.metrics.increment(Metric.PeersDisconnected)
-            this.metrics.gauge(Metric.ActivePeers, this.activePeerCount())
+            this.metrics.gauge(Metric.ActivePeers, this.registry.totalPeers())
             this.opts.auditLog?.({ type: 'peer-left', roomId, peerId, ts: Date.now() })
         })
 
         this.logger.info('Peer joined', { peerId, roomId, role })
         this.metrics.increment(Metric.PeersConnected, { role })
-        this.metrics.gauge(Metric.ActivePeers, this.activePeerCount())
+        this.metrics.gauge(Metric.ActivePeers, this.registry.totalPeers())
 
-        if (isNewRoom) {
+        if (isNew) {
             this.logger.info('Room created', { roomId })
             this.metrics.increment(Metric.RoomsCreated)
-            this.metrics.gauge(Metric.ActiveRooms, this.rooms.size)
+            this.metrics.gauge(Metric.ActiveRooms, this.registry.size)
             this.emit(ServerEvent.RoomCreated, room)
             this.opts.auditLog?.({ type: 'room-created', roomId, ts: Date.now() })
         }
-    }
-
-    private startHeartbeat(): void {
-        this.heartbeatTimer = setInterval(() => {
-            const deadline = Date.now() - this.PONG_TIMEOUT
-            for (const room of this.rooms.values()) {
-                for (const peer of room.getPeers()) {
-                    if (!peer.isAlive(deadline)) {
-                        this.logger.warn('Heartbeat timeout, disconnecting peer', {
-                            peerId: peer.id,
-                        })
-                        peer.disconnect(CloseCode.GoingAway, CloseReason.HeartbeatTimeout)
-                    } else {
-                        peer.ping()
-                    }
-                }
-            }
-        }, this.PING_INTERVAL)
-        this.heartbeatTimer.unref()
     }
 }

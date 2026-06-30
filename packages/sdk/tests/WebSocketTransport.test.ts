@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocketTransport } from '../src/WebSocketTransport.js'
 import { TransportEvent } from '../src/types.js'
 
-// ── MockWS ────────────────────────────────────────────────────────────────────
-
 class MockWS {
     static instances: MockWS[] = []
     readonly url: string
@@ -55,8 +53,6 @@ afterEach(() => {
     vi.clearAllMocks()
 })
 
-// ── connect() ─────────────────────────────────────────────────────────────────
-
 describe('WebSocketTransport — connect()', () => {
     it('resolves when socket opens', async () => {
         const t = new WebSocketTransport('ws://localhost')
@@ -99,16 +95,12 @@ describe('WebSocketTransport — connect()', () => {
         const t = new WebSocketTransport('ws://localhost')
         const p1 = t.connect()
         await tick()
-        // second connect while first is pending should not create a second socket
-        // (initSocket guards with _connecting flag)
-        // we resolve the first
+
         MockWS.instances[0]?.open()
         await p1
         expect(MockWS.instances.length).toBe(1)
     })
 })
-
-// ── V5: _closed after exhaustion ──────────────────────────────────────────────
 
 describe('WebSocketTransport — exhaustion closes transport (V5)', () => {
     it('no reconnect attempt after maxReconnectAttempts=0 exhausted', async () => {
@@ -120,7 +112,7 @@ describe('WebSocketTransport — exhaustion closes transport (V5)', () => {
         await tick()
         MockWS.instances[0]?.closeWith(1006)
         await p.catch(() => {})
-        // only one WS ever created — no reconnect scheduled
+
         expect(MockWS.instances.length).toBe(1)
     })
 
@@ -139,8 +131,6 @@ describe('WebSocketTransport — exhaustion closes transport (V5)', () => {
         expect(errHandler.mock.calls[0]?.[0]?.message).toMatch('Max reconnect attempts reached')
     })
 })
-
-// ── send() ────────────────────────────────────────────────────────────────────
 
 describe('WebSocketTransport — send()', () => {
     it('queues messages when not connected and flushes on explicit flush()', async () => {
@@ -164,13 +154,11 @@ describe('WebSocketTransport — send()', () => {
         await tick()
         const errHandler = vi.fn()
         t.on(TransportEvent.Error, errHandler)
-        t.send({ type: 'pong' } as never) // fills queue
-        t.send({ type: 'pong' } as never) // overflows
+        t.send({ type: 'pong' } as never)
+        t.send({ type: 'pong' } as never)
         expect(errHandler).toHaveBeenCalledOnce()
     })
 })
-
-// ── close() ───────────────────────────────────────────────────────────────────
 
 describe('WebSocketTransport — close()', () => {
     it('calls ws.close and clears queue', async () => {
@@ -179,7 +167,7 @@ describe('WebSocketTransport — close()', () => {
         await tick()
         const ws = MockWS.instances[0]
         if (!ws) throw new Error('no MockWS instance')
-        t.send({ type: 'pong' } as never) // queue one message
+        t.send({ type: 'pong' } as never)
         t.close()
         expect(ws.close).toHaveBeenCalled()
     })
@@ -195,7 +183,7 @@ describe('WebSocketTransport — close()', () => {
         t.close()
         ws.closeWith(1006)
         vi.advanceTimersByTime(60_000)
-        // still only one WS instance
+
         expect(MockWS.instances.length).toBe(1)
         vi.useRealTimers()
     })

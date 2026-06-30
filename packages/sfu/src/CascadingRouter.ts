@@ -1,7 +1,9 @@
 import { EventEmitter } from '@rtcforge/core'
+import { NodeFailureTracker } from './NodeFailureTracker.js'
 import type { SfuCluster } from './SfuCluster.js'
 import type { SfuNode } from './SfuNode.js'
-import { CascadingRouterEvent, SfuClusterEvent, SfuNodeEvent, noopLogger } from './types.js'
+import { NoAvailableNodeError } from './errors.js'
+import { CascadingRouterEvent, noopLogger } from './types.js'
 import type { CascadingRouterOptions, Logger } from './types.js'
 
 type CascadingRouterEvents = {
@@ -16,57 +18,43 @@ export class CascadingRouter extends EventEmitter<CascadingRouterEvents> {
     private readonly _assignments = new Map<string, SfuNode>()
     private readonly _cascadeLinks = new Map<string, SfuNode[]>()
     private readonly _logger: Logger
-    private readonly _nodeFailedListeners = new Map<string, () => void>()
+    private readonly _failures: NodeFailureTracker
 
     constructor(cluster: SfuCluster, options: CascadingRouterOptions = {}) {
         super()
         this._cluster = cluster
         this._logger = options.logger ?? noopLogger
-
-        for (const node of cluster.nodes) {
-            this._attachNodeFailedListener(node)
-        }
-        cluster.on(SfuClusterEvent.NodeAdded, (node: SfuNode) => {
-            this._attachNodeFailedListener(node)
-        })
-        cluster.on(SfuClusterEvent.NodeRemoved, (node: SfuNode) => {
-            const listener = this._nodeFailedListeners.get(node.id)
-            if (listener) {
-                node.off(SfuNodeEvent.Failed, listener)
-                this._nodeFailedListeners.delete(node.id)
-            }
-        })
+        this._failures = new NodeFailureTracker(cluster, (node) => this._handleNodeGone(node))
     }
 
-    private _attachNodeFailedListener(node: SfuNode): void {
-        if (this._nodeFailedListeners.has(node.id)) return
-        const listener = () => {
-            for (const [roomId, assigned] of [...this._assignments]) {
-                if (assigned.id === node.id) {
-                    node.untrackRoom(roomId)
-                    this._assignments.delete(roomId)
-                    this._logger.warn('Room assignment cleared — node failed', {
-                        roomId,
-                        nodeId: node.id,
-                    })
-                    this.emit(CascadingRouterEvent.RoomDetached, roomId)
-                }
+    private _handleNodeGone(node: SfuNode): void {
+        for (const [roomId, assigned] of [...this._assignments]) {
+            if (assigned.id === node.id) {
+                node.untrackRoom(roomId)
+                this._assignments.delete(roomId)
+                this._logger.warn('Room assignment cleared — node failed', {
+                    roomId,
+                    nodeId: node.id,
+                })
+                this.emit(CascadingRouterEvent.RoomDetached, roomId)
             }
-            for (const [roomId, nodes] of [...this._cascadeLinks]) {
-                const filtered = nodes.filter((n) => n.id !== node.id)
-                if (filtered.length !== nodes.length) {
-                    node.untrackRoom(roomId)
-                    this.emit(CascadingRouterEvent.CascadeDropped, roomId, node)
-                    if (filtered.length === 0) {
-                        this._cascadeLinks.delete(roomId)
-                    } else {
-                        this._cascadeLinks.set(roomId, filtered)
-                    }
+        }
+        for (const [roomId, nodes] of [...this._cascadeLinks]) {
+            const filtered = nodes.filter((n) => n.id !== node.id)
+            if (filtered.length !== nodes.length) {
+                node.untrackRoom(roomId)
+                this.emit(CascadingRouterEvent.CascadeDropped, roomId, node)
+                if (filtered.length === 0) {
+                    this._cascadeLinks.delete(roomId)
+                } else {
+                    this._cascadeLinks.set(roomId, filtered)
                 }
             }
         }
-        this._nodeFailedListeners.set(node.id, listener)
-        node.on(SfuNodeEvent.Failed, listener)
+    }
+
+    dispose(): void {
+        this._failures.dispose()
     }
 
     get assignmentCount(): number {
@@ -74,8 +62,8 @@ export class CascadingRouter extends EventEmitter<CascadingRouterEvents> {
     }
 
     attachRoom(roomId: string, preferredRegion?: string): SfuNode {
-        const node = this._cluster.assignNode(preferredRegion)
-        if (!node) throw new Error('No available SFU node in cluster')
+        const node = this._cluster.assignNode(preferredRegion, roomId)
+        if (!node) throw new NoAvailableNodeError()
 
         const existing = this._assignments.get(roomId)
         if (existing) {
@@ -125,6 +113,6 @@ export class CascadingRouter extends EventEmitter<CascadingRouterEvents> {
     }
 
     getCascadeNodes(roomId: string): SfuNode[] {
-        return this._cascadeLinks.get(roomId) ?? []
+        return [...(this._cascadeLinks.get(roomId) ?? [])]
     }
 }

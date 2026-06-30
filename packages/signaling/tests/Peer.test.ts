@@ -18,7 +18,7 @@ describe('Peer', () => {
     beforeEach(() => {
         ws = new MockWs()
         onSignal = vi.fn()
-        peer = new Peer('p1', 'participant', ws as never, onSignal)
+        peer = new Peer({ id: 'p1', role: 'participant', ws: ws as never, onSignal })
     })
 
     afterEach(() => {
@@ -57,9 +57,11 @@ describe('Peer', () => {
     })
 
     it('updates lastPong when pong message received', () => {
-        peer.lastPong = 0
+        vi.useFakeTimers()
+        const before = peer.lastPong
+        vi.advanceTimersByTime(10)
         ws.emit('message', Buffer.from(JSON.stringify({ type: MessageType.Pong })))
-        expect(peer.lastPong).toBeGreaterThan(0)
+        expect(peer.lastPong).toBeGreaterThan(before)
     })
 
     it('emits disconnected when WebSocket closes', () => {

@@ -217,7 +217,6 @@ describe('RTCForgeClient', () => {
         const promise = client.joinRoom('r1')
         await tick()
 
-        // Initial connection succeeds
         const ws0 = latestWs()
         ws0.open()
         ws0.message({ type: MessageType.RoomJoined, roomId: 'r1', peerId: 'p1', peers: [] })
@@ -225,17 +224,14 @@ describe('RTCForgeClient', () => {
 
         const countBefore = MockWS.instances.length
 
-        // ws0 drops → attempt 1: ws1 created (never opened → reconnectAttempt not reset)
         ws0.closeWith(1006, 'dropped')
         vi.runAllTimers()
         await tick()
 
-        // ws1 fails immediately → attempt 2: ws2 created
         latestWs().closeWith(1006, 'fail')
         vi.runAllTimers()
         await tick()
 
-        // ws2 fails → maxReconnectAttempts (2) reached → no ws3 created
         latestWs().closeWith(1006, 'fail')
         vi.runAllTimers()
         await tick()

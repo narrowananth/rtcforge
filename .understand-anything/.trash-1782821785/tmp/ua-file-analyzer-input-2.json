@@ -1,0 +1,125 @@
+{
+    "projectRoot": "/Users/fynxtlapind167/Personal/Git/rtcforge",
+    "batchFiles": [
+        {
+            "path": "packages/sfu/src/CascadeBridge.ts",
+            "language": "typescript",
+            "sizeLines": 62,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/CascadeTree.ts",
+            "language": "typescript",
+            "sizeLines": 242,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/CascadingRouter.ts",
+            "language": "typescript",
+            "sizeLines": 118,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/HealthChecker.ts",
+            "language": "typescript",
+            "sizeLines": 55,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/NodeFailureTracker.ts",
+            "language": "typescript",
+            "sizeLines": 62,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/PlacementStrategy.ts",
+            "language": "typescript",
+            "sizeLines": 45,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/SfuBridge.ts",
+            "language": "typescript",
+            "sizeLines": 82,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/SfuCluster.ts",
+            "language": "typescript",
+            "sizeLines": 146,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/SfuNode.ts",
+            "language": "typescript",
+            "sizeLines": 158,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/StatsCollector.ts",
+            "language": "typescript",
+            "sizeLines": 39,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/sfu/src/types.ts",
+            "language": "typescript",
+            "sizeLines": 107,
+            "fileCategory": "code"
+        }
+    ],
+    "batchImportData": {
+        "packages/sfu/src/CascadeBridge.ts": [
+            "packages/sfu/src/CascadeTree.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/CascadeTree.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/NodeFailureTracker.ts",
+            "packages/sfu/src/SfuCluster.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/CascadingRouter.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/errors.ts",
+            "packages/sfu/src/NodeFailureTracker.ts",
+            "packages/sfu/src/SfuCluster.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/HealthChecker.ts": ["packages/sfu/src/SfuNode.ts"],
+        "packages/sfu/src/NodeFailureTracker.ts": [
+            "packages/sfu/src/SfuCluster.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/PlacementStrategy.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/SfuBridge.ts": [
+            "packages/sfu/src/CascadingRouter.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/SfuCluster.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/HealthChecker.ts",
+            "packages/sfu/src/PlacementStrategy.ts",
+            "packages/sfu/src/SfuNode.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/SfuNode.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/StatsCollector.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/StatsCollector.ts": [
+            "packages/core/src/index.ts",
+            "packages/sfu/src/types.ts"
+        ],
+        "packages/sfu/src/types.ts": ["packages/core/src/index.ts", "packages/sfu/src/SfuNode.ts"]
+    }
+}

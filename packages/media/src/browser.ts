@@ -11,7 +11,7 @@ export {
 } from './MediaManager.js'
 export { PeerConnection } from './PeerConnection.js'
 export { MediaEvent, ConnectionEvent, turnConfigToIceServer } from './types.js'
-export type { CallOptions, TurnConfig, MediaServiceOptions } from './types.js'
+export type { CallOptions, TurnConfig, PeerConnectionFactory } from './types.js'
 export { noopLogger } from '@rtcforge/core'
 export type { Logger, MetricsCollector } from '@rtcforge/core'
 export { SignalKind, SignalType } from './protocol.js'

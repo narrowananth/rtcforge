@@ -1,0 +1,463 @@
+{
+    "nodes": [
+        {
+            "id": "file:packages/sdk/src/JoinHandshake.ts",
+            "type": "file",
+            "name": "JoinHandshake.ts",
+            "filePath": "packages/sdk/src/JoinHandshake.ts",
+            "summary": "Drives the one-shot connect-and-join handshake: connects the transport, waits for the server's joined message (or a timeout), and resolves or rejects accordingly.",
+            "tags": ["service", "handshake", "transport", "connection", "promise"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "file:packages/sdk/src/RTCForgeClient.ts",
+            "type": "file",
+            "name": "RTCForgeClient.ts",
+            "filePath": "packages/sdk/src/RTCForgeClient.ts",
+            "summary": "Top-level SDK client developers instantiate to connect to an RTCForge signaling server, join a room, manage connection-state transitions, and leave cleanly.",
+            "tags": ["entry-point", "api-handler", "client", "state-machine", "event-handler"],
+            "complexity": "complex",
+            "languageNotes": "Connection lifecycle is guarded by a LEGAL_TRANSITIONS state-machine table and a cleanup-callback stack."
+        },
+        {
+            "id": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "type": "file",
+            "name": "ReconnectStrategy.ts",
+            "filePath": "packages/sdk/src/ReconnectStrategy.ts",
+            "summary": "Encapsulates exponential-backoff-with-jitter reconnect timing and attempt accounting used by the WebSocket transport.",
+            "tags": ["utility", "reconnect", "backoff", "resilience"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/sdk/src/Room.ts",
+            "type": "file",
+            "name": "Room.ts",
+            "filePath": "packages/sdk/src/Room.ts",
+            "summary": "Client-side view of a joined room: tracks peers, roles, and metadata, emits peer/media events, sends and broadcasts signaling messages, and binds an optional media Call.",
+            "tags": ["service", "data-model", "event-handler", "room", "peers"],
+            "complexity": "complex"
+        },
+        {
+            "id": "file:packages/sdk/src/SendQueue.ts",
+            "type": "file",
+            "name": "SendQueue.ts",
+            "filePath": "packages/sdk/src/SendQueue.ts",
+            "summary": "Small FIFO buffer holding outbound messages while the socket is offline, drained in order once the connection is open.",
+            "tags": ["utility", "queue", "buffering", "transport"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/sdk/src/Transport.ts",
+            "type": "file",
+            "name": "Transport.ts",
+            "filePath": "packages/sdk/src/Transport.ts",
+            "summary": "Defines the Transport interface and its typed event map (open/close/message/error/reconnecting) that any signaling transport implementation must satisfy.",
+            "tags": ["type-definition", "transport", "interface", "contract"],
+            "complexity": "simple"
+        },
+        {
+            "id": "file:packages/sdk/src/WebSocketTransport.ts",
+            "type": "file",
+            "name": "WebSocketTransport.ts",
+            "filePath": "packages/sdk/src/WebSocketTransport.ts",
+            "summary": "WebSocket implementation of the Transport interface with automatic reconnection, token refresh, ping/pong handling, message validation, and an offline send queue.",
+            "tags": ["service", "transport", "websocket", "reconnect", "event-handler"],
+            "complexity": "complex",
+            "languageNotes": "Lazily resolves the WebSocket constructor via dynamic import to support both browser and Node runtimes."
+        },
+        {
+            "id": "file:packages/sdk/src/protocol.ts",
+            "type": "file",
+            "name": "protocol.ts",
+            "filePath": "packages/sdk/src/protocol.ts",
+            "summary": "Wire-protocol definitions: the MessageType enum plus Zod schemas validating server and client signaling messages.",
+            "tags": ["type-definition", "schema", "validation", "protocol", "serialization"],
+            "complexity": "moderate",
+            "languageNotes": "Uses Zod discriminated-union schemas for runtime validation of inbound messages."
+        },
+        {
+            "id": "file:packages/sdk/src/types.ts",
+            "type": "file",
+            "name": "types.ts",
+            "filePath": "packages/sdk/src/types.ts",
+            "summary": "Public SDK type surface: Logger, ConnectionState, event-name enums (Room/Client/Transport), and close code/reason constants shared across the package.",
+            "tags": ["type-definition", "types", "enums", "logging"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "class",
+            "name": "JoinHandshake",
+            "filePath": "packages/sdk/src/JoinHandshake.ts",
+            "lineRange": [8, 62],
+            "summary": "Single-use handshake coordinator that races the server's joined response against a connect timeout, cleaning up its message listener and timer on settle.",
+            "tags": ["handshake", "promise", "timeout", "cleanup"],
+            "complexity": "moderate"
+        },
+        {
+            "id": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "type": "class",
+            "name": "RTCForgeClient",
+            "filePath": "packages/sdk/src/RTCForgeClient.ts",
+            "lineRange": [33, 193],
+            "summary": "Primary client class: builds the transport, runs the join handshake, constructs the Room, wires lifecycle/steady-state events, and enforces legal connection-state transitions.",
+            "tags": ["client", "api-handler", "state-machine", "lifecycle", "event-handler"],
+            "complexity": "complex"
+        },
+        {
+            "id": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "class",
+            "name": "ReconnectStrategy",
+            "filePath": "packages/sdk/src/ReconnectStrategy.ts",
+            "lineRange": [8, 34],
+            "summary": "Tracks reconnect attempts and computes the next backoff delay with jitter, capped at a maximum, and signals when attempts are exhausted.",
+            "tags": ["reconnect", "backoff", "resilience", "utility"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/sdk/src/Room.ts:Room",
+            "type": "class",
+            "name": "Room",
+            "filePath": "packages/sdk/src/Room.ts",
+            "lineRange": [69, 252],
+            "summary": "Stateful room representation maintaining peer/role/metadata maps, processing inbound signaling messages, emitting room events, and bridging to a media Call.",
+            "tags": ["room", "data-model", "peers", "event-handler", "signaling"],
+            "complexity": "complex"
+        },
+        {
+            "id": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "class",
+            "name": "SendQueue",
+            "filePath": "packages/sdk/src/SendQueue.ts",
+            "lineRange": [8, 33],
+            "summary": "FIFO message buffer exposing enqueue, size, drain (with a send callback), and clear for use while the transport is disconnected.",
+            "tags": ["queue", "buffering", "utility"],
+            "complexity": "simple"
+        },
+        {
+            "id": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "type": "class",
+            "name": "WebSocketTransport",
+            "filePath": "packages/sdk/src/WebSocketTransport.ts",
+            "lineRange": [14, 228],
+            "summary": "Concrete Transport over a WebSocket: handles connect timeouts, reconnect scheduling via ReconnectStrategy, token-refreshed reconnects, ping/pong, schema-validated messages, and queued sends.",
+            "tags": ["transport", "websocket", "reconnect", "event-handler", "resilience"],
+            "complexity": "complex"
+        }
+    ],
+    "edges": [
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/JoinHandshake.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/Room.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/WebSocketTransport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/SendQueue.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/SendQueue.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/sdk/src/SendQueue.ts",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/SendQueue.ts",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1.0
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+
+        {
+            "source": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        }
+    ]
+}

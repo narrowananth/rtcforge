@@ -5,10 +5,6 @@ import type { SfuMediaInterface } from './types.js'
 
 export type { SfuMediaInterface }
 
-/**
- * SfuBridge wires a CascadingRouter to a MediaService so that
- * SFU routing decisions automatically propagate to the media plane.
- */
 export class SfuBridge {
     private readonly _router: CascadingRouter
     private readonly _media: SfuMediaInterface
@@ -69,11 +65,15 @@ export class SfuBridge {
         this._router.off(CascadingRouterEvent.RoomDetached, this._onRoomDetached)
         this._router.off(CascadingRouterEvent.CascadeDropped, this._onCascadeDropped)
         for (const roomId of this._assignedRooms) {
-            this._media.removeRoute(roomId)
+            try {
+                this._media.removeRoute(roomId)
+            } catch {}
         }
         for (const [roomId, nodeIds] of this._cascadeRoutes) {
             for (const nodeId of nodeIds) {
-                this._media.removeCascadeRoute(roomId, nodeId)
+                try {
+                    this._media.removeCascadeRoute(roomId, nodeId)
+                } catch {}
             }
         }
         this._assignedRooms.clear()

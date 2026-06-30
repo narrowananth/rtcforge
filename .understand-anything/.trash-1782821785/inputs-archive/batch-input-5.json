@@ -1,0 +1,55 @@
+{
+    "batchIndex": 5,
+    "projectName": "RTCForge",
+    "languages": ["typescript"],
+    "batchFiles": [
+        {
+            "path": "packages/core/src/Clock.ts",
+            "language": "typescript",
+            "sizeLines": 56,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/Gossip.ts",
+            "language": "typescript",
+            "sizeLines": 321,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/Lock.ts",
+            "language": "typescript",
+            "sizeLines": 39,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/Membership.ts",
+            "language": "typescript",
+            "sizeLines": 69,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/MembershipReconciler.ts",
+            "language": "typescript",
+            "sizeLines": 57,
+            "fileCategory": "code"
+        },
+        {
+            "path": "packages/core/src/StateStore.ts",
+            "language": "typescript",
+            "sizeLines": 58,
+            "fileCategory": "code"
+        }
+    ],
+    "batchImportData": {
+        "packages/core/src/Clock.ts": [],
+        "packages/core/src/Gossip.ts": [
+            "packages/core/src/Clock.ts",
+            "packages/core/src/Membership.ts"
+        ],
+        "packages/core/src/Lock.ts": ["packages/core/src/Clock.ts"],
+        "packages/core/src/Membership.ts": ["packages/core/src/Clock.ts"],
+        "packages/core/src/MembershipReconciler.ts": ["packages/core/src/Membership.ts"],
+        "packages/core/src/StateStore.ts": ["packages/core/src/Clock.ts"]
+    },
+    "neighborMap": {}
+}

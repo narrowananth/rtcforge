@@ -1,5 +1,6 @@
 import { EventEmitter, toError } from '@rtcforge/core'
 import { WebSocket } from 'ws'
+import { RateLimiter } from './RateLimiter.js'
 import { ClientMessageSchema, MessageType } from './protocol.js'
 import type { ServerMessage } from './protocol.js'
 import { PeerEvent } from './types.js'
@@ -10,38 +11,40 @@ type PeerEvents = {
     [PeerEvent.Broadcast]: [channel: string, data: unknown]
     [PeerEvent.Error]: [err: Error]
     [PeerEvent.RateLimitExceeded]: []
+    [PeerEvent.Pong]: []
 }
 
-type RateLimit = { maxPerSec: number; count: number; windowStart: number }
+export interface PeerOptions {
+    id: string
+    ws: WebSocket
+    onSignal: (to: string, data: unknown) => void
+    role?: string
+    metadata?: Record<string, string>
+    maxMessagesPerSecond?: number
+}
 
 export class Peer extends EventEmitter<PeerEvents> {
     readonly id: string
-    private _role: string
     readonly metadata: Record<string, string>
-    lastPong: number
 
+    private _role: string
+    private _lastPong: number
     private readonly ws: WebSocket
     private readonly onSignal: (to: string, data: unknown) => void
-    private readonly _rateLimit: RateLimit | null
+    private readonly _rateLimiter: RateLimiter | null
 
-    constructor(
-        id: string,
-        role: string,
-        ws: WebSocket,
-        onSignal: (to: string, data: unknown) => void,
-        metadata: Record<string, string> = {},
-        maxMessagesPerSecond?: number,
-    ) {
+    constructor(opts: PeerOptions) {
         super()
-        this.id = id
-        this._role = role
-        this.metadata = metadata
-        this.ws = ws
-        this.onSignal = onSignal
-        this.lastPong = Date.now()
-        this._rateLimit =
-            maxMessagesPerSecond !== undefined
-                ? { maxPerSec: maxMessagesPerSecond, count: 0, windowStart: Date.now() }
+        this.id = opts.id
+        this._role = opts.role ?? ''
+
+        this.metadata = Object.freeze({ ...(opts.metadata ?? {}) })
+        this.ws = opts.ws
+        this.onSignal = opts.onSignal
+        this._lastPong = Date.now()
+        this._rateLimiter =
+            opts.maxMessagesPerSecond !== undefined
+                ? new RateLimiter(opts.maxMessagesPerSecond)
                 : null
 
         this.ws.on('message', (raw) => this.handleMessage(raw.toString()))
@@ -54,12 +57,16 @@ export class Peer extends EventEmitter<PeerEvents> {
         return this._role
     }
 
+    get lastPong(): number {
+        return this._lastPong
+    }
+
     setRole(role: string): void {
         this._role = role
     }
 
     isAlive(deadline: number): boolean {
-        return this.lastPong >= deadline
+        return this._lastPong >= deadline
     }
 
     send(msg: ServerMessage): void {
@@ -78,9 +85,7 @@ export class Peer extends EventEmitter<PeerEvents> {
     ping(): void {
         try {
             this.send({ type: MessageType.Ping })
-        } catch {
-            // no-op: peer already disconnected
-        }
+        } catch {}
     }
 
     disconnect(code: number, reason: string): void {
@@ -88,17 +93,9 @@ export class Peer extends EventEmitter<PeerEvents> {
     }
 
     private handleMessage(raw: string): void {
-        const now = Date.now()
-        if (this._rateLimit !== null) {
-            if (now - this._rateLimit.windowStart >= 1000) {
-                this._rateLimit.count = 0
-                this._rateLimit.windowStart = now
-            }
-            if (this._rateLimit.count >= this._rateLimit.maxPerSec) {
-                this.emit(PeerEvent.RateLimitExceeded)
-                return
-            }
-            this._rateLimit.count++
+        if (this._rateLimiter !== null && !this._rateLimiter.allow()) {
+            this.emit(PeerEvent.RateLimitExceeded)
+            return
         }
 
         let parsed: unknown
@@ -123,7 +120,8 @@ export class Peer extends EventEmitter<PeerEvents> {
                 this.emit(PeerEvent.Signal, msg.to, msg.data)
                 break
             case MessageType.Pong:
-                this.lastPong = now
+                this._lastPong = Date.now()
+                this.emit(PeerEvent.Pong)
                 break
             case MessageType.Broadcast:
                 this.emit(PeerEvent.Broadcast, msg.channel, msg.data ?? null)

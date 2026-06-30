@@ -13,9 +13,16 @@ type RoomEvents = {
     [RoomEvent.PeerKicked]: [peerId: string, reason: string | undefined]
 }
 
+const LEGAL_TRANSITIONS: Record<RoomState, readonly RoomState[]> = {
+    [RoomState.Creating]: [RoomState.Active, RoomState.Closing, RoomState.Closed],
+    [RoomState.Active]: [RoomState.Closing, RoomState.Closed],
+    [RoomState.Closing]: [RoomState.Closed],
+    [RoomState.Closed]: [],
+}
+
 export class Room extends EventEmitter<RoomEvents> {
     readonly id: string
-    private _state: RoomState = RoomState.Active
+    private _state: RoomState = RoomState.Creating
     private readonly _peers = new Map<string, Peer>()
     private readonly maxPeers: number | undefined
     private readonly _peerMeta = new Map<string, Record<string, string>>()
@@ -48,8 +55,15 @@ export class Room extends EventEmitter<RoomEvents> {
         return this._state
     }
 
-    getPeers(): IterableIterator<Peer> {
-        return this._peers.values()
+    private _transitionTo(next: RoomState): boolean {
+        if (this._state === next) return false
+        if (!LEGAL_TRANSITIONS[this._state].includes(next)) return false
+        this._state = next
+        return true
+    }
+
+    getPeers(): Peer[] {
+        return [...this._peers.values()]
     }
 
     getPeerCount(): number {
@@ -79,7 +93,7 @@ export class Room extends EventEmitter<RoomEvents> {
 
         this._peers.set(peer.id, peer)
         if (peer.metadata && Object.keys(peer.metadata).length > 0) {
-            this._peerMeta.set(peer.id, peer.metadata)
+            this._peerMeta.set(peer.id, { ...peer.metadata })
         } else {
             this._peerMeta.delete(peer.id)
         }
@@ -126,6 +140,7 @@ export class Room extends EventEmitter<RoomEvents> {
             }
         })
 
+        this._transitionTo(RoomState.Active)
         this._resetIdleTimer()
         this.emit(RoomEvent.PeerJoined, peer)
         return true
@@ -136,9 +151,7 @@ export class Room extends EventEmitter<RoomEvents> {
         if (!peer) return false
         try {
             peer.send({ type: MessageType.Kicked, peerId, reason })
-        } catch {
-            // socket already closed; proceed with disconnect anyway
-        }
+        } catch {}
         peer.disconnect(CloseCode.PolicyViolation, reason ?? CloseReason.Kicked)
         this.emit(RoomEvent.PeerKicked, peerId, reason)
         return true
@@ -188,8 +201,9 @@ export class Room extends EventEmitter<RoomEvents> {
 
         if (this._peers.size === 0 && !this._keepAliveOnEmpty) {
             this._clearTimers()
+            this._transitionTo(RoomState.Closing)
             this.emit(RoomEvent.PeerLeft, peer)
-            this._state = RoomState.Closed
+            this._transitionTo(RoomState.Closed)
             this.emit(RoomEvent.Closed)
         } else {
             this.broadcastExcept(peerId, { type: MessageType.PeerLeft, peerId })
@@ -198,8 +212,13 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
+    markActivity(): void {
+        this._resetIdleTimer()
+    }
+
     getPeerMetadata(peerId: string): Record<string, string> | undefined {
-        return this._peerMeta.get(peerId)
+        const meta = this._peerMeta.get(peerId)
+        return meta ? { ...meta } : undefined
     }
 
     setPeerRole(peerId: string, newRole: string): boolean {
@@ -208,6 +227,11 @@ export class Room extends EventEmitter<RoomEvents> {
         peer.setRole(newRole)
         this.broadcast({ type: MessageType.RoleChanged, peerId, role: newRole })
         return true
+    }
+
+    dispose(): void {
+        this._clearTimers()
+        this._transitionTo(RoomState.Closed)
     }
 
     private _clearTimers(): void {
@@ -228,8 +252,8 @@ export class Room extends EventEmitter<RoomEvents> {
     }
 
     private _forceClose(): void {
-        if (this._state !== RoomState.Active) return
-        this._state = RoomState.Closing
+        if (this._state !== RoomState.Active && this._state !== RoomState.Creating) return
+        this._transitionTo(RoomState.Closing)
         this._clearTimers()
         this.broadcast({ type: MessageType.Error, code: 'ROOM_EXPIRED', message: 'Room expired' })
         const peers = [...this._peers.values()]
@@ -239,7 +263,7 @@ export class Room extends EventEmitter<RoomEvents> {
             peer.disconnect(CloseCode.Normal, 'Room expired')
             this.emit(RoomEvent.PeerLeft, peer)
         }
-        this._state = RoomState.Closed
+        this._transitionTo(RoomState.Closed)
         this.emit(RoomEvent.Closed)
     }
 }

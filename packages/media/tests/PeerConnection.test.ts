@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PeerConnection } from '../src/PeerConnection.js'
 import { ConnectionEvent } from '../src/types.js'
 
-// ── RTCPeerConnection mock ────────────────────────────────────────────────────
-
 type EventHandler = (...args: unknown[]) => void
 
 function makeMockRTCPeerConnection() {
@@ -65,8 +63,6 @@ afterEach(() => {
     vi.clearAllMocks()
 })
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('PeerConnection — ICE candidate buffering', () => {
     it('buffers ICE candidates received before remote description is set', async () => {
         const pc = new PeerConnection(true)
@@ -124,7 +120,7 @@ describe('PeerConnection — handleOffer / handleAnswer', () => {
         mockPC.signalingState = 'have-local-offer'
 
         const pc = new PeerConnection(false)
-        // Force makingOffer = true via internal state by triggering negotiationneeded
+
         const result = await pc.handleOffer('collision-offer')
 
         expect(result).toBeNull()

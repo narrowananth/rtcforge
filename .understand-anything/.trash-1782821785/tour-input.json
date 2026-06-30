@@ -1,0 +1,2582 @@
+{
+    "nodes": [
+        {
+            "id": "file:packages/adapter-udp/src/UdpGossipTransport.ts",
+            "name": "UdpGossipTransport.ts",
+            "filePath": "packages/adapter-udp/src/UdpGossipTransport.ts",
+            "summary": "Node.js UDP datagram implementation of @rtcforge/core's GossipTransport, used to exchange cluster membership gossip between SFU nodes over the network.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/core/src/index.ts",
+            "summary": "Public barrel entry point for the @rtcforge/core package, re-exporting shared primitives: EventEmitter, errors, logging/metrics, HashRing, Clock, IdGenerator, StateStore, MessageBus, Lock, Membership, and Gossip.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/ActiveSpeakerDetector.ts",
+            "name": "ActiveSpeakerDetector.ts",
+            "filePath": "packages/media/src/ActiveSpeakerDetector.ts",
+            "summary": "Polls WebRTC getStats audio levels across peer connections on an interval to determine the currently active speaker and notifies via an onChange callback.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/Call.ts",
+            "name": "Call.ts",
+            "filePath": "packages/media/src/Call.ts",
+            "summary": "Client-side mesh call orchestrator: manages one PeerConnection per remote peer in a Room, wiring perfect-negotiation signaling, track add/replace/remove, mute controls, and active-speaker detection.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/Consumer.ts",
+            "name": "Consumer.ts",
+            "filePath": "packages/media/src/Consumer.ts",
+            "summary": "Server-side SFU consumer wrapper extending MediaEntity, representing a downstream media consumer bound to an upstream producer.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/LocalTrackRegistry.ts",
+            "name": "LocalTrackRegistry.ts",
+            "filePath": "packages/media/src/LocalTrackRegistry.ts",
+            "summary": "Tracks the set of local MediaStreamTracks a Call is publishing, supporting add/remove/replace and per-kind enable (mute) toggling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/MediaEntity.ts",
+            "name": "MediaEntity.ts",
+            "filePath": "packages/media/src/MediaEntity.ts",
+            "summary": "Defines the abstract MediaEntity base class and MediaEntityHandle interface shared by server-side Producer and Consumer, providing pause/resume/close lifecycle and transport-close handling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/MediaRouter.ts",
+            "name": "MediaRouter.ts",
+            "filePath": "packages/media/src/MediaRouter.ts",
+            "summary": "Wraps a mediasoup Router to manage WebRTC and pipe transports, producers and consumers for one room, including cross-router piping of producers for cascading/scale-out.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/MediaService.ts",
+            "name": "MediaService.ts",
+            "filePath": "packages/media/src/MediaService.ts",
+            "summary": "Top-level SFU media service that owns a WorkerPool and lazily creates one MediaRouter per signaling Room, handling peer-left transport cleanup and room-closed teardown.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/PeerConnection.ts",
+            "name": "PeerConnection.ts",
+            "filePath": "packages/media/src/PeerConnection.ts",
+            "summary": "Thin EventEmitter wrapper around a native RTCPeerConnection implementing perfect negotiation, ICE candidate buffering, simulcast transceivers, codec preference, and stats.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/Producer.ts",
+            "name": "Producer.ts",
+            "filePath": "packages/media/src/Producer.ts",
+            "summary": "Server-side SFU producer wrapper extending MediaEntity, representing an upstream media producer bound to a transport.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/WorkerPool.ts",
+            "name": "WorkerPool.ts",
+            "filePath": "packages/media/src/WorkerPool.ts",
+            "summary": "Manages a pool of mediasoup workers, spawning one per CPU and assigning new routers to the least-loaded worker, with auto-respawn on worker death.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/protocol.ts",
+            "name": "protocol.ts",
+            "filePath": "packages/media/src/protocol.ts",
+            "summary": "Defines the SFU media signaling wire protocol: SignalKind/SignalType enums, a Zod MediaSignalSchema, and the isMediaSignal type guard for validating inbound signals.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/types.ts",
+            "name": "types.ts",
+            "filePath": "packages/media/src/types.ts",
+            "summary": "Shared type definitions and constants for the media package: room/media/connection event enums, default mediasoup codecs, default listen infos, and a TURN-config-to-ICE-server helper.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/sdk/src/index.ts",
+            "summary": "Public barrel entry point for the @rtcforge/sdk client package, re-exporting RTCForgeClient, Room, transports, reconnect/backoff strategies, message queues, and client/room/transport types.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "name": "SimpleBandwidthEstimator.ts",
+            "filePath": "packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "summary": "Heuristic bandwidth/quality estimator for the SFU that maps observed network stats to a recommended simulcast quality layer using directional streak hysteresis.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/errors.ts",
+            "name": "errors.ts",
+            "filePath": "packages/sfu/src/errors.ts",
+            "summary": "Defines SFU-specific error types, notably NoAvailableNodeError thrown when no cluster node can accept a placement.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/CascadeBridge.ts",
+            "name": "CascadeBridge.ts",
+            "filePath": "packages/sfu/src/CascadeBridge.ts",
+            "summary": "Wires a CascadeTree's link lifecycle events to a media plane, piping and unpiping inter-node cascade links as the tree is rebuilt or torn down.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/CascadeTree.ts",
+            "name": "CascadeTree.ts",
+            "filePath": "packages/sfu/src/CascadeTree.ts",
+            "summary": "Plans and maintains a hierarchical fan-out tree of SFU nodes for large broadcast rooms, recomputing the relay topology when nodes fail and emitting link/leaf diff events.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/CascadingRouter.ts",
+            "name": "CascadingRouter.ts",
+            "filePath": "packages/sfu/src/CascadingRouter.ts",
+            "summary": "Routes rooms to primary SFU nodes and manages cascade links between nodes, re-assigning rooms and pruning cascade links when a node fails.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/HealthChecker.ts",
+            "name": "HealthChecker.ts",
+            "filePath": "packages/sfu/src/HealthChecker.ts",
+            "summary": "Periodically probes registered SFU nodes via an injected check callback, deduplicating in-flight checks and reporting healthy/unhealthy results back to the cluster.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "name": "NodeFailureTracker.ts",
+            "filePath": "packages/sfu/src/NodeFailureTracker.ts",
+            "summary": "Observes cluster membership and per-node failed/recovered events to fire a single de-duplicated node-gone callback, shared by the cascade router and tree for failure-driven rebuilds.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/PlacementStrategy.ts",
+            "name": "PlacementStrategy.ts",
+            "filePath": "packages/sfu/src/PlacementStrategy.ts",
+            "summary": "Pluggable node-placement strategies for the SFU cluster: a least-loaded selector and a consistent-hash-ring selector, both with optional regional pooling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/SfuBridge.ts",
+            "name": "SfuBridge.ts",
+            "filePath": "packages/sfu/src/SfuBridge.ts",
+            "summary": "Connects a CascadingRouter's room-assignment and cascade events to a media interface, adding and removing media routes as rooms are assigned, detached, or cascaded.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/SfuCluster.ts",
+            "name": "SfuCluster.ts",
+            "filePath": "packages/sfu/src/SfuCluster.ts",
+            "summary": "Central registry of SFU nodes that adds/removes nodes, selects placement via a strategy, runs health checks, and triggers rebalancing on node failure or overload.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/SfuNode.ts",
+            "name": "SfuNode.ts",
+            "filePath": "packages/sfu/src/SfuNode.ts",
+            "summary": "Represents a single SFU node, tracking its load, capacity, failure/drain state and assigned rooms, and emitting load, overloaded, failed, recovered, and bandwidth-quality events.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/StatsCollector.ts",
+            "name": "StatsCollector.ts",
+            "filePath": "packages/sfu/src/StatsCollector.ts",
+            "summary": "Periodically samples a node's network stats and feeds them to a bandwidth estimator, reporting the derived quality via a callback.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sfu/src/types.ts",
+            "name": "types.ts",
+            "filePath": "packages/sfu/src/types.ts",
+            "summary": "Shared type and event-constant definitions for the SFU package: node/cluster/router/tree event enums, placement and media interfaces, options, and re-exported core types.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/Authenticator.ts",
+            "name": "Authenticator.ts",
+            "filePath": "packages/signaling/src/Authenticator.ts",
+            "summary": "Resolves and validates an incoming WebSocket connection's auth payload, supporting both a pluggable async auth function (token-based) and query-string credentials, returning a normalized AuthPayload or a close reason.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "name": "HeartbeatMonitor.ts",
+            "filePath": "packages/signaling/src/HeartbeatMonitor.ts",
+            "summary": "Periodic timer that pings every peer across all rooms and disconnects peers that have missed their liveness deadline, keeping the connection pool free of dead sockets.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/Peer.ts",
+            "name": "Peer.ts",
+            "filePath": "packages/signaling/src/Peer.ts",
+            "summary": "Represents a single connected client over a WebSocket, parsing and validating inbound messages, emitting typed signal/broadcast/pong events, and enforcing per-peer rate limiting.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/RateLimiter.ts",
+            "name": "RateLimiter.ts",
+            "filePath": "packages/signaling/src/RateLimiter.ts",
+            "summary": "Lightweight sliding-window rate limiter tracking hit timestamps to allow or reject actions within a configured window and limit.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/Room.ts",
+            "name": "Room.ts",
+            "filePath": "packages/signaling/src/Room.ts",
+            "summary": "Core room aggregate managing peer membership, message relay/broadcast, role and metadata tracking, lifecycle state transitions, and idle/duration timeout enforcement.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/RoomRegistry.ts",
+            "name": "RoomRegistry.ts",
+            "filePath": "packages/signaling/src/RoomRegistry.ts",
+            "summary": "In-memory registry of active rooms providing get-or-create, lifecycle event re-emission, empty-room rollback, and bulk disconnect for graceful shutdown.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/RoomRouter.ts",
+            "name": "RoomRouter.ts",
+            "filePath": "packages/signaling/src/RoomRouter.ts",
+            "summary": "Consistent-hash router that maps room IDs to owning nodes via a weighted HashRing, kept current by a membership reconciler, enabling multi-node scale-out of signaling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/SignalingServer.ts",
+            "name": "SignalingServer.ts",
+            "filePath": "packages/signaling/src/SignalingServer.ts",
+            "summary": "Top-level WebSocket signaling server that wires together the authenticator, room registry, heartbeat monitor, and optional cluster router, handling connection lifecycle, redirects, health endpoint, metrics, and audit logging.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/protocol.ts",
+            "name": "protocol.ts",
+            "filePath": "packages/signaling/src/protocol.ts",
+            "summary": "Defines the wire protocol for client/server signaling messages, including the MessageType enum and Zod schemas (ClientMessageSchema, ServerMessageSchema) used to validate inbound and outbound frames.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/signaling/src/types.ts",
+            "name": "types.ts",
+            "filePath": "packages/signaling/src/types.ts",
+            "summary": "Shared type and constant definitions for the signaling package — auth payload schema, room/peer/server event and state enums, close codes/reasons — and re-exports of core logger/metrics/membership primitives.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/JoinHandshake.ts",
+            "name": "JoinHandshake.ts",
+            "filePath": "packages/sdk/src/JoinHandshake.ts",
+            "summary": "Drives the one-shot connect-and-join handshake: connects the transport, waits for the server's joined message (or a timeout), and resolves or rejects accordingly.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/RTCForgeClient.ts",
+            "name": "RTCForgeClient.ts",
+            "filePath": "packages/sdk/src/RTCForgeClient.ts",
+            "summary": "Top-level SDK client developers instantiate to connect to an RTCForge signaling server, join a room, manage connection-state transitions, and leave cleanly.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "name": "ReconnectStrategy.ts",
+            "filePath": "packages/sdk/src/ReconnectStrategy.ts",
+            "summary": "Encapsulates exponential-backoff-with-jitter reconnect timing and attempt accounting used by the WebSocket transport.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/Room.ts",
+            "name": "Room.ts",
+            "filePath": "packages/sdk/src/Room.ts",
+            "summary": "Client-side view of a joined room: tracks peers, roles, and metadata, emits peer/media events, sends and broadcasts signaling messages, and binds an optional media Call.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/SendQueue.ts",
+            "name": "SendQueue.ts",
+            "filePath": "packages/sdk/src/SendQueue.ts",
+            "summary": "Small FIFO buffer holding outbound messages while the socket is offline, drained in order once the connection is open.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/Transport.ts",
+            "name": "Transport.ts",
+            "filePath": "packages/sdk/src/Transport.ts",
+            "summary": "Defines the Transport interface and its typed event map (open/close/message/error/reconnecting) that any signaling transport implementation must satisfy.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/WebSocketTransport.ts",
+            "name": "WebSocketTransport.ts",
+            "filePath": "packages/sdk/src/WebSocketTransport.ts",
+            "summary": "WebSocket implementation of the Transport interface with automatic reconnection, token refresh, ping/pong handling, message validation, and an offline send queue.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/protocol.ts",
+            "name": "protocol.ts",
+            "filePath": "packages/sdk/src/protocol.ts",
+            "summary": "Wire-protocol definitions: the MessageType enum plus Zod schemas validating server and client signaling messages.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/sdk/src/types.ts",
+            "name": "types.ts",
+            "filePath": "packages/sdk/src/types.ts",
+            "summary": "Public SDK type surface: Logger, ConnectionState, event-name enums (Room/Client/Transport), and close code/reason constants shared across the package.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/Clock.ts",
+            "name": "Clock.ts",
+            "filePath": "packages/core/src/Clock.ts",
+            "summary": "Defines the Clock abstraction used throughout @rtcforge/core for time and timer access, providing the real systemClock and a deterministic ManualClock for testing time-dependent logic.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/Gossip.ts",
+            "name": "Gossip.ts",
+            "filePath": "packages/core/src/Gossip.ts",
+            "summary": "Implements an epidemic gossip-based cluster membership protocol with incarnation numbers, alive/dead/tombstone lifecycle, and a fanout-limited transport, enabling multi-node RTCForge deployments to discover and track peers without a central registry.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/Lock.ts",
+            "name": "Lock.ts",
+            "filePath": "packages/core/src/Lock.ts",
+            "summary": "Defines the distributed Lock interface for TTL-based leader/resource coordination, with a noopLock for single-node mode and an in-memory MemoryLock for local development and tests.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/Membership.ts",
+            "name": "Membership.ts",
+            "filePath": "packages/core/src/Membership.ts",
+            "summary": "Defines the NodeInfo and Membership interfaces for cluster node registration and discovery, plus MemoryMembership, a TTL-pruned in-memory roster with watch notifications.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/MembershipReconciler.ts",
+            "name": "MembershipReconciler.ts",
+            "filePath": "packages/core/src/MembershipReconciler.ts",
+            "summary": "Diffs successive Membership snapshots and fires onAdd/onRemove/onUpdate handlers, letting consumers react incrementally to nodes joining and leaving the cluster.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/StateStore.ts",
+            "name": "StateStore.ts",
+            "filePath": "packages/core/src/StateStore.ts",
+            "summary": "Defines the StateStore key-value interface with optional TTL and prefix scans, plus MemoryStateStore, a process-local implementation used as the default backing store for shared session state.",
+            "type": "file"
+        },
+        {
+            "id": "file:.husky/pre-commit",
+            "name": "pre-commit",
+            "filePath": ".husky/pre-commit",
+            "summary": "Husky Git pre-commit hook that runs lint-staged before each commit to lint and format staged files.",
+            "type": "file"
+        },
+        {
+            "id": "file:.understand-anything/.understandignore",
+            "name": ".understandignore",
+            "filePath": ".understand-anything/.understandignore",
+            "summary": "Ignore-list controlling which files the Understand-Anything analysis tool excludes when scanning the repository.",
+            "type": "file"
+        },
+        {
+            "id": "config:.understand-anything/intermediate/scan-result.json",
+            "name": "scan-result.json",
+            "filePath": ".understand-anything/intermediate/scan-result.json",
+            "summary": "Generated project-scan inventory used by the Understand-Anything pipeline, listing all files, detected languages, frameworks, the import map, and complexity estimates.",
+            "type": "config"
+        },
+        {
+            "id": "config:package.json",
+            "name": "package.json",
+            "filePath": "package.json",
+            "summary": "Root npm workspaces manifest for the RTCForge monorepo, wiring shared dev tooling (tsup, vitest, ESLint), workspace packages, and lint-staged/husky configuration.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/adapter-udp/package.json",
+            "name": "package.json",
+            "filePath": "packages/adapter-udp/package.json",
+            "summary": "Package manifest for @rtcforge/adapter-udp, a UDP gossip transport adapter providing a connectionless wire for the core gossip membership layer.",
+            "type": "config"
+        },
+        {
+            "id": "file:packages/adapter-udp/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/adapter-udp/src/index.ts",
+            "summary": "Public entry point for @rtcforge/adapter-udp, re-exporting UdpGossipTransport and its options type.",
+            "type": "file"
+        },
+        {
+            "id": "config:packages/adapter-udp/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/adapter-udp/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the adapter-udp package, extending the shared base config and scoping compilation to the package source.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/core/package.json",
+            "name": "package.json",
+            "filePath": "packages/core/package.json",
+            "summary": "Package manifest for @rtcforge/core, the shared primitives package providing EventEmitter, Logger, hashing, and other building blocks for the other packages.",
+            "type": "config"
+        },
+        {
+            "id": "file:packages/core/src/errors.ts",
+            "name": "errors.ts",
+            "filePath": "packages/core/src/errors.ts",
+            "summary": "Defines the RtcForge error hierarchy (RtcForgeError, InvalidArgumentError) and the isRtcForgeError type guard used across packages for consistent error handling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/EventEmitter.ts",
+            "name": "EventEmitter.ts",
+            "filePath": "packages/core/src/EventEmitter.ts",
+            "summary": "Lightweight, dependency-free typed EventEmitter used throughout RTCForge for on/once/off/emit pub-sub event handling.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/HashRing.ts",
+            "name": "HashRing.ts",
+            "filePath": "packages/core/src/HashRing.ts",
+            "summary": "Weighted rendezvous (highest-random-weight) hash ring used to map keys to cluster nodes for consistent, weight-aware node selection in scale-out scenarios.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/IdGenerator.ts",
+            "name": "IdGenerator.ts",
+            "filePath": "packages/core/src/IdGenerator.ts",
+            "summary": "Provides ID generation helpers: randomId for opaque random identifiers and SequentialId for monotonically increasing counters.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/MessageBus.ts",
+            "name": "MessageBus.ts",
+            "filePath": "packages/core/src/MessageBus.ts",
+            "summary": "In-process LocalMessageBus implementing topic-based publish/subscribe, the default single-node messaging backend before plugging in a distributed bus.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/core/src/types.ts",
+            "name": "types.ts",
+            "filePath": "packages/core/src/types.ts",
+            "summary": "Shared core type definitions and no-op defaults — Logger/Metrics interfaces, noopLogger, noopMetrics, the Metric helper, and the toError coercion utility.",
+            "type": "file"
+        },
+        {
+            "id": "config:packages/core/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/core/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the core package, extending the shared base config and scoping compilation to its source.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/media/package.json",
+            "name": "package.json",
+            "filePath": "packages/media/package.json",
+            "summary": "Package manifest for @rtcforge/media, the WebRTC media package handling peer connections, media capture, and call management, with separate browser and Node entry points.",
+            "type": "config"
+        },
+        {
+            "id": "file:packages/media/src/browser.ts",
+            "name": "browser.ts",
+            "filePath": "packages/media/src/browser.ts",
+            "summary": "Browser-targeted public entry point for @rtcforge/media, re-exporting only the client-safe surface (Call, media capture helpers, PeerConnection, signal types) without the Node/SFU server pieces.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/media/src/index.ts",
+            "summary": "Full public entry point for @rtcforge/media, re-exporting the complete media surface including Call, capture helpers, PeerConnection, MediaService, MediaRouter, Producer/Consumer, and WorkerPool.",
+            "type": "file"
+        },
+        {
+            "id": "file:packages/media/src/MediaManager.ts",
+            "name": "MediaManager.ts",
+            "filePath": "packages/media/src/MediaManager.ts",
+            "summary": "Browser media-capture helpers wrapping navigator.mediaDevices — getUserMedia/getDisplayMedia, device enumeration and filtering, device-change subscription, and permission checks.",
+            "type": "file"
+        },
+        {
+            "id": "config:packages/media/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/media/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the media package, extending the shared base config and scoping compilation to its source.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/sdk/package.json",
+            "name": "package.json",
+            "filePath": "packages/sdk/package.json",
+            "summary": "Package manifest for @rtcforge/sdk, the browser and Node.js client SDK exposing RTCForgeClient, with optional and runtime dependencies on the other RTCForge packages.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/sdk/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/sdk/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the sdk package, extending the shared base config and scoping compilation to its source.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/sfu/package.json",
+            "name": "package.json",
+            "filePath": "packages/sfu/package.json",
+            "summary": "Package manifest for @rtcforge/sfu, the cascading SFU cluster package providing multi-node routing, load balancing, and bandwidth estimation.",
+            "type": "config"
+        },
+        {
+            "id": "file:packages/sfu/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/sfu/src/index.ts",
+            "summary": "Public entry point for @rtcforge/sfu, re-exporting the cascading SFU surface — SfuNode, SfuCluster, CascadingRouter, cascade tree planning, placement strategies, bandwidth estimation, and failure tracking.",
+            "type": "file"
+        },
+        {
+            "id": "config:packages/sfu/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/sfu/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the sfu package, extending the shared base config and scoping compilation to its source.",
+            "type": "config"
+        },
+        {
+            "id": "config:packages/signaling/package.json",
+            "name": "package.json",
+            "filePath": "packages/signaling/package.json",
+            "summary": "Package manifest for @rtcforge/signaling, declaring the dual CJS/ESM build entry points, public publish access, and runtime dependencies on @rtcforge/core, the ws WebSocket library, and zod for validation.",
+            "type": "config"
+        },
+        {
+            "id": "file:packages/signaling/src/index.ts",
+            "name": "index.ts",
+            "filePath": "packages/signaling/src/index.ts",
+            "summary": "Public entry point (barrel) for the @rtcforge/signaling package, re-exporting SignalingServer, Room, Peer, RoomRouter, the wire protocol types, and supporting event/auth/metrics types that consumers use to stand up a WebRTC signaling server.",
+            "type": "file"
+        },
+        {
+            "id": "config:packages/signaling/tsconfig.json",
+            "name": "tsconfig.json",
+            "filePath": "packages/signaling/tsconfig.json",
+            "summary": "TypeScript compiler configuration for the @rtcforge/signaling package, extending the shared monorepo base config and scoping compilation to the src directory.",
+            "type": "config"
+        }
+    ],
+    "edges": [
+        {
+            "source": "file:packages/adapter-udp/src/UdpGossipTransport.ts",
+            "target": "class:packages/adapter-udp/src/UdpGossipTransport.ts:UdpGossipTransport",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/adapter-udp/src/UdpGossipTransport.ts",
+            "target": "class:packages/adapter-udp/src/UdpGossipTransport.ts:UdpGossipTransport",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/adapter-udp/src/UdpGossipTransport.ts",
+            "target": "function:packages/adapter-udp/src/UdpGossipTransport.ts:sanitizeGossipMessage",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/adapter-udp/src/UdpGossipTransport.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/ActiveSpeakerDetector.ts",
+            "target": "class:packages/media/src/ActiveSpeakerDetector.ts:ActiveSpeakerDetector",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/ActiveSpeakerDetector.ts",
+            "target": "class:packages/media/src/ActiveSpeakerDetector.ts:ActiveSpeakerDetector",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "class:packages/media/src/Call.ts:Call",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "class:packages/media/src/Call.ts:Call",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/media/src/ActiveSpeakerDetector.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/media/src/LocalTrackRegistry.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/media/src/PeerConnection.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/media/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/media/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Call.ts",
+            "target": "file:packages/sdk/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/media/src/Call.ts:Call",
+            "target": "class:packages/media/src/PeerConnection.ts:PeerConnection",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/media/src/Call.ts:Call",
+            "target": "class:packages/media/src/ActiveSpeakerDetector.ts:ActiveSpeakerDetector",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/media/src/Call.ts:Call",
+            "target": "class:packages/media/src/LocalTrackRegistry.ts:LocalTrackRegistry",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/media/src/Consumer.ts",
+            "target": "class:packages/media/src/Consumer.ts:Consumer",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/Consumer.ts",
+            "target": "class:packages/media/src/Consumer.ts:Consumer",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/Consumer.ts",
+            "target": "file:packages/media/src/MediaEntity.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/media/src/Consumer.ts:Consumer",
+            "target": "class:packages/media/src/MediaEntity.ts:MediaEntity",
+            "type": "inherits",
+            "direction": "forward",
+            "weight": 0.9
+        },
+        {
+            "source": "file:packages/media/src/LocalTrackRegistry.ts",
+            "target": "class:packages/media/src/LocalTrackRegistry.ts:LocalTrackRegistry",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/LocalTrackRegistry.ts",
+            "target": "class:packages/media/src/LocalTrackRegistry.ts:LocalTrackRegistry",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/LocalTrackRegistry.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaEntity.ts",
+            "target": "class:packages/media/src/MediaEntity.ts:MediaEntity",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/MediaEntity.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "class:packages/media/src/MediaRouter.ts:MediaRouter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "class:packages/media/src/MediaRouter.ts:MediaRouter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "file:packages/media/src/Consumer.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "file:packages/media/src/MediaEntity.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "file:packages/media/src/Producer.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaRouter.ts",
+            "target": "file:packages/media/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/media/src/MediaRouter.ts:MediaRouter",
+            "target": "class:packages/media/src/Producer.ts:Producer",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/media/src/MediaRouter.ts:MediaRouter",
+            "target": "class:packages/media/src/Consumer.ts:Consumer",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "class:packages/media/src/MediaService.ts:MediaService",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "class:packages/media/src/MediaService.ts:MediaService",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "file:packages/media/src/MediaRouter.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "file:packages/media/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/MediaService.ts",
+            "target": "file:packages/media/src/WorkerPool.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/media/src/MediaService.ts:MediaService",
+            "target": "class:packages/media/src/WorkerPool.ts:WorkerPool",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/media/src/MediaService.ts:MediaService",
+            "target": "class:packages/media/src/MediaRouter.ts:MediaRouter",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/media/src/PeerConnection.ts",
+            "target": "class:packages/media/src/PeerConnection.ts:PeerConnection",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/PeerConnection.ts",
+            "target": "class:packages/media/src/PeerConnection.ts:PeerConnection",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/PeerConnection.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/PeerConnection.ts",
+            "target": "file:packages/media/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/Producer.ts",
+            "target": "class:packages/media/src/Producer.ts:Producer",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/Producer.ts",
+            "target": "class:packages/media/src/Producer.ts:Producer",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/Producer.ts",
+            "target": "file:packages/media/src/MediaEntity.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/media/src/Producer.ts:Producer",
+            "target": "class:packages/media/src/MediaEntity.ts:MediaEntity",
+            "type": "inherits",
+            "direction": "forward",
+            "weight": 0.9
+        },
+        {
+            "source": "file:packages/media/src/WorkerPool.ts",
+            "target": "class:packages/media/src/WorkerPool.ts:WorkerPool",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/WorkerPool.ts",
+            "target": "class:packages/media/src/WorkerPool.ts:WorkerPool",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/WorkerPool.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/WorkerPool.ts",
+            "target": "file:packages/media/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/media/src/protocol.ts",
+            "target": "function:packages/media/src/protocol.ts:isMediaSignal",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/protocol.ts",
+            "target": "function:packages/media/src/protocol.ts:isMediaSignal",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/types.ts",
+            "target": "function:packages/media/src/types.ts:turnConfigToIceServer",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/types.ts",
+            "target": "function:packages/media/src/types.ts:turnConfigToIceServer",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/types.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "target": "class:packages/sfu/src/SimpleBandwidthEstimator.ts:SimpleBandwidthEstimator",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "target": "class:packages/sfu/src/SimpleBandwidthEstimator.ts:SimpleBandwidthEstimator",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SimpleBandwidthEstimator.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/errors.ts",
+            "target": "class:packages/sfu/src/errors.ts:NoAvailableNodeError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/errors.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeBridge.ts",
+            "target": "file:packages/sfu/src/CascadeTree.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeBridge.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeBridge.ts",
+            "target": "class:packages/sfu/src/CascadeBridge.ts:CascadeBridge",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeBridge.ts",
+            "target": "class:packages/sfu/src/CascadeBridge.ts:CascadeBridge",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "file:packages/sfu/src/SfuCluster.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "function:packages/sfu/src/CascadeTree.ts:planCascadeTree",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "function:packages/sfu/src/CascadeTree.ts:planCascadeTree",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "class:packages/sfu/src/CascadeTree.ts:CascadeTree",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/CascadeTree.ts",
+            "target": "class:packages/sfu/src/CascadeTree.ts:CascadeTree",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/CascadeTree.ts:CascadeTree",
+            "target": "function:packages/sfu/src/CascadeTree.ts:planCascadeTree",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/sfu/src/errors.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/sfu/src/SfuCluster.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "class:packages/sfu/src/CascadingRouter.ts:CascadingRouter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/CascadingRouter.ts",
+            "target": "class:packages/sfu/src/CascadingRouter.ts:CascadingRouter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/CascadingRouter.ts:CascadingRouter",
+            "target": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/HealthChecker.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/HealthChecker.ts",
+            "target": "class:packages/sfu/src/HealthChecker.ts:HealthChecker",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/HealthChecker.ts",
+            "target": "class:packages/sfu/src/HealthChecker.ts:HealthChecker",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "target": "file:packages/sfu/src/SfuCluster.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "target": "class:packages/sfu/src/NodeFailureTracker.ts:NodeFailureTracker",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/NodeFailureTracker.ts",
+            "target": "class:packages/sfu/src/NodeFailureTracker.ts:NodeFailureTracker",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "class:packages/sfu/src/PlacementStrategy.ts:LeastLoadedStrategy",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "class:packages/sfu/src/PlacementStrategy.ts:LeastLoadedStrategy",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "class:packages/sfu/src/PlacementStrategy.ts:HashRingStrategy",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/PlacementStrategy.ts",
+            "target": "class:packages/sfu/src/PlacementStrategy.ts:HashRingStrategy",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/SfuBridge.ts",
+            "target": "file:packages/sfu/src/CascadingRouter.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuBridge.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuBridge.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuBridge.ts",
+            "target": "class:packages/sfu/src/SfuBridge.ts:SfuBridge",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/SfuBridge.ts",
+            "target": "class:packages/sfu/src/SfuBridge.ts:SfuBridge",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "file:packages/sfu/src/HealthChecker.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "file:packages/sfu/src/PlacementStrategy.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/SfuCluster.ts",
+            "target": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "target": "class:packages/sfu/src/HealthChecker.ts:HealthChecker",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "target": "class:packages/sfu/src/PlacementStrategy.ts:LeastLoadedStrategy",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/SfuCluster.ts:SfuCluster",
+            "target": "class:packages/sfu/src/SfuNode.ts:SfuNode",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/SfuNode.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuNode.ts",
+            "target": "file:packages/sfu/src/StatsCollector.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuNode.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/SfuNode.ts",
+            "target": "class:packages/sfu/src/SfuNode.ts:SfuNode",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/SfuNode.ts",
+            "target": "class:packages/sfu/src/SfuNode.ts:SfuNode",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sfu/src/SfuNode.ts:SfuNode",
+            "target": "class:packages/sfu/src/StatsCollector.ts:StatsCollector",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/StatsCollector.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/StatsCollector.ts",
+            "target": "file:packages/sfu/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/StatsCollector.ts",
+            "target": "class:packages/sfu/src/StatsCollector.ts:StatsCollector",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sfu/src/StatsCollector.ts",
+            "target": "class:packages/sfu/src/StatsCollector.ts:StatsCollector",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sfu/src/types.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sfu/src/types.ts",
+            "target": "file:packages/sfu/src/SfuNode.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Authenticator.ts",
+            "target": "class:packages/signaling/src/Authenticator.ts:Authenticator",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/Authenticator.ts",
+            "target": "class:packages/signaling/src/Authenticator.ts:Authenticator",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/Authenticator.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Authenticator.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "target": "class:packages/signaling/src/HeartbeatMonitor.ts:HeartbeatMonitor",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "target": "class:packages/signaling/src/HeartbeatMonitor.ts:HeartbeatMonitor",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "target": "file:packages/signaling/src/Room.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "class:packages/signaling/src/Peer.ts:Peer",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "class:packages/signaling/src/Peer.ts:Peer",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "file:packages/signaling/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "file:packages/signaling/src/RateLimiter.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Peer.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/RateLimiter.ts",
+            "target": "class:packages/signaling/src/RateLimiter.ts:RateLimiter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/RateLimiter.ts",
+            "target": "class:packages/signaling/src/RateLimiter.ts:RateLimiter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "class:packages/signaling/src/Room.ts:Room",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "class:packages/signaling/src/Room.ts:Room",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "file:packages/signaling/src/Peer.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "file:packages/signaling/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/Room.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRegistry.ts",
+            "target": "class:packages/signaling/src/RoomRegistry.ts:RoomRegistry",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRegistry.ts",
+            "target": "class:packages/signaling/src/RoomRegistry.ts:RoomRegistry",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRegistry.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRegistry.ts",
+            "target": "file:packages/signaling/src/Room.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRegistry.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/signaling/src/RoomRegistry.ts:RoomRegistry",
+            "target": "class:packages/signaling/src/Room.ts:Room",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRouter.ts",
+            "target": "class:packages/signaling/src/RoomRouter.ts:RoomRouter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRouter.ts",
+            "target": "function:packages/signaling/src/RoomRouter.ts:nodeWeight",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRouter.ts",
+            "target": "class:packages/signaling/src/RoomRouter.ts:RoomRouter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRouter.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/RoomRouter.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/Authenticator.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/HeartbeatMonitor.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/Peer.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/Room.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/RoomRegistry.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/RoomRouter.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/signaling/src/SignalingServer.ts",
+            "target": "file:packages/signaling/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "target": "class:packages/signaling/src/Authenticator.ts:Authenticator",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "target": "class:packages/signaling/src/RoomRegistry.ts:RoomRegistry",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "target": "class:packages/signaling/src/HeartbeatMonitor.ts:HeartbeatMonitor",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "target": "class:packages/signaling/src/RoomRouter.ts:RoomRouter",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/SignalingServer.ts:SignalingServer",
+            "target": "class:packages/signaling/src/Room.ts:Room",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/signaling/src/types.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "class:packages/signaling/src/HeartbeatMonitor.ts:HeartbeatMonitor",
+            "target": "class:packages/signaling/src/Room.ts:Room",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/Peer.ts:Peer",
+            "target": "class:packages/signaling/src/RateLimiter.ts:RateLimiter",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/signaling/src/Room.ts:Room",
+            "target": "class:packages/signaling/src/Peer.ts:Peer",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/JoinHandshake.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/Room.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "file:packages/sdk/src/WebSocketTransport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/Transport.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/SendQueue.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "file:packages/sdk/src/types.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/core/src/index.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/protocol.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/SendQueue.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/types.ts",
+            "target": "file:packages/sdk/src/Transport.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/JoinHandshake.ts",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/RTCForgeClient.ts",
+            "target": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/ReconnectStrategy.ts",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/Room.ts",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/SendQueue.ts",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/SendQueue.ts",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/sdk/src/WebSocketTransport.ts",
+            "target": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "target": "class:packages/sdk/src/JoinHandshake.ts:JoinHandshake",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/RTCForgeClient.ts:RTCForgeClient",
+            "target": "class:packages/sdk/src/Room.ts:Room",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "target": "class:packages/sdk/src/ReconnectStrategy.ts:ReconnectStrategy",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "class:packages/sdk/src/WebSocketTransport.ts:WebSocketTransport",
+            "target": "class:packages/sdk/src/SendQueue.ts:SendQueue",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/core/src/Clock.ts",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Clock.ts",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "file:packages/core/src/Membership.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipNetwork",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:InMemoryGossipTransport",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:GossipNetwork",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Gossip.ts",
+            "target": "class:packages/core/src/Gossip.ts:InMemoryGossipTransport",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/Gossip.ts:GossipMembership",
+            "target": "class:packages/core/src/Clock.ts:ManualClock",
+            "type": "depends_on",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "class:packages/core/src/Lock.ts:MemoryLock",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Lock.ts",
+            "target": "class:packages/core/src/Lock.ts:MemoryLock",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "class:packages/core/src/Membership.ts:MemoryMembership",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/Membership.ts",
+            "target": "class:packages/core/src/Membership.ts:MemoryMembership",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "file:packages/core/src/Membership.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "class:packages/core/src/MembershipReconciler.ts:MembershipReconciler",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/MembershipReconciler.ts",
+            "target": "class:packages/core/src/MembershipReconciler.ts:MembershipReconciler",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "file:packages/core/src/Clock.ts",
+            "type": "imports",
+            "direction": "forward",
+            "weight": 0.7
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "class:packages/core/src/StateStore.ts:MemoryStateStore",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/StateStore.ts",
+            "target": "class:packages/core/src/StateStore.ts:MemoryStateStore",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "function:packages/core/src/errors.ts:isRtcForgeError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/errors.ts",
+            "target": "function:packages/core/src/errors.ts:isRtcForgeError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/errors.ts:InvalidArgumentError",
+            "target": "class:packages/core/src/errors.ts:RtcForgeError",
+            "type": "inherits",
+            "direction": "forward",
+            "weight": 0.9
+        },
+        {
+            "source": "file:packages/core/src/EventEmitter.ts",
+            "target": "class:packages/core/src/EventEmitter.ts:EventEmitter",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/EventEmitter.ts",
+            "target": "class:packages/core/src/EventEmitter.ts:EventEmitter",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "function:packages/core/src/HashRing.ts:cyrb53",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "class:packages/core/src/HashRing.ts:HashRing",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/HashRing.ts",
+            "target": "class:packages/core/src/HashRing.ts:HashRing",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "class:packages/core/src/HashRing.ts:HashRing",
+            "target": "function:packages/core/src/HashRing.ts:cyrb53",
+            "type": "calls",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/IdGenerator.ts",
+            "target": "class:packages/core/src/IdGenerator.ts:SequentialId",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/IdGenerator.ts",
+            "target": "class:packages/core/src/IdGenerator.ts:SequentialId",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/MessageBus.ts",
+            "target": "class:packages/core/src/MessageBus.ts:LocalMessageBus",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/MessageBus.ts",
+            "target": "class:packages/core/src/MessageBus.ts:LocalMessageBus",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/core/src/types.ts",
+            "target": "function:packages/core/src/types.ts:toError",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/core/src/types.ts",
+            "target": "function:packages/core/src/types.ts:toError",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:getUserMediaWithOptions",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:checkPermissions",
+            "type": "contains",
+            "direction": "forward",
+            "weight": 1
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:getUserMediaWithOptions",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "file:packages/media/src/MediaManager.ts",
+            "target": "function:packages/media/src/MediaManager.ts:checkPermissions",
+            "type": "exports",
+            "direction": "forward",
+            "weight": 0.8
+        },
+        {
+            "source": "config:packages/core/tsconfig.json",
+            "target": "file:packages/core/src/types.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/core/tsconfig.json",
+            "target": "file:packages/core/src/EventEmitter.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/adapter-udp/tsconfig.json",
+            "target": "file:packages/adapter-udp/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/tsconfig.json",
+            "target": "file:packages/media/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/tsconfig.json",
+            "target": "file:packages/media/src/browser.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/sfu/tsconfig.json",
+            "target": "file:packages/sfu/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/adapter-udp/package.json",
+            "target": "file:packages/adapter-udp/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/package.json",
+            "target": "file:packages/media/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/media/package.json",
+            "target": "file:packages/media/src/browser.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/sfu/package.json",
+            "target": "file:packages/sfu/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/signaling/tsconfig.json",
+            "target": "file:packages/signaling/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        },
+        {
+            "source": "config:packages/signaling/package.json",
+            "target": "file:packages/signaling/src/index.ts",
+            "type": "configures",
+            "direction": "forward",
+            "weight": 0.6
+        }
+    ]
+}

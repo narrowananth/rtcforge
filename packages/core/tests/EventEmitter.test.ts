@@ -98,7 +98,7 @@ describe('EventEmitter', () => {
         const ee = new EventEmitter<TestEvents>()
         const listener = vi.fn()
         ee.once('data', listener)
-        ee.off('data', listener) // must remove the internal wrapper
+        ee.off('data', listener)
         ee.emit('data', 'x')
         expect(listener).not.toHaveBeenCalled()
     })

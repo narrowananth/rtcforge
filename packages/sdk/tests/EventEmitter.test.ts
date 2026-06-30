@@ -109,7 +109,7 @@ describe('EventEmitter', () => {
         ee.on('data', vi.fn())
         ee.once('data', vi.fn())
         expect(ee.listenerCount('data')).toBe(2)
-        ee.emit('data', 'x') // once fires and removes itself
+        ee.emit('data', 'x')
         expect(ee.listenerCount('data')).toBe(1)
     })
 })

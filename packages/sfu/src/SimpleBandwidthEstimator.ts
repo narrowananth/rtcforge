@@ -1,10 +1,15 @@
-import type { BandwidthEstimator, SimpleBandwidthEstimatorOptions } from './types.js'
+import type { NetworkStats } from '@rtcforge/core'
+import type {
+    BandwidthEstimator,
+    BandwidthQuality,
+    SimpleBandwidthEstimatorOptions,
+} from './types.js'
 
 export class SimpleBandwidthEstimator implements BandwidthEstimator {
     private readonly opts: Required<SimpleBandwidthEstimatorOptions>
     private _streak = 0
-    private _lastQuality: 'high' | 'medium' | 'low' = 'high'
-    private _lastRaw: 'high' | 'medium' | 'low' = 'high'
+    private _pendingDir: -1 | 0 | 1 = 0
+    private _lastQuality: BandwidthQuality = 'high'
 
     constructor(opts: SimpleBandwidthEstimatorOptions = {}) {
         this.opts = {
@@ -18,10 +23,7 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
         }
     }
 
-    estimate(stats: { bitrate: number; packetLoss: number; rtt: number }):
-        | 'high'
-        | 'medium'
-        | 'low' {
+    estimate(stats: NetworkStats): BandwidthQuality {
         const {
             packetLossHighThreshold,
             packetLossMedThreshold,
@@ -29,7 +31,7 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
             rttMedThreshold,
             bitrateMinKbps,
         } = this.opts
-        let raw: 'high' | 'medium' | 'low'
+        let raw: BandwidthQuality
         if (stats.packetLoss > packetLossHighThreshold || stats.rtt > rttHighThreshold) {
             raw = 'low'
         } else if (
@@ -42,30 +44,37 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
             raw = 'high'
         }
 
+        const names: BandwidthQuality[] = ['low', 'medium', 'high']
         const order = { low: 0, medium: 1, high: 2 }
-        if (raw === this._lastQuality) {
+        const committed = order[this._lastQuality]
+        const target = order[raw]
+
+        if (target === committed) {
             this._streak = 0
-            this._lastRaw = raw
-        } else if (raw !== this._lastRaw) {
+            this._pendingDir = 0
+            return this._lastQuality
+        }
+
+        const dir: -1 | 1 = target > committed ? 1 : -1
+        if (dir !== this._pendingDir) {
+            this._pendingDir = dir
             this._streak = 1
-            this._lastRaw = raw
         } else {
             this._streak++
-            const threshold =
-                order[raw] < order[this._lastQuality]
-                    ? this.opts.downgradeStreak
-                    : this.opts.upgradeStreak
-            if (this._streak >= threshold) {
-                this._lastQuality = raw
-                this._streak = 0
-            }
+        }
+
+        const threshold = dir < 0 ? this.opts.downgradeStreak : this.opts.upgradeStreak
+        if (this._streak >= threshold) {
+            this._lastQuality = names[committed + dir]
+            this._streak = 0
+            this._pendingDir = 0
         }
         return this._lastQuality
     }
 
     reset(): void {
         this._streak = 0
+        this._pendingDir = 0
         this._lastQuality = 'high'
-        this._lastRaw = 'high'
     }
 }

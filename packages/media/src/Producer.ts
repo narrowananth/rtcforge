@@ -1,10 +1,19 @@
-import { MediaEntity, MediaEntityEvent } from './MediaEntity.js'
-
-export const ProducerEvent = MediaEntityEvent
-export type ProducerEvent = MediaEntityEvent
+import type { types as MsTypes } from 'mediasoup'
+import { MediaEntity } from './MediaEntity.js'
 
 export class Producer extends MediaEntity {
-    constructor(peerId: string, kind: 'audio' | 'video') {
-        super('producer', peerId, kind)
+    readonly role = 'producer' as const
+
+    constructor(
+        peerId: string,
+        private readonly producer: MsTypes.Producer,
+    ) {
+        super(peerId, producer)
+
+        producer.observer.once('close', () => this.close())
+    }
+
+    get transportId(): string {
+        return this.producer.appData.transportId as string
     }
 }
