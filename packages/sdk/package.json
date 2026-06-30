@@ -22,7 +22,7 @@
         "access": "public"
     },
     "dependencies": {
-        "@rtcforge/core": "*",
+        "@rtcforge/core": "^0.1.0",
         "zod": "^4.4.3"
     },
     "optionalDependencies": {
