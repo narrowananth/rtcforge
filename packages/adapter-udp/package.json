@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-adapter-udp",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "UDP GossipTransport adapter — connectionless wire for rtcforge-core GossipMembership",
     "main": "dist/index.js",
     "module": "dist/index.mjs",

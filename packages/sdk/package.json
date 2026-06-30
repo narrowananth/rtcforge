@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-sdk",
-    "version": "0.1.0",
-    "description": "Browser + Node.js client SDK \u2014 RTCForgeClient",
+    "version": "0.1.1",
+    "description": "Browser + Node.js client SDK — RTCForgeClient",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",

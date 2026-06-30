@@ -1,6 +1,6 @@
 {
     "name": "@rtcforge-examples/live-stream-app",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "private": true,
     "type": "module",
     "description": "Example: live streaming with host/viewer roles + 1M-viewer cascade fan-out tree (@rtcforge/sfu CascadeTree/CascadeBridge)",

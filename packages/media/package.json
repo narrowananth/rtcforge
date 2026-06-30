@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-media",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "WebRTC peer connections, media capture, and call management",
     "main": "dist/index.js",
     "module": "dist/index.mjs",

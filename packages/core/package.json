@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-core",
-    "version": "0.1.0",
-    "description": "Shared primitives \u2014 EventEmitter, Logger",
+    "version": "0.1.1",
+    "description": "Shared primitives — EventEmitter, Logger",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",

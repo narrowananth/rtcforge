@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-sfu",
-    "version": "0.1.0",
-    "description": "Cascading SFU cluster management \u2014 multi-node routing, load balancing, bandwidth estimation",
+    "version": "0.1.1",
+    "description": "Cascading SFU cluster management — multi-node routing, load balancing, bandwidth estimation",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",

@@ -1,6 +1,6 @@
 {
     "name": "@rtcforge-examples/sfu-app",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "private": true,
     "type": "module",
     "description": "Example: SFU cluster routing + media plane using @rtcforge/sfu and @rtcforge/media",
