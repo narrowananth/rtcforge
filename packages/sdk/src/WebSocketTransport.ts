@@ -11,6 +11,31 @@ import type { Logger, TransportOptions } from './types.js'
 
 const WS_OPEN = 1
 
+/**
+ * Default WebSocket-based {@link Transport}.
+ *
+ * @remarks
+ * Handles the full connection lifecycle: it resolves a `WebSocket`
+ * implementation (the global one in browsers/Node ≥ 22, falling back to the
+ * `ws` package), validates every inbound frame against
+ * `ServerMessageSchema` and silently drops invalid ones, and answers
+ * server `ping` frames with `pong` automatically. Messages sent while the socket
+ * is not open are buffered in a {@link MessageQueue} and flushed on reconnect.
+ * When {@link TransportOptions.reconnect} is enabled it retries using a
+ * {@link BackoffStrategy}, optionally refreshing the auth token via
+ * {@link TransportOptions.tokenRefresh} before each attempt, and gives up once
+ * the strategy is exhausted.
+ *
+ * @example
+ * ```ts
+ * const transport = new WebSocketTransport('wss://example.com/rtc?roomId=demo', {
+ *   reconnect: true,
+ *   maxReconnectDelay: 32_000,
+ * })
+ * transport.on('message', (msg) => console.log(msg))
+ * await transport.connect()
+ * ```
+ */
 export class WebSocketTransport extends EventEmitter<TransportEvents> implements Transport {
     private ws: WebSocket | null = null
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -26,6 +51,10 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
     private readonly _queue: MessageQueue<ClientMessage>
     private readonly _reconnect: BackoffStrategy
 
+    /**
+     * @param url - Full signaling socket URL including any auth/room query parameters.
+     * @param options - Reconnect, timeout, logging, token-refresh, and queue configuration.
+     */
     constructor(url: string, options: TransportOptions = {}) {
         super()
         this.url = url

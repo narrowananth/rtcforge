@@ -12,10 +12,17 @@ import type {
     WebRtcTransportParams,
 } from './types.js'
 
+/**
+ * Events emitted by a {@link MediaRouter}.
+ */
 export const MediaRouterEvent = {
+    /** A producer was created or piped in. Payload: `(producer)`. */
     ProducerAdded: 'producerAdded',
+    /** A producer closed and was removed from the router. Payload: `(producer)`. */
     ProducerClosed: 'producerClosed',
+    /** A consumer was created. Payload: `(consumer)`. */
     ConsumerAdded: 'consumerAdded',
+    /** The router was closed. */
     Closed: 'closed',
 } as const
 

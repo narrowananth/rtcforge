@@ -1,22 +1,53 @@
 import { z } from 'zod'
 
+/**
+ * Discriminator values for every message exchanged over the signaling
+ * {@link Transport}. Each value is the `type` field of a wire message; the same
+ * constant is reused as the event name emitted by {@link Room} for the
+ * corresponding server message.
+ *
+ * @remarks
+ * `Ping`/`Pong` are handled internally by {@link WebSocketTransport} as a
+ * keep-alive and never surface to application code.
+ */
 export const MessageType = {
+    /** Server confirms the local peer has joined a room; carries the roster, roles, metadata and ICE servers. */
     RoomJoined: 'room-joined',
+    /** A remote peer joined the room. */
     PeerJoined: 'peer-joined',
+    /** A remote peer left the room. */
     PeerLeft: 'peer-left',
+    /** A known peer came online (regained its connection). */
     PresenceOnline: 'presence-online',
+    /** A known peer went offline (lost its connection but has not left). */
     PresenceOffline: 'presence-offline',
+    /** Directed peer-to-peer signaling payload (e.g. SDP/ICE), routed via the server. */
     Signal: 'signal',
+    /** Fan-out message delivered to every peer subscribed to a named channel. */
     Broadcast: 'broadcast',
+    /** Server-reported error carrying a machine `code` and human-readable `message`. */
     Error: 'error',
+    /** Server keep-alive request; answered automatically with {@link MessageType.Pong}. */
     Ping: 'ping',
+    /** Client keep-alive reply to a {@link MessageType.Ping}. */
     Pong: 'pong',
+    /** The local peer was forcibly removed from the room by the server. */
     Kicked: 'kicked',
+    /** A peer's role changed. */
     RoleChanged: 'role-changed',
 } as const
 
+/** Union of the string discriminator values in {@link MessageType}. */
 export type MessageType = (typeof MessageType)[keyof typeof MessageType]
 
+/**
+ * Zod schema validating every inbound message from the signaling server.
+ *
+ * @remarks
+ * {@link WebSocketTransport} parses each frame with this schema and silently
+ * drops any message that fails validation, so malformed server output can never
+ * reach application code.
+ */
 export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal(MessageType.RoomJoined),
@@ -63,8 +94,13 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal(MessageType.RoleChanged), peerId: z.string(), role: z.string() }),
 ])
 
+/** A validated message received from the signaling server. */
 export type ServerMessage = z.infer<typeof ServerMessageSchema>
 
+/**
+ * Zod schema for messages the client is permitted to send to the server:
+ * directed signals, broadcasts, and the keep-alive pong.
+ */
 export const ClientMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal(MessageType.Signal), to: z.string(), data: z.unknown() }),
     z.object({ type: z.literal(MessageType.Pong) }),
@@ -75,4 +111,5 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
     }),
 ])
 
+/** A message sent from the client to the signaling server. */
 export type ClientMessage = z.infer<typeof ClientMessageSchema>

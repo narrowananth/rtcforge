@@ -20,6 +20,35 @@ type CallEvents = {
     [MediaEvent.ConnectionFailed]: [peerId: string]
 }
 
+/**
+ * Browser P2P mesh call over a signaling {@link Room}. Manages one
+ * {@link PeerConnection} per remote peer, wiring perfect negotiation, ICE, and
+ * track publishing so that adding a track fans it out to every peer.
+ *
+ * It reacts to room membership: joining peers get a new connection, leaving
+ * peers are torn down, and a {@link RoomEvent.Refreshed} triggers a full
+ * {@link Call.restart}. All observable activity is surfaced as {@link MediaEvent}s.
+ *
+ * @remarks
+ * Intended for small mesh calls where each participant connects directly to
+ * every other participant. For many-participant rooms, use the SFU
+ * ({@link MediaService}) instead.
+ *
+ * @example
+ * ```ts
+ * const stream = await getUserMedia({ audio: true, video: true })
+ * const call = new Call(room, { stream, iceServers })
+ *
+ * call.on(MediaEvent.RemoteStream, (peerId, remoteStream) => {
+ *   attachToVideoElement(peerId, remoteStream)
+ * })
+ * call.on(MediaEvent.RemoteStreamRemoved, (peerId) => detach(peerId))
+ *
+ * call.start()
+ * // later
+ * call.close()
+ * ```
+ */
 export class Call extends EventEmitter<CallEvents> {
     private readonly room: Room
     private readonly opts: CallOptions
@@ -31,6 +60,10 @@ export class Call extends EventEmitter<CallEvents> {
     private closed = false
     private _activeSpeaker: ActiveSpeakerDetector | null = null
 
+    /**
+     * @param room - The signaling room whose membership and signal messages drive the mesh.
+     * @param opts - Call configuration (initial stream, ICE servers, codec, simulcast, etc.). Defaults to `{}`.
+     */
     constructor(room: Room, opts: CallOptions = {}) {
         super()
         this.room = room
@@ -39,6 +72,11 @@ export class Call extends EventEmitter<CallEvents> {
         this.tracks = new LocalTrackRegistry(opts.stream)
     }
 
+    /**
+     * Starts the call: creates connections to all current peers and subscribes
+     * to room membership and signaling events. Idempotent, and a no-op once the
+     * call has been closed.
+     */
     start(): void {
         if (this.started || this.closed) return
         this.started = true
@@ -56,6 +94,16 @@ export class Call extends EventEmitter<CallEvents> {
         this.room.on(RoomEvent.Refreshed, this.handleRoomRefreshed)
     }
 
+    /**
+     * Publishes a local track to every peer connection and registers it so it is
+     * also added to peers that join later. Emits {@link MediaEvent.TrackPublished}.
+     *
+     * @param track - The local media track to send.
+     * @param stream - The stream the track belongs to.
+     * @param opts - Optional per-track overrides.
+     * @param opts.contentHint - Encoder content hint set on the track (e.g. `"motion"`, `"detail"`).
+     * @param opts.maxBitrate - Maximum send bitrate in bits per second; falls back to {@link CallOptions.maxBitrate}.
+     */
     addTrack(
         track: MediaStreamTrack,
         stream: MediaStream,
@@ -72,6 +120,13 @@ export class Call extends EventEmitter<CallEvents> {
         this.emit(MediaEvent.TrackPublished, track, stream)
     }
 
+    /**
+     * Replaces a published track with a new one on every peer connection without
+     * renegotiation (e.g. switching cameras). Updates the local track registry.
+     *
+     * @param oldTrack - The currently published track.
+     * @param newTrack - The track to send in its place.
+     */
     async replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void> {
         this.tracks.replace(oldTrack, newTrack)
         await Promise.all(
@@ -79,6 +134,13 @@ export class Call extends EventEmitter<CallEvents> {
         )
     }
 
+    /**
+     * Publishes a screen-share track, applying the content hint and max bitrate
+     * from {@link CallOptions.screenShare}. Convenience over {@link Call.addTrack}.
+     *
+     * @param track - The screen-capture track.
+     * @param stream - The stream the track belongs to.
+     */
     addScreenTrack(track: MediaStreamTrack, stream: MediaStream): void {
         this.addTrack(track, stream, {
             contentHint: this.opts.screenShare?.contentHint,
@@ -86,6 +148,14 @@ export class Call extends EventEmitter<CallEvents> {
         })
     }
 
+    /**
+     * Opens a data channel to a specific peer.
+     *
+     * @param peerId - The target peer's id.
+     * @param label - Data channel label.
+     * @param opts - Optional data channel configuration.
+     * @returns The created data channel, or `undefined` if no connection to that peer exists.
+     */
     createDataChannel(
         peerId: string,
         label: string,
@@ -94,6 +164,12 @@ export class Call extends EventEmitter<CallEvents> {
         return this.connections.get(peerId)?.createDataChannel(label, opts)
     }
 
+    /**
+     * Collects WebRTC statistics for one or all peer connections.
+     *
+     * @param peerId - If given, returns stats for just that peer; otherwise for all connected peers.
+     * @returns A map of peer id to its `RTCStatsReport`.
+     */
     async getStats(peerId?: string): Promise<Map<string, RTCStatsReport>> {
         const result = new Map<string, RTCStatsReport>()
         if (peerId) {
@@ -109,6 +185,13 @@ export class Call extends EventEmitter<CallEvents> {
         return result
     }
 
+    /**
+     * Starts polling remote audio levels and emitting {@link MediaEvent.ActiveSpeaker}
+     * when the dominant speaker changes. Idempotent.
+     *
+     * @param intervalMs - Poll interval in milliseconds.
+     * @defaultValue 1000
+     */
     startActiveSpeakerDetection(intervalMs = 1000): void {
         if (this._activeSpeaker === null) {
             this._activeSpeaker = new ActiveSpeakerDetector(
@@ -120,11 +203,18 @@ export class Call extends EventEmitter<CallEvents> {
         this._activeSpeaker.start()
     }
 
+    /** Stops active-speaker detection and releases its resources. Idempotent. */
     stopActiveSpeakerDetection(): void {
         this._activeSpeaker?.stop()
         this._activeSpeaker = null
     }
 
+    /**
+     * Unpublishes a track from every peer connection and removes it from the
+     * local registry.
+     *
+     * @param track - The track to remove.
+     */
     removeTrack(track: MediaStreamTrack): void {
         for (const pc of this.connections.values()) {
             pc.removeTrack(track)
@@ -132,25 +222,36 @@ export class Call extends EventEmitter<CallEvents> {
         this.tracks.remove(track)
     }
 
+    /** Disables all local audio tracks (mutes the microphone) without renegotiating. */
     muteAudio(): void {
         this.tracks.setKindEnabled('audio', false)
     }
+    /** Re-enables all local audio tracks. */
     unmuteAudio(): void {
         this.tracks.setKindEnabled('audio', true)
     }
+    /** Disables all local video tracks (stops sending camera frames) without renegotiating. */
     muteVideo(): void {
         this.tracks.setKindEnabled('video', false)
     }
+    /** Re-enables all local video tracks. */
     unmuteVideo(): void {
         this.tracks.setKindEnabled('video', true)
     }
+    /** @returns Whether the local audio tracks are currently muted. */
     isAudioMuted(): boolean {
         return this.tracks.isKindMuted('audio')
     }
+    /** @returns Whether the local video tracks are currently muted. */
     isVideoMuted(): boolean {
         return this.tracks.isKindMuted('video')
     }
 
+    /**
+     * Tears down all connections and room listeners, then starts fresh. Local
+     * published tracks are preserved and re-added to the new connections. Invoked
+     * automatically when the room signals {@link RoomEvent.Refreshed}.
+     */
     restart(): void {
         this.stopActiveSpeakerDetection()
         this._teardownConnections()
@@ -160,6 +261,11 @@ export class Call extends EventEmitter<CallEvents> {
         this.start()
     }
 
+    /**
+     * Permanently closes the call: stops active-speaker detection, clears local
+     * tracks, detaches room listeners, and closes every peer connection. Idempotent;
+     * a closed call cannot be restarted with {@link Call.start}.
+     */
     close(): void {
         if (this.closed) return
         this.closed = true

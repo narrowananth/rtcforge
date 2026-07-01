@@ -2,6 +2,8 @@
 
 > The media plane for RTCForge — P2P mesh calls and a mediasoup-backed SFU.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-media.html)**
+
 ## What
 
 Carries the actual audio/video. Two modes:
@@ -47,4 +49,4 @@ For server-side SFU, use `MediaService` with a `WorkerPool`.
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

@@ -1,16 +1,51 @@
 import { type Clock, systemClock } from './Clock.js'
 
+/**
+ * Descriptor for a node participating in cluster membership.
+ */
 export interface NodeInfo {
+    /** Unique node identifier. */
     id: string
+    /** Optional geographic or logical region the node belongs to. */
     region?: string
+    /** Optional network address other nodes use to reach this one. */
     address?: string
+    /** Optional free-form string metadata (e.g. capabilities, version). */
     metadata?: Record<string, string>
 }
 
+/**
+ * Registry of the nodes currently forming a cluster.
+ *
+ * @remarks
+ * Membership lets components discover peers, register themselves with a heartbeat TTL, and
+ * react to nodes joining or leaving. The default in-process implementation is
+ * {@link MemoryMembership}; `GossipMembership` provides a decentralized, gossip-based
+ * implementation for multi-node deployments. Pair with `MembershipReconciler` to turn
+ * membership snapshots into add/remove/update callbacks.
+ */
 export interface Membership {
+    /**
+     * Registers (or refreshes) a node with a heartbeat lifetime.
+     * @param node - The node to register.
+     * @param ttlMs - Lifetime in milliseconds; the node is considered gone if not refreshed within this window.
+     */
     register(node: NodeInfo, ttlMs: number): Promise<void>
+    /**
+     * Removes a node from the registry.
+     * @param nodeId - The id of the node to remove.
+     */
     deregister(nodeId: string): Promise<void>
+    /**
+     * Returns a snapshot of the currently live nodes.
+     * @returns The live nodes; expired entries are pruned before the snapshot is taken.
+     */
     list(): Promise<NodeInfo[]>
+    /**
+     * Subscribes to membership changes.
+     * @param callback - Invoked with the full set of live nodes whenever membership changes.
+     * @returns A function that cancels the subscription when called.
+     */
     watch(callback: (nodes: NodeInfo[]) => void): () => void
 }
 

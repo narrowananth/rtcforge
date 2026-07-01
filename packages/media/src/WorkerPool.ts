@@ -5,8 +5,13 @@ import { EventEmitter, noopLogger } from 'rtcforge-core'
 import type { Logger } from 'rtcforge-core'
 import type { WorkerSettings } from './types.js'
 
+/**
+ * Events emitted by a {@link WorkerPool}.
+ */
 export const WorkerPoolEvent = {
+    /** An error occurred, e.g. respawning a died worker failed. Payload: `(error)`. */
     Error: 'error',
+    /** A mediasoup worker subprocess died. Payload: `(pid)`. Routers on it are lost. */
     WorkerDied: 'worker-died',
 } as const
 
@@ -15,11 +20,23 @@ type WorkerPoolEvents = {
     [WorkerPoolEvent.WorkerDied]: [pid: number]
 }
 
+/**
+ * Server-side (mediasoup SFU) pool of worker subprocesses. Spawns one worker per
+ * logical CPU (by default), tracks each worker's router load, and assigns new
+ * routers to the least-loaded worker. Died workers are respawned automatically
+ * while the pool is running.
+ *
+ * @remarks Node-only; not usable in the browser. Managed internally by {@link MediaService}.
+ */
 export class WorkerPool extends EventEmitter<WorkerPoolEvents> {
     private readonly _load = new Map<MsTypes.Worker, number>()
     private _started = false
     private _starting = false
 
+    /**
+     * @param settings - Worker pool settings (count, log level/tags, RTC port range). Defaults to `{}`.
+     * @param logger - Logger for diagnostics. Defaults to a no-op logger.
+     */
     constructor(
         private readonly settings: WorkerSettings = {},
         private readonly logger: Logger = noopLogger,
@@ -27,10 +44,15 @@ export class WorkerPool extends EventEmitter<WorkerPoolEvents> {
         super()
     }
 
+    /** Number of live workers in the pool. */
     get size(): number {
         return this._load.size
     }
 
+    /**
+     * Spawns the configured number of workers. Idempotent and safe against
+     * concurrent calls; returns once all workers are ready.
+     */
     async start(): Promise<void> {
         if (this._started || this._starting) return
 
@@ -45,6 +67,14 @@ export class WorkerPool extends EventEmitter<WorkerPoolEvents> {
         }
     }
 
+    /**
+     * Creates a mediasoup router on the least-loaded worker, incrementing that
+     * worker's load and decrementing it when the router closes.
+     *
+     * @param options - mediasoup router options (media codecs).
+     * @returns The created mediasoup `Router`.
+     * @throws If the pool has not been started, or if it has no workers.
+     */
     async createRouter(options: MsTypes.RouterOptions): Promise<MsTypes.Router> {
         if (!this._started) throw new Error('WorkerPool not started — call start() first')
         const worker = this._leastLoaded()
@@ -57,6 +87,7 @@ export class WorkerPool extends EventEmitter<WorkerPoolEvents> {
         return router
     }
 
+    /** Closes all workers and empties the pool. Respawning is disabled once closed. */
     async close(): Promise<void> {
         for (const worker of this._load.keys()) worker.close()
         this._load.clear()

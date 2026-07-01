@@ -1,5 +1,5 @@
-import { GossipMembership } from '@rtcforge/core'
-import type { GossipMessage } from '@rtcforge/core'
+import { GossipMembership } from 'rtcforge-core'
+import type { GossipMessage } from 'rtcforge-core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { UdpGossipTransport } from '../src/UdpGossipTransport.js'
 

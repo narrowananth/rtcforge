@@ -1,4 +1,4 @@
-import { EventEmitter } from '@rtcforge/core'
+import { EventEmitter } from 'rtcforge-core'
 import { describe, expect, it, vi } from 'vitest'
 
 type TestEvents = {

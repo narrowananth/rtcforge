@@ -1,5 +1,5 @@
-import { EventEmitter } from '@rtcforge/core'
-import type { Room } from '@rtcforge/signaling'
+import { EventEmitter } from 'rtcforge-core'
+import type { Room } from 'rtcforge-signaling'
 import { afterEach, describe, expect, it } from 'vitest'
 import { MediaService } from '../src/MediaService.js'
 import { WorkerPool } from '../src/WorkerPool.js'

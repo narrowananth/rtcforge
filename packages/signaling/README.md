@@ -2,6 +2,8 @@
 
 > WebSocket signaling server for RTCForge — session lifecycle, rooms, auth, and cluster sharding.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-signaling.html)**
+
 ## What
 
 The server-side entry point. `SignalingServer` accepts WebSocket connections, authenticates peers, groups them into `Room`s, and relays the signaling messages (offers, answers, ICE candidates) that WebRTC needs to establish peer connections. `RoomRouter` shards rooms across multiple server nodes.
@@ -41,4 +43,4 @@ await server.start();
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

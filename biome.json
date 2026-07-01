@@ -24,6 +24,13 @@
         }
     },
     "files": {
-        "ignore": ["**/dist/**", "**/node_modules/**", "**/*.cjs", "**/*.mjs"]
+        "ignore": [
+            "**/dist/**",
+            "**/node_modules/**",
+            "**/docs-site/**",
+            "docs/typedoc.js",
+            "**/*.cjs",
+            "**/*.mjs"
+        ]
     }
 }

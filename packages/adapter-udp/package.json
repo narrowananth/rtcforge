@@ -1,7 +1,17 @@
 {
     "name": "rtcforge-adapter-udp",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "UDP GossipTransport adapter — connectionless wire for rtcforge-core GossipMembership",
+    "homepage": "https://narrowananth.github.io/rtcforge/",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/narrowananth/rtcforge.git",
+        "directory": "packages/adapter-udp"
+    },
+    "bugs": {
+        "url": "https://github.com/narrowananth/rtcforge/issues"
+    },
+    "author": "narrowananth",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",

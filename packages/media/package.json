@@ -1,7 +1,17 @@
 {
     "name": "rtcforge-media",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "WebRTC peer connections, media capture, and call management",
+    "homepage": "https://narrowananth.github.io/rtcforge/",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/narrowananth/rtcforge.git",
+        "directory": "packages/media"
+    },
+    "bugs": {
+        "url": "https://github.com/narrowananth/rtcforge/issues"
+    },
+    "author": "narrowananth",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",

@@ -14,17 +14,40 @@ type PeerEvents = {
     [PeerEvent.Pong]: []
 }
 
+/**
+ * Construction options for a {@link Peer}.
+ */
 export interface PeerOptions {
+    /** Stable identifier for the peer. */
     id: string
+    /** The peer's open WebSocket connection. */
     ws: WebSocket
+    /** Callback invoked when the peer sends a directed `signal`, used to relay it. */
     onSignal: (to: string, data: unknown) => void
+    /** Optional initial role. @defaultValue `''` */
     role?: string
+    /** Optional immutable metadata attached to the peer at join time. */
     metadata?: Record<string, string>
+    /** When set, caps inbound messages per second; excess ones are dropped. */
     maxMessagesPerSecond?: number
 }
 
+/**
+ * A single connected client within a {@link Room}.
+ *
+ * @remarks
+ * Wraps the underlying WebSocket: it parses and validates inbound
+ * {@link ClientMessage}s, applies optional per-peer rate limiting, tracks the
+ * last heartbeat pong for liveness, and serializes outbound
+ * {@link ServerMessage}s. It extends the core `EventEmitter` and emits
+ * {@link PeerEvent} values (`signal`, `broadcast`, `pong`, `error`,
+ * `rate-limit-exceeded`, `disconnected`). Peers are created and owned by
+ * {@link SignalingServer}; you usually obtain them via {@link Room.getPeers}.
+ */
 export class Peer extends EventEmitter<PeerEvents> {
+    /** Stable identifier for this peer. */
     readonly id: string
+    /** Immutable (frozen) copy of the metadata supplied at join time. */
     readonly metadata: Record<string, string>
 
     private _role: string
@@ -33,6 +56,12 @@ export class Peer extends EventEmitter<PeerEvents> {
     private readonly onSignal: (to: string, data: unknown) => void
     private readonly _rateLimiter: RateLimiter | null
 
+    /**
+     * Wraps an open WebSocket as a peer and begins listening for inbound
+     * messages and the socket `close` event.
+     *
+     * @param opts - Peer configuration; see `PeerOptions`.
+     */
     constructor(opts: PeerOptions) {
         super()
         this.id = opts.id
@@ -53,22 +82,53 @@ export class Peer extends EventEmitter<PeerEvents> {
         })
     }
 
+    /**
+     * The peer's current role. Empty string if none was assigned.
+     */
     get role(): string {
         return this._role
     }
 
+    /**
+     * Epoch-millisecond timestamp of the peer's most recent heartbeat pong
+     * (initialized to construction time). Used by the heartbeat monitor to prune
+     * unresponsive peers.
+     */
     get lastPong(): number {
         return this._lastPong
     }
 
+    /**
+     * Sets the peer's role.
+     *
+     * @remarks
+     * Updates local state only; use {@link Room.setPeerRole} to also notify the
+     * rest of the room.
+     *
+     * @param role - The new role string.
+     */
     setRole(role: string): void {
         this._role = role
     }
 
+    /**
+     * Reports whether the peer has ponged recently enough to be considered live.
+     *
+     * @param deadline - Cutoff timestamp in epoch milliseconds; the peer is
+     *   alive if its last pong is at or after this value.
+     * @returns `true` if the peer is still considered connected.
+     */
     isAlive(deadline: number): boolean {
         return this._lastPong >= deadline
     }
 
+    /**
+     * Serializes and sends a message to the peer over its WebSocket.
+     *
+     * @param msg - The server message to send.
+     * @throws If the WebSocket is not open, or if the underlying send fails
+     *   (which also emits {@link PeerEvent.Error}).
+     */
     send(msg: ServerMessage): void {
         if (this.ws.readyState !== WebSocket.OPEN) {
             throw new Error(`Peer ${this.id} WebSocket is not open`)

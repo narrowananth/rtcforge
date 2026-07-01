@@ -21,6 +21,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Generated API docs (TypeDoc → deployed to GitHub Pages via CI)
+docs-site/
+
 # Environment
 .env
 .env.local

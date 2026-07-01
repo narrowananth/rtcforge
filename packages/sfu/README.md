@@ -2,13 +2,15 @@
 
 > Multi-node SFU cluster management for RTCForge — routing, placement, cascade fan-out, and health.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-sfu.html)**
+
 ## What
 
 The control plane that turns many single SFU nodes into one cluster. `SfuCluster` tracks nodes, `CascadingRouter` + placement strategies decide which node hosts a room, and `CascadeTree`/`CascadeBridge` chain nodes into a fan-out tree so one stream can reach huge audiences. Includes health checks, failure tracking, and bandwidth estimation.
 
 ## Why
 
-A single SFU node has a ceiling — CPU and uplink bandwidth. To serve large or geo-spread rooms (up to the 1M-viewer case in `docs/SCALING.md`), you spread load across nodes and cascade streams between them. This package handles placement and fan-out so the media nodes stay simple.
+A single SFU node has a ceiling — CPU and uplink bandwidth. To serve large or geo-spread rooms (up to the 1M-viewer case), you spread load across nodes and cascade streams between them. This package handles placement and fan-out so the media nodes stay simple.
 
 ## Where it fits
 
@@ -46,4 +48,4 @@ const node = cluster.assignNode(undefined, "room-42"); // → which node hosts t
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)**. See [`docs/SCALING.md`](https://github.com/your-org/rtcforge/blob/master/docs/SCALING.md) and [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

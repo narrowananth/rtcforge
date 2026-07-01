@@ -1,4 +1,4 @@
-import { MessageType } from '@rtcforge/sdk'
+import { MessageType } from 'rtcforge-sdk'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Call } from '../src/Call.js'
 import { SignalKind, SignalType } from '../src/protocol.js'

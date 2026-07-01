@@ -14,6 +14,39 @@ type SfuClusterEvents = {
 
 type NodeEntry = { node: SfuNode; overloadListener: () => void }
 
+/**
+ * Manages a set of {@link SfuNode} instances and selects nodes for rooms via a
+ * pluggable {@link PlacementStrategy}.
+ *
+ * The cluster can optionally reconcile its membership against an external
+ * {@link Membership} source and run periodic health checks that mark failing
+ * nodes as failed and trigger a rebalance. Placement always considers only
+ * active nodes — those that are neither failed nor draining.
+ *
+ * Emits {@link SfuClusterEvent} events.
+ *
+ * @example
+ * ```ts
+ * const cluster = new SfuCluster({
+ *   placementStrategy: new LeastLoadedStrategy(),
+ *   healthCheck: {
+ *     intervalMs: 10_000,
+ *     onCheck: async (id) => probe(id),
+ *   },
+ *   onRebalance: (nodeId, reason) => migrateRooms(nodeId, reason),
+ * })
+ *
+ * cluster.addNode(new SfuNode('sfu-eu-1', 'eu'))
+ * cluster.addNode(new SfuNode('sfu-eu-2', 'eu'))
+ * cluster.startHealthChecks()
+ *
+ * const node = cluster.assignNode('eu', 'room-42')
+ * ```
+ *
+ * @remarks
+ * Call {@link SfuCluster.dispose} when the cluster is no longer needed to stop
+ * membership reconciliation and health checks.
+ */
 export class SfuCluster extends EventEmitter<SfuClusterEvents> {
     private readonly _nodes = new Map<string, NodeEntry>()
     private readonly _logger: Logger
@@ -24,6 +57,11 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
     private readonly _nodeFactory: (info: NodeInfo) => SfuNode
     private _reconciler: MembershipReconciler | undefined
 
+    /**
+     * @param options - Placement, membership, health-check, and logging configuration.
+     * When a {@link SfuClusterOptions.membership} source is supplied, membership
+     * reconciliation starts immediately.
+     */
     constructor(options: SfuClusterOptions = {}) {
         super()
         this._opts = options
@@ -45,18 +83,28 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         }
     }
 
+    /**
+     * Release cluster resources: stop membership reconciliation and health
+     * checks. Does not remove nodes or emit membership events.
+     */
     dispose(): void {
         this._reconciler?.dispose()
         this._reconciler = undefined
         this.stopHealthChecks()
     }
 
+    /** All nodes currently registered with the cluster, regardless of state. */
     get nodes(): SfuNode[] {
         const result: SfuNode[] = []
         for (const { node } of this._nodes.values()) result.push(node)
         return result
     }
 
+    /**
+     * Nodes eligible to serve traffic: those that are neither failed nor draining.
+     *
+     * @returns The active subset of {@link SfuCluster.nodes}.
+     */
     getActiveNodes(): SfuNode[] {
         const result: SfuNode[] = []
         for (const { node } of this._nodes.values()) {
@@ -65,6 +113,12 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         return result
     }
 
+    /**
+     * Register a node with the cluster and begin listening for its overload
+     * events. Emits {@link SfuClusterEvent.NodeAdded}.
+     *
+     * @param node - The node to add. Re-adding an existing id replaces its entry.
+     */
     addNode(node: SfuNode): void {
         const overloadListener = () => this._checkAllOverloaded()
         this._nodes.set(node.id, { node, overloadListener })
@@ -73,6 +127,13 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         this.emit(SfuClusterEvent.NodeAdded, node)
     }
 
+    /**
+     * Remove a node from the cluster and detach its overload listener. Emits
+     * {@link SfuClusterEvent.NodeRemoved} when a node was removed.
+     *
+     * @param id - Identifier of the node to remove.
+     * @returns `true` if a node was removed, `false` if no node had that id.
+     */
     removeNode(id: string): boolean {
         const entry = this._nodes.get(id)
         if (!entry) return false
@@ -83,10 +144,26 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         return true
     }
 
+    /**
+     * Select an active node for a room using the configured placement strategy.
+     *
+     * @param region - Optional preferred region for region-affinity placement.
+     * @param key - Optional routing key (for example a room id) for deterministic strategies.
+     * @returns The chosen node, or `undefined` when no active node is available.
+     */
     assignNode(region?: string, key?: string): SfuNode | undefined {
         return this._placement.select(this.getActiveNodes(), region, key)
     }
 
+    /**
+     * Start periodic health checks.
+     *
+     * No-op unless a {@link SfuClusterOptions.healthCheck} `onCheck` probe was
+     * configured. Each sweep probes every node; a node that fails is marked
+     * failed, surfaces an {@link SfuClusterEvent.Error}, and triggers
+     * {@link SfuCluster.rebalance}. A previously failed node that passes is
+     * marked recovered.
+     */
     startHealthChecks(): void {
         const onCheck = this._opts.healthCheck?.onCheck
         if (!onCheck) return
@@ -102,6 +179,7 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         this._healthChecker.start()
     }
 
+    /** Stop periodic health checks if they are running. */
     stopHealthChecks(): void {
         this._healthChecker?.stop()
     }
@@ -121,6 +199,14 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         }
     }
 
+    /**
+     * Invoke the {@link SfuClusterOptions.onRebalance} callback for every node
+     * that is currently draining or failed, so the host can migrate their rooms.
+     *
+     * Emits {@link SfuClusterEvent.Overloaded} if at least one such node was
+     * found. Called automatically when a health check fails; may also be called
+     * manually.
+     */
     rebalance(): void {
         let needsOverloadedEvent = false
         for (const { node } of this._nodes.values()) {

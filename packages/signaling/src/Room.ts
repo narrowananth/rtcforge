@@ -20,7 +20,24 @@ const LEGAL_TRANSITIONS: Record<RoomState, readonly RoomState[]> = {
     [RoomState.Closed]: [],
 }
 
+/**
+ * A group of peers that exchange signaling messages with one another.
+ *
+ * @remarks
+ * A room is created lazily by {@link SignalingServer} when its first peer
+ * joins and, unless kept alive, closes automatically when its last peer
+ * leaves. It relays directed signals ({@link Room.relay}), fans out broadcasts
+ * ({@link Room.broadcast} / {@link Room.broadcastExcept}), tracks per-peer
+ * roles and metadata, and enforces optional capacity, idle-timeout, and
+ * max-duration limits. Its lifecycle is modeled by {@link RoomState}.
+ *
+ * Rooms extend the core `EventEmitter` and emit {@link RoomEvent} values as
+ * peers join, leave, error, or are kicked, and when the room closes. You
+ * typically obtain a room from {@link SignalingServer.getRoom} or the
+ * {@link ServerEvent.RoomCreated} event rather than constructing it directly.
+ */
 export class Room extends EventEmitter<RoomEvents> {
+    /** Stable identifier of this room, taken from the joining peers' auth payloads. */
     readonly id: string
     private _state: RoomState = RoomState.Creating
     private readonly _peers = new Map<string, Peer>()
@@ -32,6 +49,17 @@ export class Room extends EventEmitter<RoomEvents> {
 
     private readonly _keepAliveOnEmpty: boolean
 
+    /**
+     * Creates a room. Normally called by {@link SignalingServer}; construct
+     * directly only in tests or custom hosts.
+     *
+     * @param id - The room's stable identifier.
+     * @param opts - Optional limits.
+     * @param opts.maxPeers - Maximum concurrent peers; further joins are rejected with {@link CloseReason.RoomFull}.
+     * @param opts.maxDurationMs - Hard lifetime; the room force-closes after this many milliseconds regardless of activity.
+     * @param opts.idleTimeoutMs - Idle window; the room force-closes if there is no relay/broadcast activity for this long while {@link RoomState.Active}.
+     * @param opts.keepAliveOnEmpty - When `true`, the room stays open after the last peer leaves instead of closing. @defaultValue `false`
+     */
     constructor(
         id: string,
         opts: {
@@ -51,6 +79,9 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
+    /**
+     * The room's current lifecycle state. See {@link RoomState}.
+     */
     get state(): RoomState {
         return this._state
     }
@@ -62,22 +93,56 @@ export class Room extends EventEmitter<RoomEvents> {
         return true
     }
 
+    /**
+     * @returns A snapshot array of all {@link Peer}s currently in the room.
+     */
     getPeers(): Peer[] {
         return [...this._peers.values()]
     }
 
+    /**
+     * @returns The number of peers currently in the room.
+     */
     getPeerCount(): number {
         return this._peers.size
     }
 
+    /**
+     * @returns A snapshot array of the ids of all peers in the room.
+     */
     getPeerIds(): string[] {
         return [...this._peers.keys()]
     }
 
+    /**
+     * Looks up a peer by id.
+     *
+     * @param id - The peer id.
+     * @returns The {@link Peer}, or `undefined` if not present.
+     */
     getPeer(id: string): Peer | undefined {
         return this._peers.get(id)
     }
 
+    /**
+     * Adds a peer to the room and sends it the initial `room-joined` message.
+     *
+     * @remarks
+     * If a peer with the same id is already present, the existing connection is
+     * disconnected with {@link CloseReason.ReplacedByReconnection} and replaced
+     * (reconnection semantics). If the room is at capacity, the incoming peer is
+     * disconnected with {@link CloseReason.RoomFull} and `false` is returned.
+     * On a genuinely new peer, the room notifies the others with `peer-joined`
+     * and `presence-online`, transitions to {@link RoomState.Active}, and emits
+     * {@link RoomEvent.PeerJoined}.
+     *
+     * @param peer - The peer to add.
+     * @param iceServers - ICE servers to include in the peer's `room-joined`
+     *   message, typically from {@link SignalingServerOptions.iceServersHook}.
+     * @returns `true` if the peer was admitted; `false` if the room was full.
+     * @throws If sending the initial `room-joined` message fails; the peer is
+     *   rolled back out of the room before the error propagates.
+     */
     addPeer(peer: Peer, iceServers?: IceServerConfig[]): boolean {
         const existing = this._peers.get(peer.id)
 
@@ -146,6 +211,18 @@ export class Room extends EventEmitter<RoomEvents> {
         return true
     }
 
+    /**
+     * Forcibly removes a peer from the room.
+     *
+     * @remarks
+     * Sends the peer a `kicked` message, disconnects it with
+     * {@link CloseCode.PolicyViolation}, and emits {@link RoomEvent.PeerKicked}.
+     *
+     * @param peerId - Id of the peer to remove.
+     * @param reason - Optional human-readable reason sent to the peer and used
+     *   as the close reason; defaults to {@link CloseReason.Kicked}.
+     * @returns `true` if the peer was found and kicked; `false` otherwise.
+     */
     kickPeer(peerId: string, reason?: string): boolean {
         const peer = this._peers.get(peerId)
         if (!peer) return false
@@ -157,6 +234,17 @@ export class Room extends EventEmitter<RoomEvents> {
         return true
     }
 
+    /**
+     * Relays a directed signal from one peer to another and counts as room
+     * activity (resets the idle timer).
+     *
+     * @param fromId - Id of the sending peer (stamped on the outgoing `signal`).
+     * @param toId - Id of the recipient peer.
+     * @param data - Opaque signal payload (SDP/ICE, etc.).
+     * @returns `true` if the recipient existed and the message was sent; `false`
+     *   if the recipient is absent or the send failed (which also emits
+     *   {@link RoomEvent.PeerError}).
+     */
     relay(fromId: string, toId: string, data: unknown): boolean {
         this._resetIdleTimer()
         const peer = this._peers.get(toId)
@@ -170,10 +258,24 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
+    /**
+     * Sends a message to every peer in the room.
+     *
+     * @param msg - The server message to fan out.
+     * @returns Ids of peers whose send failed (each also emits
+     *   {@link RoomEvent.PeerError}); empty when all sends succeeded.
+     */
     broadcast(msg: ServerMessage): string[] {
         return this._sendToAll(msg)
     }
 
+    /**
+     * Sends a message to every peer except one.
+     *
+     * @param excludeId - Id of the peer to skip (usually the sender).
+     * @param msg - The server message to fan out.
+     * @returns Ids of peers whose send failed; empty when all sends succeeded.
+     */
     broadcastExcept(excludeId: string, msg: ServerMessage): string[] {
         return this._sendToAll(msg, excludeId)
     }
@@ -212,15 +314,40 @@ export class Room extends EventEmitter<RoomEvents> {
         }
     }
 
+    /**
+     * Marks the room as active, resetting the idle-timeout countdown.
+     *
+     * @remarks
+     * Called on heartbeat pongs so that quiet-but-alive rooms are not closed by
+     * {@link SignalingServerOptions.roomIdleTimeoutMs}.
+     */
     markActivity(): void {
         this._resetIdleTimer()
     }
 
+    /**
+     * Returns a copy of the metadata a peer supplied at join time.
+     *
+     * @param peerId - The peer id.
+     * @returns A shallow copy of the peer's metadata, or `undefined` if the peer
+     *   is unknown or supplied none.
+     */
     getPeerMetadata(peerId: string): Record<string, string> | undefined {
         const meta = this._peerMeta.get(peerId)
         return meta ? { ...meta } : undefined
     }
 
+    /**
+     * Changes a peer's role and notifies the whole room.
+     *
+     * @remarks
+     * Updates the peer's role and broadcasts a `role-changed` message to every
+     * peer (including the affected one).
+     *
+     * @param peerId - Id of the peer whose role is changing.
+     * @param newRole - The new role string.
+     * @returns `true` if the peer was found and updated; `false` otherwise.
+     */
     setPeerRole(peerId: string, newRole: string): boolean {
         const peer = this._peers.get(peerId)
         if (!peer) return false
@@ -229,6 +356,11 @@ export class Room extends EventEmitter<RoomEvents> {
         return true
     }
 
+    /**
+     * Tears down the room's timers and moves it to {@link RoomState.Closed}
+     * without notifying or disconnecting peers. Used during server shutdown,
+     * where connections are closed separately.
+     */
     dispose(): void {
         this._clearTimers()
         this._transitionTo(RoomState.Closed)

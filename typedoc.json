@@ -1,0 +1,39 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "name": "RTCForge API Reference",
+    "entryPointStrategy": "packages",
+    "entryPoints": [
+        "packages/core",
+        "packages/signaling",
+        "packages/sdk",
+        "packages/media",
+        "packages/sfu",
+        "packages/adapter-udp"
+    ],
+    "out": "docs-site",
+    "includeVersion": true,
+    "customCss": "docs/typedoc.css",
+    "customJs": "docs/typedoc.js",
+    "navigationLinks": {
+        "GitHub": "https://github.com/narrowananth/rtcforge",
+        "npm": "https://www.npmjs.com/package/rtcforge-signaling"
+    },
+    "categorizeByGroup": true,
+    "sort": ["source-order"],
+    "readme": "docs/API_INDEX.md",
+    "projectDocuments": ["docs/BUILDING_APPS.md"],
+    "validation": {
+        "notExported": false,
+        "invalidLink": true,
+        "notDocumented": false
+    },
+    "externalSymbolLinkMappings": {
+        "typescript": {
+            "File": "https://developer.mozilla.org/docs/Web/API/File",
+            "Blob": "https://developer.mozilla.org/docs/Web/API/Blob",
+            "MediaStream": "https://developer.mozilla.org/docs/Web/API/MediaStream",
+            "RTCDataChannel": "https://developer.mozilla.org/docs/Web/API/RTCDataChannel",
+            "Error": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error"
+        }
+    }
+}

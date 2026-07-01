@@ -1,4 +1,4 @@
-import { ManualClock, MemoryMembership } from '@rtcforge/core'
+import { ManualClock, MemoryMembership } from 'rtcforge-core'
 import { describe, expect, it } from 'vitest'
 import { CascadingRouter } from '../src/CascadingRouter.js'
 import { HashRingStrategy } from '../src/PlacementStrategy.js'

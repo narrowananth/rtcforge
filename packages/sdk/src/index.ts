@@ -29,3 +29,6 @@ export type { MessageQueue } from './SendQueue.js'
 export { ReconnectStrategy } from './ReconnectStrategy.js'
 export type { BackoffStrategy } from './ReconnectStrategy.js'
 export { JoinHandshake } from './JoinHandshake.js'
+
+// File transfer (browser-safe). Node-only sinks: 'rtcforge-sdk/filetransfer/node'.
+export * from './filetransfer/index.js'

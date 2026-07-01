@@ -21,9 +21,16 @@ import {
 } from './types.js'
 import type { IceServerConfig, Logger, MetricsCollector, SignalingServerOptions } from './types.js'
 
+/**
+ * A point-in-time snapshot of server activity, returned by
+ * {@link SignalingServer.getStats}.
+ */
 export interface ServerStats {
+    /** Number of rooms currently held in the registry. */
     rooms: number
+    /** Total number of connected peers across all rooms. */
     peers: number
+    /** Milliseconds elapsed since {@link SignalingServer.start} was called, or `0` if not started. */
     uptime: number
 }
 
@@ -33,6 +40,49 @@ type SignalingServerEvents = {
     [ServerEvent.Error]: [err: Error]
 }
 
+/**
+ * WebSocket signaling server that brokers WebRTC negotiation between peers
+ * grouped into rooms.
+ *
+ * @remarks
+ * The server accepts WebSocket connections, authenticates each one through the
+ * {@link AuthFunction} configured in {@link SignalingServerOptions.auth},
+ * places the peer into the room named by its auth payload, and relays directed
+ * `signal` and room-wide `broadcast` messages between peers. It also enforces
+ * per-peer rate limiting ({@link SignalingServerOptions.rateLimit}), prunes
+ * dead connections with a ping/pong heartbeat
+ * ({@link SignalingServerOptions.pingInterval} /
+ * {@link SignalingServerOptions.pongTimeout}), and — when
+ * {@link SignalingServerOptions.cluster} is set — shards rooms across nodes via
+ * a {@link RoomRouter}, redirecting connections that reach the wrong node.
+ *
+ * It extends the core `EventEmitter` and emits {@link ServerEvent} values:
+ * {@link ServerEvent.RoomCreated}, {@link ServerEvent.RoomClosed}, and
+ * {@link ServerEvent.Error}.
+ *
+ * @example
+ * ```ts
+ * import { SignalingServer, ServerEvent } from 'rtcforge-signaling'
+ *
+ * const server = new SignalingServer({
+ *   port: 3000,
+ *   auth: async (token) => {
+ *     const claims = await verifyJwt(token)
+ *     return { roomId: claims.room, peerId: claims.sub, role: claims.role }
+ *   },
+ *   maxPeersPerRoom: 8,
+ *   rateLimit: { maxMessagesPerSecond: 50 },
+ * })
+ *
+ * server.on(ServerEvent.RoomCreated, (room) => {
+ *   console.log('room created', room.id)
+ * })
+ *
+ * await server.start()
+ * // ... later
+ * await server.stop()
+ * ```
+ */
 export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private readonly opts: SignalingServerOptions
     private readonly logger: Logger
@@ -47,6 +97,15 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private startedAt = 0
     private _stopped = false
 
+    /**
+     * Creates a signaling server. No socket is opened until
+     * {@link SignalingServer.start} is called.
+     *
+     * @param opts - Server configuration; see {@link SignalingServerOptions}.
+     *   Defaults to an empty object (unauthenticated, port 3000, 30s ping /
+     *   60s pong). When `opts.cluster` is provided, a {@link RoomRouter} is
+     *   constructed for room sharding.
+     */
     constructor(opts: SignalingServerOptions = {}) {
         super()
         this.opts = opts
@@ -84,6 +143,18 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         )
     }
 
+    /**
+     * Starts listening for connections and begins the heartbeat.
+     *
+     * @remarks
+     * If {@link SignalingServerOptions.server} was provided, the WebSocket
+     * server attaches to it; otherwise a new HTTP server is created and bound to
+     * {@link SignalingServerOptions.port} (default 3000). Resolves once the
+     * server is accepting connections.
+     *
+     * @returns A promise that resolves when the server is listening.
+     * @throws If the underlying HTTP server fails to bind (e.g. port in use).
+     */
     async start(): Promise<void> {
         if (this.opts.server) {
             this.wss = new WebSocketServer({ server: this.opts.server })
@@ -117,6 +188,18 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         this.logger.info('SignalingServer started', { port })
     }
 
+    /**
+     * Gracefully shuts the server down.
+     *
+     * @remarks
+     * Stops the heartbeat, disposes the cluster {@link RoomRouter} (if any),
+     * disconnects every peer with {@link CloseReason.ServerStopping}, and closes
+     * the WebSocket server (and the owned HTTP server, if one was created).
+     * Idempotent — calling it more than once is a no-op.
+     *
+     * @returns A promise that resolves once all sockets are closed.
+     * @throws If closing the WebSocket or HTTP server errors.
+     */
     async stop(): Promise<void> {
         if (this._stopped) return
         this._stopped = true
@@ -141,14 +224,32 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         this.logger.info('SignalingServer stopped')
     }
 
+    /**
+     * Looks up a room currently held by this server instance.
+     *
+     * @param roomId - The room id.
+     * @returns The {@link Room}, or `undefined` if no such room exists locally.
+     */
     getRoom(roomId: string): Room | undefined {
         return this.registry.get(roomId)
     }
 
+    /**
+     * Resolves which cluster node owns a given room.
+     *
+     * @param roomId - The room id to route.
+     * @returns The owning {@link NodeInfo}, or `undefined` when cluster mode is
+     *   not enabled or the owner is unknown.
+     */
     getOwner(roomId: string): NodeInfo | undefined {
         return this.router?.owner(roomId)
     }
 
+    /**
+     * Returns a snapshot of current server activity.
+     *
+     * @returns Live room count, peer count, and uptime. See {@link ServerStats}.
+     */
     getStats(): ServerStats {
         return {
             rooms: this.registry.size,
@@ -157,6 +258,27 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         }
     }
 
+    /**
+     * Registers a JSON health endpoint on an existing HTTP server.
+     *
+     * @remarks
+     * Responds to `GET {path}` with `200` and a body of
+     * `{ status: 'ok', ...ServerStats }`. Other methods and paths are ignored,
+     * so this can be attached alongside your own request handlers.
+     *
+     * @param server - The HTTP server to add the listener to.
+     * @param path - The URL path to serve. @defaultValue `'/health'`
+     *
+     * @example
+     * ```ts
+     * import http from 'node:http'
+     * const httpServer = http.createServer()
+     * const server = new SignalingServer({ server: httpServer })
+     * server.attachHealthEndpoint(httpServer, '/healthz')
+     * httpServer.listen(3000)
+     * // GET /healthz -> { "status": "ok", "rooms": 0, "peers": 0, "uptime": 0 }
+     * ```
+     */
     attachHealthEndpoint(server: http.Server, path = '/health'): void {
         server.on('request', (req, res) => {
             if (req.method === 'GET' && req.url?.split('?')[0] === path) {

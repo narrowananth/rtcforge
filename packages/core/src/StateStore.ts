@@ -1,10 +1,46 @@
 import { type Clock, systemClock } from './Clock.js'
 
+/**
+ * Async key/value store with optional per-key time-to-live (TTL).
+ *
+ * @remarks
+ * This is the seam RTCForge uses for shared state (room state, session data, and so on).
+ * The default in-process implementation is {@link MemoryStateStore}; production deployments
+ * can supply an adapter backed by Redis or another store. Values are stored as-is and are
+ * typed only by the caller-supplied type parameter — no runtime validation is performed.
+ */
 export interface StateStore {
+    /**
+     * Reads the value stored at `key`.
+     * @typeParam T - Expected type of the stored value.
+     * @param key - The key to read.
+     * @returns The stored value, or `undefined` if the key is absent or expired.
+     */
     get<T>(key: string): Promise<T | undefined>
+    /**
+     * Writes a value at `key`, optionally with a TTL after which it expires.
+     * @typeParam T - Type of the value being stored.
+     * @param key - The key to write.
+     * @param value - The value to store.
+     * @param ttlMs - Optional lifetime in milliseconds; if omitted the entry never expires.
+     */
     set<T>(key: string, value: T, ttlMs?: number): Promise<void>
+    /**
+     * Removes the entry at `key`, if any.
+     * @param key - The key to delete.
+     */
     delete(key: string): Promise<void>
+    /**
+     * Reports whether a live (non-expired) entry exists at `key`.
+     * @param key - The key to test.
+     * @returns `true` if a non-expired value is present.
+     */
     has(key: string): Promise<boolean>
+    /**
+     * Lists the keys of all live entries, optionally filtered by prefix.
+     * @param prefix - When provided, only keys starting with this string are returned.
+     * @returns The matching keys.
+     */
     keys(prefix?: string): Promise<string[]>
 }
 
@@ -13,9 +49,28 @@ interface Entry {
     expiresAt?: number
 }
 
+/**
+ * In-process {@link StateStore} backed by a `Map`, with lazy TTL expiration.
+ *
+ * @remarks
+ * Suitable for single-process deployments and tests. Expired entries are evicted lazily on
+ * access (`get`, `has`, `keys`) rather than by a background timer, using the injected
+ * {@link Clock} to determine the current time. State is not shared across processes.
+ *
+ * @example
+ * ```ts
+ * const store = new MemoryStateStore()
+ * await store.set('room:1', { peers: 2 }, 60_000) // expires in 60s
+ * await store.get<{ peers: number }>('room:1')     // { peers: 2 }
+ * ```
+ */
 export class MemoryStateStore implements StateStore {
     private readonly _map = new Map<string, Entry>()
 
+    /**
+     * @param _clock - Clock used to evaluate TTL expiration.
+     * @defaultValue {@link systemClock}
+     */
     constructor(private readonly _clock: Clock = systemClock) {}
 
     private _live(key: string): Entry | undefined {
@@ -28,10 +83,12 @@ export class MemoryStateStore implements StateStore {
         return e
     }
 
+    /** {@inheritDoc StateStore.get} */
     async get<T>(key: string): Promise<T | undefined> {
         return this._live(key)?.value as T | undefined
     }
 
+    /** {@inheritDoc StateStore.set} */
     async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
         this._map.set(key, {
             value,
@@ -39,14 +96,17 @@ export class MemoryStateStore implements StateStore {
         })
     }
 
+    /** {@inheritDoc StateStore.delete} */
     async delete(key: string): Promise<void> {
         this._map.delete(key)
     }
 
+    /** {@inheritDoc StateStore.has} */
     async has(key: string): Promise<boolean> {
         return this._live(key) !== undefined
     }
 
+    /** {@inheritDoc StateStore.keys} */
     async keys(prefix?: string): Promise<string[]> {
         const out: string[] = []
         for (const key of this._map.keys()) {

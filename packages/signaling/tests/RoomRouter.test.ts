@@ -1,5 +1,5 @@
 import type { AddressInfo } from 'node:net'
-import { HashRing, MemoryMembership } from '@rtcforge/core'
+import { HashRing, MemoryMembership } from 'rtcforge-core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
 import { RoomRouter } from '../src/RoomRouter.js'

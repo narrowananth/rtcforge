@@ -5,6 +5,15 @@ import type { SfuMediaInterface } from './types.js'
 
 export type { SfuMediaInterface }
 
+/**
+ * Connects a {@link CascadingRouter} to a concrete media plane.
+ *
+ * While attached, the bridge translates the router's room-assignment and
+ * cascade events into calls on an {@link SfuMediaInterface}: primary and cascade
+ * assignments become `addRoute` calls, detaches become `removeRoute`, and
+ * dropped cascades become `removeCascadeRoute`. Detaching removes every route
+ * the bridge added so the media plane is left clean.
+ */
 export class SfuBridge {
     private readonly _router: CascadingRouter
     private readonly _media: SfuMediaInterface

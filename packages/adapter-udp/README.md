@@ -2,6 +2,8 @@
 
 > UDP transport for RTCForge gossip — the network wire that makes `rtcforge-core` membership real across machines.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-adapter-udp.html)**
+
 ## What
 
 `UdpGossipTransport` — a connectionless UDP socket that carries gossip messages between nodes. It implements the `GossipTransport` interface from [`rtcforge-core`](https://www.npmjs.com/package/rtcforge-core), turning in-memory `GossipMembership` into a real cross-host cluster. This is the only socket code in the gossip path.
@@ -38,4 +40,4 @@ const membership = new GossipMembership(
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

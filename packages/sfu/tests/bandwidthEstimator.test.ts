@@ -1,4 +1,4 @@
-import type { NetworkStats } from '@rtcforge/core'
+import type { NetworkStats } from 'rtcforge-core'
 import { describe, expect, it } from 'vitest'
 import { SimpleBandwidthEstimator } from '../src/SimpleBandwidthEstimator.js'
 

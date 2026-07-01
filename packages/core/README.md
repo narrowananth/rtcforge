@@ -2,6 +2,8 @@
 
 > Zero-dependency foundation for RTCForge — shared primitives plus the building blocks for shared-nothing multi-node scale-out.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-core.html)**
+
 ## What
 
 The base package every other `rtcforge-*` package depends on. Two kinds of primitives:
@@ -38,4 +40,4 @@ Gossip membership pairs with a transport (e.g. [`rtcforge-adapter-udp`](https://
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)** — build real-time apps without reinventing the infrastructure. See [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)** — build real-time apps without reinventing the infrastructure. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

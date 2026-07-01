@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
+const pkg = (name: string) => new URL(`./packages/${name}/src/index.ts`, import.meta.url).pathname
+
 export default defineConfig({
     test: {
         include: ['packages/*/tests/**/*.test.ts'],
@@ -7,19 +9,12 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@rtcforge/core': new URL('./packages/core/src/index.ts', import.meta.url).pathname,
-            '@rtcforge/signaling': new URL('./packages/signaling/src/index.ts', import.meta.url)
-                .pathname,
-            '@rtcforge/sdk': new URL('./packages/sdk/src/index.ts', import.meta.url).pathname,
-            '@rtcforge/chat': new URL('./packages/chat/src/index.ts', import.meta.url).pathname,
-            '@rtcforge/media': new URL('./packages/media/src/index.ts', import.meta.url).pathname,
-            '@rtcforge/recording': new URL('./packages/recording/src/index.ts', import.meta.url)
-                .pathname,
-            '@rtcforge/streaming': new URL('./packages/streaming/src/index.ts', import.meta.url)
-                .pathname,
-            '@rtcforge/whiteboard': new URL('./packages/whiteboard/src/index.ts', import.meta.url)
-                .pathname,
-            '@rtcforge/sfu': new URL('./packages/sfu/src/index.ts', import.meta.url).pathname,
+            'rtcforge-core': pkg('core'),
+            'rtcforge-signaling': pkg('signaling'),
+            'rtcforge-sdk': pkg('sdk'),
+            'rtcforge-media': pkg('media'),
+            'rtcforge-sfu': pkg('sfu'),
+            'rtcforge-adapter-udp': pkg('adapter-udp'),
         },
     },
 })

@@ -2,7 +2,7 @@
 
 Open-source npm library for building real-time communication systems on top of WebRTC.
 
-Composable packages, pick the layers you need: WebSocket **signaling**, a browser/Node **client SDK**, a **media plane** (P2P mesh `Call` + mediasoup **SFU**), and **shared-nothing multi-node scale-out** (consistent-hash routing + gossip membership — **no Redis/etcd**). It stops at the transport boundary — chat, presence, recording, and whiteboard are built in *your* application layer on the primitives it exposes. See `ARCHITECTURE.md` and `docs/SCALING.md`.
+Composable packages, pick the layers you need: WebSocket **signaling**, a browser/Node **client SDK**, a **media plane** (P2P mesh `Call` + mediasoup **SFU**), and **shared-nothing multi-node scale-out** (consistent-hash routing + gossip membership — **no Redis/etcd**). It stops at the transport boundary — chat, presence, recording, and whiteboard are built in *your* application layer on the primitives it exposes. See [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md).
 
 ---
 
@@ -18,7 +18,7 @@ Composable packages, pick the layers you need: WebSocket **signaling**, a browse
 ## Setup
 
 ```bash
-git clone https://github.com/your-org/rtcforge.git
+git clone https://github.com/narrowananth/rtcforge.git
 cd rtcforge
 npm install
 ```
@@ -63,15 +63,7 @@ rtcforge/
  │    ├── sfu/             # rtcforge-sfu         — multi-node cluster, cascade fan-out tree
  │    └── adapter-udp/     # rtcforge-adapter-udp — UdpGossipTransport (gossip network wire)
  │
- ├── examples/             # APPLICATION LAYER reference apps (not published)
- │    ├── video-call-app/   # 1:1 and group video call (signaling + sdk)
- │    ├── chat-app/         # Multi-user chat + presence (sdk broadcast)
- │    ├── live-stream-app/  # Host/viewer streaming + 1M-viewer cascade tree (sfu)
- │    ├── sfu-app/          # SFU cluster routing + media plane (sfu + media)
- │    └── whiteboard-app/   # Collaborative whiteboard (sdk DataChannel)
- │
- ├── docs/SCALING.md       # Scaling model + the 1M-user analysis
- ├── ARCHITECTURE.md       # Architecture & integration guide
+ ├── docs/BUILDING_APPS.md # Implementation guide — which packages per app type + wiring
  ├── biome.json            # Lint + format config (Biome)
  ├── tsconfig.base.json    # Shared TypeScript config
  └── tsconfig.json         # Root typecheck (references all packages)
@@ -79,9 +71,8 @@ rtcforge/
 
 > RTCForge is a **two-layer** library: the published `packages/` are the **core
 > transport layer**; features like chat, presence, and whiteboard live in **your
-> application layer**, built on the transport primitives (the `chat-app` and
-> `whiteboard-app` examples do exactly this on top of `sdk` + `signaling`).
-> See `ARCHITECTURE.md` and `docs/SCALING.md`.
+> application layer**, built on the transport primitives (`sdk` + `signaling`).
+> See [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md).
 
 Each package under `packages/` follows the same layout:
 
@@ -123,35 +114,12 @@ const client = new RTCForgeClient({ serverUrl: "wss://your-signaling-host" });
 const room = await client.joinRoom("my-room");
 ```
 
+**New here? Which packages for your app + how to wire them → [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md)** (chat, video call, live stream, whiteboard, file transfer, 1M-viewer scale).
+
+**Full class-level API reference (every package) → [narrowananth.github.io/rtcforge](https://narrowananth.github.io/rtcforge/).**
+
 **Full install table, server example, publishing, and local testing → [`docs/PUBLISHING.md`](docs/PUBLISHING.md).**
 
----
-
-### Running the example apps
-
-Each example has its own README with full instructions. Port assignments at a glance:
-
-| App               | Server port               | Browser dev server         |
-| ----------------- | ------------------------- | -------------------------- |
-| `chat-app`        | `3002`                    | `http://localhost:5174`    |
-| `video-call-app`  | `3003`                    | `http://localhost:5175`    |
-| `live-stream-app` | `3004`                    | `http://localhost:5176`    |
-| `whiteboard-app`  | `3005`                    | `http://localhost:5177`    |
-| `sfu-app`         | `3006`                    | `http://localhost:5178`    |
-
-Every active example follows the same two-terminal pattern:
-
-```bash
-# Terminal 1 — signaling server
-cd examples/<app-name>
-npm run server
-
-# Terminal 2 — browser dev server
-cd examples/<app-name>
-npm run dev
-```
-
-See each app's `README.md` for detailed steps.
 
 ---
 

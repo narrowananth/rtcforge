@@ -2,6 +2,8 @@
 
 > Browser + Node.js client for RTCForge — connect, join rooms, exchange signaling.
 
+📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-sdk.html)**
+
 ## What
 
 The client your app code talks to. `RTCForgeClient` connects to a [`rtcforge-signaling`](https://www.npmjs.com/package/rtcforge-signaling) server, joins a `Room`, and handles reconnect, a send queue for offline messages, and a pluggable `Transport`.
@@ -44,4 +46,4 @@ For audio/video, pass the `Room` to [`rtcforge-media`](https://www.npmjs.com/pac
 
 ---
 
-Part of **[RTCForge](https://github.com/your-org/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/your-org/rtcforge/blob/master/docs/PUBLISHING.md).
+Part of **[RTCForge](https://github.com/narrowananth/rtcforge)**. See [`docs/PUBLISHING.md`](https://github.com/narrowananth/rtcforge/blob/master/docs/PUBLISHING.md).

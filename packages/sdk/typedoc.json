@@ -1,0 +1,6 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["src/index.ts", "src/filetransfer/index.ts", "src/filetransfer/node/index.ts"],
+    "tsconfig": "tsconfig.json",
+    "validation": { "notExported": false }
+}

@@ -1,7 +1,17 @@
 {
     "name": "rtcforge-sdk",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Browser + Node.js client SDK — RTCForgeClient",
+    "homepage": "https://narrowananth.github.io/rtcforge/",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/narrowananth/rtcforge.git",
+        "directory": "packages/sdk"
+    },
+    "bugs": {
+        "url": "https://github.com/narrowananth/rtcforge/issues"
+    },
+    "author": "narrowananth",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -10,11 +20,21 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
+        },
+        "./filetransfer": {
+            "types": "./dist/filetransfer/index.d.ts",
+            "import": "./dist/filetransfer/index.mjs",
+            "require": "./dist/filetransfer/index.js"
+        },
+        "./filetransfer/node": {
+            "types": "./dist/filetransfer/node/index.d.ts",
+            "import": "./dist/filetransfer/node/index.mjs",
+            "require": "./dist/filetransfer/node/index.js"
         }
     },
     "files": ["dist"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020"
+        "build": "tsup src/index.ts src/filetransfer/index.ts src/filetransfer/node/index.ts --format cjs,esm --dts --clean --target es2020"
     },
     "keywords": ["webrtc", "sdk", "browser", "realtime", "rtcforge"],
     "license": "MIT",

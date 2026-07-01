@@ -398,7 +398,7 @@ Your Node.js Application  ← APPLICATION LAYER
 RTCForge is a **library**, not a server.
 Developers work with high-level core-layer abstractions — `Room`, `Peer`, `MediaService`, `SfuCluster` — and build their application layer on the events those emit.
 RTCForge handles all protocol complexity internally.
-A single signaling instance manages room state in-memory. Horizontal scale-out is **shared-nothing and built in** — `RoomRouter` + `HashRing` shard rooms across a gossip-discovered fleet (`GossipMembership`), with **no Redis/etcd/central store**. Operators inject one socket adapter (`@rtcforge/adapter-udp`) and the host fleet; the routing math is a pure function shipped in `@rtcforge/core`. See `docs/SCALING.md` for the full 1M-user analysis.
+A single signaling instance manages room state in-memory. Horizontal scale-out is **shared-nothing and built in** — `RoomRouter` + `HashRing` shard rooms across a gossip-discovered fleet (`GossipMembership`), with **no Redis/etcd/central store**. Operators inject one socket adapter (`@rtcforge/adapter-udp`) and the host fleet; the routing math is a pure function shipped in `@rtcforge/core`.
 
 ---
 
@@ -469,13 +469,6 @@ rtcforge/                          ← monorepo (npm workspaces)
  │    ├── sfu/                     # @rtcforge/sfu (cluster, cascading, fan-out tree, bridges)
  │    ├── sdk/                     # @rtcforge/sdk (browser + Node.js client)
  │    └── adapter-udp/             # @rtcforge/adapter-udp (UdpGossipTransport — gossip wire)
- │
- ├── examples/                     ← APPLICATION LAYER reference apps (not published)
- │    ├── video-call-app/
- │    ├── live-stream-app/
- │    ├── sfu-app/
- │    ├── chat-app/
- │    └── whiteboard-app/
  │
  ├── plan/
  └── docs/
