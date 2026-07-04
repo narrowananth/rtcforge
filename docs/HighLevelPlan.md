@@ -5,12 +5,13 @@
 > *Forge your own real-time infrastructure.*
 
 > ⚠️ **This is the original design/vision document.** It predates the shipped
-> package layout and still uses the planning-era `@rtcforge/*` scoped names. The
-> published packages are **unscoped** (`rtcforge-core`, `rtcforge-sdk`, …), fronted
-> by the one-install **`rtcforge`** meta-package; `mediasoup` is an optional peer
-> dependency of `rtcforge-media`; and `@rtcforge/adapter-udp` shipped as
-> `rtcforge-sfu/udp` (the standalone `rtcforge-adapter-udp` is a deprecated
-> re-export). For accurate install/usage see [`../README.md`](../README.md),
+> layout and uses planning-era `@rtcforge/*` scoped names and a multi-package
+> split. **What actually shipped:** a **single published package, `rtcforge`**,
+> that bundles every module and exposes them via subpaths — `rtcforge/server`,
+> `/client`, `/media` (mediasoup-free `browser` build + node SFU), `/filetransfer`
+> (+ `/node`), `/sfu` (+ `/udp`), `/core`. `mediasoup` is an optional peer
+> dependency. The old `rtcforge-core`/`-sdk`/`-signaling`/`-media`/`-sfu` packages
+> are deprecated. For accurate install/usage see [`../README.md`](../README.md),
 > [`PUBLISHING.md`](PUBLISHING.md), and [`BUILDING_APPS.md`](BUILDING_APPS.md).
 
 ---
