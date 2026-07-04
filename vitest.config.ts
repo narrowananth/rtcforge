@@ -14,7 +14,6 @@ export default defineConfig({
             'rtcforge-sdk': pkg('sdk'),
             'rtcforge-media': pkg('media'),
             'rtcforge-sfu': pkg('sfu'),
-            'rtcforge-adapter-udp': pkg('adapter-udp'),
         },
     },
 })

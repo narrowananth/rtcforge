@@ -7,8 +7,7 @@
         "packages/signaling",
         "packages/sdk",
         "packages/media",
-        "packages/sfu",
-        "packages/adapter-udp"
+        "packages/sfu"
     ],
     "out": "docs-site",
     "includeVersion": true,
