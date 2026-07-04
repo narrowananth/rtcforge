@@ -1,6 +1,7 @@
 {
     "name": "rtcforge-signaling",
     "version": "1.0.1",
+    "private": true,
     "description": "Internal to rtcforge — install `rtcforge` instead. Signaling server (SignalingServer, Room, Peer, auth hook).",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
