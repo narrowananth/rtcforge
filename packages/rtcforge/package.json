@@ -25,6 +25,11 @@
             "require": "./dist/server.cjs"
         },
         "./media": {
+            "browser": {
+                "types": "./dist/media.browser.d.ts",
+                "import": "./dist/media.browser.mjs",
+                "require": "./dist/media.browser.cjs"
+            },
             "types": "./dist/media.d.ts",
             "import": "./dist/media.mjs",
             "require": "./dist/media.cjs"
@@ -33,6 +38,11 @@
             "types": "./dist/filetransfer.d.ts",
             "import": "./dist/filetransfer.mjs",
             "require": "./dist/filetransfer.cjs"
+        },
+        "./filetransfer/node": {
+            "types": "./dist/filetransfer/node.d.ts",
+            "import": "./dist/filetransfer/node.mjs",
+            "require": "./dist/filetransfer/node.cjs"
         },
         "./sfu": {
             "types": "./dist/sfu.d.ts",
