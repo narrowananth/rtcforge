@@ -1,5 +1,11 @@
 # rtcforge-sfu
 
+## 2.0.0
+
+### Patch Changes
+
+- rtcforge-core@2.0.0
+
 ## 1.0.1
 
 ### Patch Changes

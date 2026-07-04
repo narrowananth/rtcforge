@@ -1,5 +1,13 @@
 # rtcforge-media
 
+## 2.0.0
+
+### Patch Changes
+
+- rtcforge-core@2.0.0
+- rtcforge-sdk@2.0.0
+- rtcforge-signaling@2.0.0
+
 ## 1.0.1
 
 ### Patch Changes
