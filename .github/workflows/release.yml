@@ -21,6 +21,9 @@ jobs:
           node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
+      # npm >= 11.5.1 is required for OIDC trusted publishing; Node's bundled npm
+      # can lag behind, so pin to latest before any publish.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
       # Opens/updates a "Version Packages" PR; when that PR merges, `publish`
