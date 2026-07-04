@@ -1,6 +1,7 @@
 {
     "name": "rtcforge-sfu",
     "version": "1.0.1",
+    "private": true,
     "description": "Internal to rtcforge — install `rtcforge` instead. Cascading SFU cluster (multi-node routing, load balancing).",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {

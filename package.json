@@ -6,7 +6,7 @@
     "description": "Build real-time applications without reinventing infrastructure",
     "workspaces": ["packages/*"],
     "scripts": {
-        "build": "npm run build --workspaces --if-present",
+        "build": "npm run build -w rtcforge-core -w rtcforge-sdk -w rtcforge-signaling -w rtcforge-media -w rtcforge-sfu -w rtcforge",
         "dev": "npm run dev --workspaces --if-present",
         "typecheck": "tsc --noEmit",
         "check": "biome check .",
