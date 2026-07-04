@@ -10,14 +10,19 @@ window.rtcforge = {
     async join(signalUrl, roomId, peerId) {
         const client = new RTCForgeClient({ serverUrl: signalUrl, peerId, reconnect: true })
         window.__client = client
+        // Register client-lifecycle handlers *before* joining so the initial
+        // Connected (which fires during joinRoom) is captured, not only reconnects.
+        client.on(ClientEvent.Reconnecting, () => received.push({ type: 'reconnecting' }))
+        client.on(ClientEvent.Connected, () => received.push({ type: 'connected' }))
         const room = await client.joinRoom(roomId)
         window.__room = room
         room.on(RoomEvent.PeerJoined, (id) => received.push({ type: 'peer-joined', id }))
         room.on(RoomEvent.PeerLeft, (id) => received.push({ type: 'peer-left', id }))
-        room.on('chat', (msg, from) => received.push({ type: 'chat', from, msg }))
-        client.on(ClientEvent.Reconnecting, () => received.push({ type: 'reconnecting' }))
-        client.on(ClientEvent.Connected, () => received.push({ type: 'connected' }))
-        return { peers: room.getPeerIds() }
+        // A single "broadcast" event carries (from, channel, data); filter by channel.
+        room.on(RoomEvent.Broadcast, (from, channel, msg) => {
+            if (channel === 'chat') received.push({ type: 'chat', from, msg })
+        })
+        return { peers: room.peers }
     },
     broadcast(channel, payload) {
         window.__room.broadcast(channel, payload)

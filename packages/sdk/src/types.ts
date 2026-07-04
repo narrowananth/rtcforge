@@ -228,6 +228,22 @@ export const RoomEvent = {
     Closed: 'closed',
     /** The room roster was replaced after a reconnect/rejoin (peers, roles, metadata, ICE servers). */
     Refreshed: 'refreshed',
+    /** A remote peer joined the room; the payload is the peer id string. */
+    PeerJoined: 'peer-joined',
+    /** A remote peer left the room; the payload is the peer id string. */
+    PeerLeft: 'peer-left',
+    /** A known peer regained its connection; the payload is the peer id string. */
+    PresenceOnline: 'presence-online',
+    /** A known peer lost its connection but has not left; the payload is the peer id string. */
+    PresenceOffline: 'presence-offline',
+    /** The local peer was kicked; the payload is `(peerId, reason)`. */
+    Kicked: 'kicked',
+    /** A directed peer-to-peer signaling payload arrived; the payload is `(from, data)`. */
+    Signal: 'signal',
+    /** A broadcast arrived on a named channel; the payload is `(from, channel, data)`. */
+    Broadcast: 'broadcast',
+    /** A peer's role changed; the payload is `(peerId, role)`. */
+    RoleChanged: 'role-changed',
 } as const
 
 /** Union of the {@link RoomEvent} string values. */

@@ -42,9 +42,11 @@ test('client reconnects after a transport drop', async ({ browser }) => {
     await page.evaluate((s) => window.rtcforge.join(s, 'reconnect-room', 'carol'), SIGNAL)
 
     // Force-close the underlying socket; reconnect: true should recover it.
+    // (Browsers reject close code 1006; 4000 is in the app-allowed 3000-4999 range
+    // and is treated as a retryable drop by the client.)
     await page.evaluate(() => {
         // @ts-expect-error test-only access to the transport socket
-        window.__client.transport?.ws?.close(1006)
+        window.__client.transport?.ws?.close(4000)
     })
 
     await expect
