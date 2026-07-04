@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-sdk",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Internal to rtcforge — install `rtcforge` instead. Browser + Node.js client (RTCForgeClient, Room, file transfer).",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -47,7 +47,7 @@
         "access": "public"
     },
     "dependencies": {
-        "rtcforge-core": "^1.0.0",
+        "rtcforge-core": "^1.0.1",
         "zod": "^4.4.3"
     },
     "optionalDependencies": {

@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-media",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Internal to rtcforge — install `rtcforge` instead. WebRTC peer connections, media capture, and calls.",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -43,13 +43,13 @@
         "node": ">=18.0.0"
     },
     "dependencies": {
-        "rtcforge-core": "^1.0.0",
-        "rtcforge-sdk": "^1.0.0",
+        "rtcforge-core": "^1.0.1",
+        "rtcforge-sdk": "^1.0.1",
         "zod": "^4.4.3"
     },
     "peerDependencies": {
         "mediasoup": "^3.20.10",
-        "rtcforge-signaling": "^1.0.0"
+        "rtcforge-signaling": "^1.0.1"
     },
     "peerDependenciesMeta": {
         "mediasoup": {
@@ -61,7 +61,7 @@
     },
     "devDependencies": {
         "mediasoup": "^3.20.10",
-        "rtcforge-signaling": "^1.0.0"
+        "rtcforge-signaling": "^1.0.1"
     },
     "publishConfig": {
         "access": "public"

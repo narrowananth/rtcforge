@@ -1,6 +1,6 @@
 {
     "name": "rtcforge",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "One-install front door for RTCForge — real-time WebRTC infrastructure. Frontend via rtcforge/client + rtcforge/media, backend via rtcforge/server.",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -57,11 +57,11 @@
         "node": ">=18.0.0"
     },
     "dependencies": {
-        "rtcforge-sdk": "^1.0.0",
-        "rtcforge-signaling": "^1.0.0"
+        "rtcforge-sdk": "^1.0.1",
+        "rtcforge-signaling": "^1.0.1"
     },
     "peerDependencies": {
-        "rtcforge-media": "^1.0.0"
+        "rtcforge-media": "^1.0.1"
     },
     "peerDependenciesMeta": {
         "rtcforge-media": {
