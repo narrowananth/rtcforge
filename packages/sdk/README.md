@@ -30,16 +30,23 @@ Client layer.
 ## How to use
 
 ```ts
-import { RTCForgeClient } from "rtcforge-sdk";
+// createClient defaults reconnect on + a warn console logger; or use `new RTCForgeClient(...)`.
+import { createClient } from "rtcforge-sdk";
 
-const client = new RTCForgeClient({
-  serverUrl: "wss://your-signaling-host",
-  reconnect: true,
-});
+const client = createClient({ serverUrl: "wss://your-signaling-host" });
 
 const room = await client.joinRoom("my-room"); // connects + joins
+// client.room reaches the joined room without holding the return value.
 
-room.on("peer-joined", (peer) => console.log("joined:", peer.id));
+// PeerJoined/PeerLeft payloads are the peer id (a string), not an object:
+room.on("peer-joined", (peerId) => console.log("joined:", peerId));
+
+// Exchange application messages over the room. A single "broadcast" event
+// carries (from, channel, data) — filter by channel yourself:
+room.broadcast("chat", { text: "hello" });
+room.on("broadcast", (from, channel, data) => {
+  if (channel === "chat") console.log(from, data.text);
+});
 ```
 
 For audio/video, pass the `Room` to [`rtcforge-media`](https://www.npmjs.com/package/rtcforge-media).

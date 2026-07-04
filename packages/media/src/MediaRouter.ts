@@ -57,6 +57,16 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
         this._router = router
         this._config = config
         this._logger = logger
+        // The underlying mediasoup router closes on its own when its worker dies.
+        // Observe that so a worker crash flips our state and emits Closed, letting
+        // MediaService reap the dead router instead of handing it back forever.
+        this._router.observer.once('close', () => {
+            if (this._closed) return
+            this._closed = true
+            this._transports.clear()
+            this._pipeTransports.clear()
+            this.emit(MediaRouterEvent.Closed)
+        })
     }
 
     get rtpCapabilities(): MsTypes.RtpCapabilities {
@@ -100,10 +110,11 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
     }
 
     async connectTransport(
+        peerId: string,
         transportId: string,
         dtlsParameters: MsTypes.DtlsParameters,
     ): Promise<void> {
-        await this._requireTransport(transportId).connect({ dtlsParameters })
+        await this._requireOwnedTransport(peerId, transportId).connect({ dtlsParameters })
     }
 
     async produce(
@@ -113,7 +124,7 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
         rtpParameters: MsTypes.RtpParameters,
     ): Promise<Producer> {
         this._assertOpen()
-        const transport = this._requireTransport(transportId)
+        const transport = this._requireOwnedTransport(peerId, transportId)
         const msProducer = await transport.produce({
             kind,
             rtpParameters,
@@ -135,7 +146,7 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
         if (!this._router.canConsume({ producerId, rtpCapabilities })) {
             throw new Error(`Cannot consume producer ${producerId} with given capabilities`)
         }
-        const transport = this._requireTransport(transportId)
+        const transport = this._requireOwnedTransport(peerId, transportId)
         const msConsumer = await transport.consume({
             producerId,
             rtpCapabilities,
@@ -149,8 +160,14 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
         return consumer
     }
 
-    async resumeConsumer(consumerId: string): Promise<void> {
-        await this._consumers.get(consumerId)?.resume()
+    async resumeConsumer(peerId: string, consumerId: string): Promise<void> {
+        const consumer = this._consumers.get(consumerId)
+        if (!consumer) return
+        // Ownership: only the peer the consumer belongs to may resume it.
+        if (consumer.peerId !== peerId) {
+            throw new Error(`Consumer ${consumerId} does not belong to peer ${peerId}`)
+        }
+        await consumer.resume()
     }
 
     async pipeProducerTo(producerId: string, dest: MediaRouter): Promise<void> {
@@ -272,6 +289,17 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
 
     private _requireTransport(transportId: string): MsTypes.WebRtcTransport {
         return requireFrom(this._transports, transportId, 'Transport')
+    }
+
+    // Verify the caller owns the transport (matches the peerId stamped into
+    // appData at creation). Without this, a peer that learns another peer's
+    // transportId over signaling could connect/produce/consume on it.
+    private _requireOwnedTransport(peerId: string, transportId: string): MsTypes.WebRtcTransport {
+        const transport = this._requireTransport(transportId)
+        if ((transport.appData as { peerId?: string }).peerId !== peerId) {
+            throw new Error(`Transport ${transportId} does not belong to peer ${peerId}`)
+        }
+        return transport
     }
 
     private _requirePipeTransport(pipeTransportId: string): MsTypes.PipeTransport {

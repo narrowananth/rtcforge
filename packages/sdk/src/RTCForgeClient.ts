@@ -4,7 +4,7 @@ import { Room } from './Room.js'
 import type { RoomControl } from './Room.js'
 import type { Transport } from './Transport.js'
 import { WebSocketTransport } from './WebSocketTransport.js'
-import { MessageType } from './protocol.js'
+import { MessageType, PROTOCOL_VERSION } from './protocol.js'
 import type { ServerMessage } from './protocol.js'
 import { ClientEvent, ConnectionState, TransportEvent } from './types.js'
 import type { RTCForgeClientOptions, TransportFactory } from './types.js'
@@ -14,6 +14,7 @@ type ClientEvents = {
     [ClientEvent.Disconnected]: [code: number, reason: string]
     [ClientEvent.Reconnecting]: [attempt: number]
     [ClientEvent.Error]: [err: Error]
+    [ClientEvent.Terminated]: [code: number, reason: string]
 }
 
 const defaultTransportFactory: TransportFactory = (url, options) =>
@@ -34,7 +35,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
     private readonly opts: RTCForgeClientOptions
     private readonly _transportFactory: TransportFactory
     private transport: Transport | null = null
-    private room: Room | null = null
+    private _room: Room | null = null
     private control: RoomControl | null = null
     private _handshake: JoinHandshake | null = null
     private _cleanups: Array<() => void> = []
@@ -50,6 +51,15 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
         return this._connectionState
     }
 
+    /**
+     * The currently joined {@link Room}, or `null` when not in a room. Lets you
+     * reach the room without holding onto the {@link RTCForgeClient.joinRoom}
+     * return value.
+     */
+    get room(): Room | null {
+        return this._room
+    }
+
     async joinRoom(roomId: string): Promise<Room> {
         if (this._connectionState === ConnectionState.Connecting)
             throw new Error('joinRoom already in progress')
@@ -61,6 +71,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
             reconnect: this.opts.reconnect ?? true,
             maxReconnectDelay: this.opts.maxReconnectDelay ?? 32_000,
             maxReconnectAttempts: this.opts.maxReconnectAttempts,
+            nonRetryableCloseCodes: this.opts.nonRetryableCloseCodes,
             connectTimeoutMs: this.opts.connectTimeoutMs,
             maxQueueSize: this.opts.maxQueueSize,
             logger: this.opts.logger,
@@ -74,9 +85,18 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
 
         try {
             const joined = await handshake.run()
-            this._handshake = null
+
+            // Fail-fast visibility on a protocol skew (server older/newer than us).
+            if (joined.v !== undefined && joined.v !== PROTOCOL_VERSION) {
+                this.opts.logger?.warn?.('Signaling protocol version mismatch', {
+                    server: joined.v,
+                    client: PROTOCOL_VERSION,
+                })
+            }
 
             if (this.transport !== transport) {
+                handshake.dispose()
+                this._handshake = null
                 transport.close()
                 throw new Error('joinRoom cancelled by leave()')
             }
@@ -92,19 +112,30 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
                 peerRoles: joined.peerRoles,
                 peerMetadata: joined.peerMetadata,
             })
-            this.room = room
+            this._room = room
             this.control = control
-            this._attachSteadyState(transport, control)
+            const onMessage = this._attachSteadyState(transport, control)
+            // Replay any frames buffered during the handshake→steady-state gap
+            // (and detach the handshake listener) before flushing outbound sends.
+            handshake.drain(onMessage)
+            this._handshake = null
             transport.flush()
             this.emit(ClientEvent.Connected)
             return room
         } catch (err) {
-            this._handshake = null
-            this._setState(ConnectionState.Disconnected)
-            for (const cleanup of this._cleanups) cleanup()
-            this._cleanups = []
+            handshake.dispose()
             transport.close()
-            if (this.transport === transport) this.transport = null
+            // Only mutate shared client state if THIS join still owns the transport.
+            // A re-join started from within a Terminated/Disconnected handler (the
+            // documented re-auth pattern) installs a new transport; this stale
+            // catch must not clobber it.
+            if (this.transport === transport) {
+                this._handshake = null
+                this._setState(ConnectionState.Disconnected)
+                for (const cleanup of this._cleanups) cleanup()
+                this._cleanups = []
+                this.transport = null
+            }
             throw err
         }
     }
@@ -117,7 +148,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
         this._cleanups = []
         this.control?.close()
         this.control = null
-        this.room = null
+        this._room = null
         this.transport?.close()
         this.transport = null
     }
@@ -145,18 +176,41 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
             this.emit(ClientEvent.Reconnecting, attempt)
         }
         const onError = (err: Error) => this.emit(ClientEvent.Error, err)
+        // The transport gave up permanently (non-retryable close or exhaustion).
+        // Reset the client so a fresh joinRoom works without a leave() first, and
+        // surface a distinct terminal signal the app can act on (e.g. re-auth).
+        const onTerminated = (code: number, reason: string) => {
+            // Cancel an in-flight join (terminated after socket-open but before
+            // room-joined) so the awaiting joinRoom() rejects now instead of
+            // hanging until joinTimeoutMs.
+            this._handshake?.cancel(`connection terminated (${code}): ${reason}`)
+            this._handshake = null
+            for (const cleanup of this._cleanups) cleanup()
+            this._cleanups = []
+            this.control?.close()
+            this.control = null
+            this._room = null
+            this.transport = null
+            this._setState(ConnectionState.Disconnected)
+            this.emit(ClientEvent.Terminated, code, reason)
+        }
 
         transport.on(TransportEvent.Close, onClose)
         transport.on(TransportEvent.Reconnecting, onReconnecting)
         transport.on(TransportEvent.Error, onError)
+        transport.on(TransportEvent.Terminated, onTerminated)
         this._cleanups.push(
             () => transport.off(TransportEvent.Close, onClose),
             () => transport.off(TransportEvent.Reconnecting, onReconnecting),
             () => transport.off(TransportEvent.Error, onError),
+            () => transport.off(TransportEvent.Terminated, onTerminated),
         )
     }
 
-    private _attachSteadyState(transport: Transport, control: RoomControl): void {
+    private _attachSteadyState(
+        transport: Transport,
+        control: RoomControl,
+    ): (msg: ServerMessage) => void {
         const onMessage = (msg: ServerMessage) => {
             if (msg.type === MessageType.RoomJoined) {
                 if (!this._setState(ConnectionState.Connected)) return
@@ -178,6 +232,7 @@ export class RTCForgeClient extends EventEmitter<ClientEvents> {
         }
         transport.on(TransportEvent.Message, onMessage)
         this._cleanups.push(() => transport.off(TransportEvent.Message, onMessage))
+        return onMessage
     }
 
     private buildUrl(roomId: string): string {

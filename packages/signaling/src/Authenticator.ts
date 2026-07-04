@@ -41,10 +41,16 @@ export class Authenticator {
             try {
                 raw = await this.deps.auth(token)
             } catch (err) {
-                const reason = toError(err).message || CloseReason.AuthFailed
-                logger.warn('Auth failed', { reason })
+                // Log the real error internally, but send only a GENERIC reason to
+                // the client — never leak internal messages (e.g. DB errors), and
+                // avoid the >123-byte close-reason throw a long message would cause.
+                logger.warn('Auth failed', { reason: toError(err).message })
                 metrics.increment(Metric.AuthErrors, { reason: 'auth_exception' })
-                return { ok: false, code: CloseCode.PolicyViolation, reason }
+                return {
+                    ok: false,
+                    code: CloseCode.PolicyViolation,
+                    reason: CloseReason.AuthFailed,
+                }
             }
             const result = AuthPayloadSchema.safeParse(raw)
             if (!result.success) {

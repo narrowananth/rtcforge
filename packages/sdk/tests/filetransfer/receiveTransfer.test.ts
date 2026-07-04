@@ -70,4 +70,21 @@ describe('ReceiveTransfer', () => {
         expect(rt.state).toBe(TransferState.Cancelled)
         expect(controls[0]?.type).toBe(ControlType.Reject)
     })
+
+    it('fails on an out-of-range frame seq and cancels the peer (no huge alloc)', async () => {
+        // Regression (REVIEW.md HIGH #13): a hostile seq must not drive a giant
+        // sink write; it should fail the transfer and notify the sender.
+        const { rt, controls } = makeReceiver(2, 32)
+        rt.accept(new MemorySink())
+        await flush()
+        const ch = new MockDataChannel('rtcforge-ft-t1-0')
+        ch.readyState = 'open'
+        rt.attachChannel(ch.asChannel())
+
+        ch.dispatch('message', { data: encodeFrame(4_000_000_000, randomBytes(16)) })
+        await flush()
+
+        expect(rt.state).toBe(TransferState.Failed)
+        expect(controls.some((m) => m.type === ControlType.Cancel)).toBe(true)
+    })
 })

@@ -28,6 +28,26 @@ describe('backpressure gate', () => {
         await p
         expect(resolved).toBe(true)
     })
+
+    it('rejects immediately if the channel is already closed on entry', async () => {
+        // Regression (re-review): close/error already fired before entry, so the
+        // listeners would never trigger — must reject up front, not hang.
+        const ch = new MockDataChannel('x')
+        ch.readyState = 'closed'
+        ch.bufferedAmount = 1000
+        await expect(awaitDrain(ch.asChannel(), 500, 100, 't1')).rejects.toThrow(/is closed/)
+    })
+
+    it('rejects when the channel closes while draining (no infinite hang)', async () => {
+        // Regression (REVIEW.md CRITICAL #2): a peer disconnecting while buffered
+        // above the high-water mark must reject, not await bufferedamountlow forever.
+        const ch = new MockDataChannel('x')
+        ch.readyState = 'open'
+        ch.bufferedAmount = 1000
+        const p = awaitDrain(ch.asChannel(), 500, 100, 't1')
+        ch.close()
+        await expect(p).rejects.toThrow(/closed while draining/)
+    })
 })
 
 describe('waitForOpen', () => {

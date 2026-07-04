@@ -75,8 +75,12 @@ export class HashRing {
             return
         }
         const weight = node.weight ?? 1
-        if (weight <= 0)
-            throw new Error(`HashRing: weight must be > 0 (got ${weight} for ${node.id})`)
+        // Reject NaN/Infinity as well as ≤0: a NaN weight makes the node score NaN
+        // and win zero keys (silently invisible); Infinity makes it win every key.
+        if (!Number.isFinite(weight) || weight <= 0)
+            throw new Error(
+                `HashRing: weight must be a finite number > 0 (got ${weight} for ${node.id})`,
+            )
         this._nodes.set(node.id, weight)
     }
 

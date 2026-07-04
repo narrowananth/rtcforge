@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-media",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "description": "WebRTC peer connections, media capture, and call management",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -17,8 +17,11 @@
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
+            "browser": {
+                "types": "./dist/browser.d.ts",
+                "default": "./dist/browser.mjs"
+            },
             "types": "./dist/index.d.ts",
-            "browser": "./dist/browser.mjs",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
         },
@@ -29,25 +32,36 @@
         }
     },
     "browser": "./dist/browser.mjs",
-    "files": ["dist"],
+    "sideEffects": false,
+    "files": ["dist", "LICENSE"],
     "scripts": {
         "build": "tsup src/index.ts src/browser.ts --format cjs,esm --dts --clean"
     },
     "keywords": ["webrtc", "mediasoup", "sfu", "realtime", "rtcforge"],
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "dependencies": {
-        "mediasoup": "^3.20.10",
+        "rtcforge-core": "^1.0.0",
+        "rtcforge-sdk": "^1.0.0",
         "zod": "^4.4.3"
     },
     "peerDependencies": {
-        "rtcforge-core": "^0.1.0",
-        "rtcforge-sdk": "^0.1.0",
-        "rtcforge-signaling": "^0.1.0"
+        "mediasoup": "^3.20.10",
+        "rtcforge-signaling": "^1.0.0"
+    },
+    "peerDependenciesMeta": {
+        "mediasoup": {
+            "optional": true
+        },
+        "rtcforge-signaling": {
+            "optional": true
+        }
     },
     "devDependencies": {
-        "rtcforge-core": "^0.1.0",
-        "rtcforge-sdk": "^0.1.0",
-        "rtcforge-signaling": "^0.1.0"
+        "mediasoup": "^3.20.10",
+        "rtcforge-signaling": "^1.0.0"
     },
     "publishConfig": {
         "access": "public"

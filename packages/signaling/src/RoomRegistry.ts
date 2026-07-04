@@ -50,7 +50,11 @@ export class RoomRegistry extends EventEmitter<RoomRegistryEvents> {
         const room = new Room(roomId, this.roomOpts)
         this._rooms.set(roomId, room)
         room.on(RoomEvent.Closed, () => {
-            this._rooms.delete(roomId)
+            // Identity guard: a late Closed from an old room instance must not
+            // evict a fresh room that reused the same id.
+            if (this._rooms.get(roomId) === room) {
+                this._rooms.delete(roomId)
+            }
             this.emit(RoomRegistryEvent.RoomClosed, roomId)
         })
         room.on(RoomEvent.PeerKicked, (peerId, reason) => {

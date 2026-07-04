@@ -1,0 +1,74 @@
+{
+    "name": "rtcforge",
+    "version": "1.0.0",
+    "description": "One-install front door for RTCForge — real-time WebRTC infrastructure. Frontend via rtcforge/client + rtcforge/media, backend via rtcforge/server.",
+    "homepage": "https://narrowananth.github.io/rtcforge/",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/narrowananth/rtcforge.git",
+        "directory": "packages/rtcforge"
+    },
+    "bugs": {
+        "url": "https://github.com/narrowananth/rtcforge/issues"
+    },
+    "author": "narrowananth",
+    "sideEffects": false,
+    "exports": {
+        "./client": {
+            "types": "./client.d.ts",
+            "import": "./client.mjs",
+            "require": "./client.cjs"
+        },
+        "./server": {
+            "types": "./server.d.ts",
+            "import": "./server.mjs",
+            "require": "./server.cjs"
+        },
+        "./media": {
+            "types": "./media.d.ts",
+            "import": "./media.mjs",
+            "require": "./media.cjs"
+        },
+        "./filetransfer": {
+            "types": "./filetransfer.d.ts",
+            "import": "./filetransfer.mjs",
+            "require": "./filetransfer.cjs"
+        }
+    },
+    "files": [
+        "client.mjs",
+        "client.cjs",
+        "client.d.ts",
+        "server.mjs",
+        "server.cjs",
+        "server.d.ts",
+        "media.mjs",
+        "media.cjs",
+        "media.d.ts",
+        "filetransfer.mjs",
+        "filetransfer.cjs",
+        "filetransfer.d.ts",
+        "LICENSE",
+        "README.md"
+    ],
+    "keywords": ["webrtc", "realtime", "sfu", "signaling", "rtcforge"],
+    "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "rtcforge-sdk": "^1.0.0",
+        "rtcforge-signaling": "^1.0.0"
+    },
+    "peerDependencies": {
+        "rtcforge-media": "^1.0.0"
+    },
+    "peerDependenciesMeta": {
+        "rtcforge-media": {
+            "optional": true
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}

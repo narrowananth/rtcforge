@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CascadeBridge } from '../src/CascadeBridge.js'
+import { CascadeBridge, CascadeBridgeEvent } from '../src/CascadeBridge.js'
 import { CascadeTree } from '../src/CascadeTree.js'
 import { SfuCluster } from '../src/SfuCluster.js'
 import { SfuNode } from '../src/SfuNode.js'
@@ -18,8 +18,12 @@ function recordingMedia() {
     const piped: string[] = []
     const unpiped: string[] = []
     const media: CascadePipeInterface = {
-        pipeLink: (roomId, from, to) => piped.push(`${roomId}:${from}>${to}`),
-        unpipeLink: (roomId, from, to) => unpiped.push(`${roomId}:${from}>${to}`),
+        pipeLink: (roomId, from, to) => {
+            piped.push(`${roomId}:${from}>${to}`)
+        },
+        unpipeLink: (roomId, from, to) => {
+            unpiped.push(`${roomId}:${from}>${to}`)
+        },
     }
     return { media, piped, unpiped }
 }
@@ -69,5 +73,24 @@ describe('CascadeBridge — wires CascadeTree links to the media plane', () => {
         const pipedAfter = piped.length
         tree.build('stream2', 'origin', 35)
         expect(piped.length).toBe(pipedAfter)
+    })
+
+    it('emits PipeError when an async media pipe rejects', async () => {
+        const c = cluster(6)
+        const tree = new CascadeTree(c, { fanout: 2, viewersPerNode: 10 })
+        const media: CascadePipeInterface = {
+            pipeLink: async () => Promise.reject(new Error('pipe down')),
+            unpipeLink: () => {},
+        }
+        const bridge = new CascadeBridge(tree, media)
+        const errors: Error[] = []
+        bridge.on(CascadeBridgeEvent.PipeError, (_r, _f, _t, err) => errors.push(err))
+        bridge.attach()
+
+        tree.build('stream1', 'origin', 35) // triggers pipeLink rejections
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(errors.length).toBeGreaterThan(0)
+        expect(errors[0]?.message).toBe('pipe down')
     })
 })

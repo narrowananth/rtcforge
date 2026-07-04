@@ -61,6 +61,7 @@ export class ReceiveTransfer extends Transfer {
     private _senderDone = false
     private _writeChain: Promise<void> = Promise.resolve()
     private _result: SinkResult | null = null
+    private _sinkFinalized = false
 
     /**
      * @param params - Offer-derived parameters; see {@link ReceiveTransferParams}. The transfer
@@ -77,6 +78,49 @@ export class ReceiveTransfer extends Transfer {
         this._sendControl = params.sendControl
         this._checksum = params.checksum
         this.transitionTo(TransferState.Offered)
+    }
+
+    protected override _notifyRemoteFailure(error: FileTransferError): void {
+        try {
+            this._sendControl({
+                type: ControlType.Cancel,
+                transferId: this.id,
+                reason: error.message,
+            })
+        } catch {
+            // Control channel already gone; nothing more we can do.
+        }
+    }
+
+    /**
+     * Ask the sender to resume, reporting the chunks already received so only the
+     * missing ones are resent. Invoked by {@link FileTransferManager} when the
+     * sender re-announces an in-progress transfer after a reconnect. No-op if the
+     * transfer is terminal or has not yet been accepted.
+     */
+    requestResume(): void {
+        if (this.isTerminal || this._state === TransferState.Offered || !this._sink) return
+        this._sendControl({
+            type: ControlType.ResumeRequest,
+            transferId: this.id,
+            haveChunks: [...this._received],
+        })
+    }
+
+    protected override _onTerminal(): void {
+        // Abort the sink on any non-completed terminal (frame-validation failure,
+        // cancel, etc.) so a Node sink's handle is released and its partial file
+        // discarded. A successful close already set _sinkFinalized, so this no-ops.
+        if (this._state !== TransferState.Completed) this._abortSink('transfer ended')
+        // Close the per-transfer data channels so SCTP streams don't leak.
+        for (const ch of this._channels) {
+            try {
+                ch.close()
+            } catch {
+                // already closing/closed
+            }
+        }
+        this._channels.clear()
     }
 
     /** Convenience accessor for the offered file name (equivalent to `metadata.name`). */
@@ -125,7 +169,7 @@ export class ReceiveTransfer extends Transfer {
                 })
             })
             .catch((err: unknown) => {
-                this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed))
+                this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed), true)
             })
     }
 
@@ -219,7 +263,43 @@ export class ReceiveTransfer extends Transfer {
             seq = frame.seq
             payload = frame.payload
         } catch (err) {
-            this.fail(this.toTransferError(err, FileTransferErrorCode.InvalidFrame))
+            this.fail(this.toTransferError(err, FileTransferErrorCode.InvalidFrame), true)
+            return
+        }
+        // Never trust remote-supplied seq/length: an out-of-range seq drives a
+        // sink write at seq*chunkSize (file/allocation blow-up), and an
+        // over-long payload writes past the declared file size.
+        if (!Number.isInteger(seq) || seq < 0 || seq >= this.totalChunks) {
+            this.fail(
+                new FileTransferError(
+                    `frame seq ${seq} out of range [0, ${this.totalChunks})`,
+                    FileTransferErrorCode.InvalidFrame,
+                    { transferId: this.id },
+                ),
+                true,
+            )
+            return
+        }
+        if (payload.byteLength > this.chunkSize) {
+            this.fail(
+                new FileTransferError(
+                    `frame payload ${payload.byteLength} exceeds chunkSize ${this.chunkSize}`,
+                    FileTransferErrorCode.InvalidFrame,
+                    { transferId: this.id },
+                ),
+                true,
+            )
+            return
+        }
+        if (seq * this.chunkSize + payload.byteLength > this.metadata.size) {
+            this.fail(
+                new FileTransferError(
+                    `frame seq ${seq} writes past declared size ${this.metadata.size}`,
+                    FileTransferErrorCode.InvalidFrame,
+                    { transferId: this.id },
+                ),
+                true,
+            )
             return
         }
         if (this._received.has(seq)) return
@@ -234,6 +314,13 @@ export class ReceiveTransfer extends Transfer {
         void this._tryComplete()
     }
 
+    // Abort the sink at most once (frees the handle, discards the partial file).
+    private _abortSink(reason?: unknown): void {
+        if (this._sinkFinalized || !this._sink) return
+        this._sinkFinalized = true
+        void this._sink.abort(reason)
+    }
+
     private _enqueueChunk(seq: number, bytes: Uint8Array): void {
         const sink = this._sink
         if (!sink) return
@@ -243,8 +330,8 @@ export class ReceiveTransfer extends Transfer {
                 if (this._digest) await this._digest.update(seq, bytes)
                 await sink.write(seq * this.chunkSize, bytes)
             } catch (err) {
-                this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed))
-                await sink.abort(err)
+                this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed), true)
+                this._abortSink(err)
             }
         })
     }
@@ -258,10 +345,24 @@ export class ReceiveTransfer extends Transfer {
         if (this.isTerminal) return
 
         if (this._digest) {
-            const local = await this._digest.finalize()
-            if (this._expectedDigest !== undefined && local !== this._expectedDigest) {
+            // Checksum was required (receiver enabled it), so a missing sender
+            // digest must NOT silently pass — it would bypass integrity entirely.
+            if (this._expectedDigest === undefined) {
                 this._sendControl({ type: ControlType.ChecksumMismatch, transferId: this.id })
-                await this._sink.abort('checksum mismatch')
+                this._abortSink('missing checksum')
+                this.fail(
+                    new FileTransferError(
+                        'sender provided no checksum but one was required',
+                        FileTransferErrorCode.ChecksumMismatch,
+                        { transferId: this.id },
+                    ),
+                )
+                return
+            }
+            const local = await this._digest.finalize()
+            if (local !== this._expectedDigest) {
+                this._sendControl({ type: ControlType.ChecksumMismatch, transferId: this.id })
+                this._abortSink('checksum mismatch')
                 this.fail(
                     new FileTransferError(
                         'checksum mismatch on received file',
@@ -276,8 +377,9 @@ export class ReceiveTransfer extends Transfer {
         this.transitionTo(TransferState.Completing)
         try {
             this._result = await this._sink.close()
+            this._sinkFinalized = true
         } catch (err) {
-            this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed))
+            this.fail(this.toTransferError(err, FileTransferErrorCode.SinkWriteFailed), true)
             return
         }
         this._sendControl({ type: ControlType.Complete, transferId: this.id })
@@ -289,7 +391,6 @@ export class ReceiveTransfer extends Transfer {
     private _markCancelled(reason?: string): void {
         if (this.isTerminal) return
         this.transitionTo(TransferState.Cancelled)
-        void this._sink?.abort(reason)
         if (reason !== undefined) {
             this.emit(
                 TransferEvent.Error,

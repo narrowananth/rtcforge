@@ -17,6 +17,8 @@ export type TransportEvents = {
     [TransportEvent.Error]: [err: Error]
     /** A reconnect attempt began; carries the 1-based attempt number. */
     [TransportEvent.Reconnecting]: [attempt: number]
+
+    [TransportEvent.Terminated]: [code: number, reason: string]
 }
 
 /**

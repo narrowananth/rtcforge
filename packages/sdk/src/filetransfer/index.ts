@@ -37,10 +37,12 @@ export { MemorySink } from './sink/MemorySink.js'
 export { FileSystemAccessSink } from './sink/FileSystemAccessSink.js'
 
 export { encodeFrame, decodeFrame, FRAME_HEADER_BYTES } from './framing.js'
+export { sanitizeFileName } from './sanitize.js'
 export { sha256Hex, Sha256Digest } from './checksum.js'
 export {
     ControlType,
     CONTROL_CHANNEL_LABEL,
+    FT_PROTOCOL_VERSION,
     dataChannelLabel,
     parseDataChannelLabel,
 } from './protocol.js'

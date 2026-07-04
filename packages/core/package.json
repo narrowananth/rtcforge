@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-core",
-    "version": "0.1.2",
-    "description": "Shared primitives — EventEmitter, Logger",
+    "version": "1.0.0",
+    "description": "Shared zero-dependency primitives for RTCForge — EventEmitter, Logger, and scale-out building blocks (HashRing, gossip membership, state store)",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
         "type": "git",
@@ -22,12 +22,17 @@
             "require": "./dist/index.js"
         }
     },
-    "files": ["dist"],
+    "sideEffects": false,
+    "files": ["dist", "LICENSE"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020"
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es2020",
+        "test": "vitest run"
     },
-    "keywords": ["rtcforge"],
+    "keywords": ["rtcforge", "webrtc", "gossip", "hashring"],
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "publishConfig": {
         "access": "public"
     }

@@ -1,6 +1,6 @@
 import { EventEmitter, toError } from 'rtcforge-core'
 import type { Peer } from './Peer.js'
-import { MessageType } from './protocol.js'
+import { MessageType, PROTOCOL_VERSION } from './protocol.js'
 import type { ServerMessage } from './protocol.js'
 import { CloseCode, CloseReason, PeerEvent, RoomEvent, RoomState } from './types.js'
 import type { IceServerConfig } from './types.js'
@@ -144,6 +144,15 @@ export class Room extends EventEmitter<RoomEvents> {
      *   rolled back out of the room before the error propagates.
      */
     addPeer(peer: Peer, iceServers?: IceServerConfig[]): boolean {
+        // The room may have closed (last peer left) while an async
+        // iceServersHook was awaited between getOrCreate and addPeer. Admitting
+        // a peer into a Closing/Closed room creates an invisible zombie whose
+        // later disconnect can evict a fresh same-id room. Reject instead.
+        if (this._state === RoomState.Closing || this._state === RoomState.Closed) {
+            peer.disconnect(CloseCode.PolicyViolation, CloseReason.RoomClosing)
+            return false
+        }
+
         const existing = this._peers.get(peer.id)
 
         if (!existing && this.maxPeers !== undefined && this._peers.size >= this.maxPeers) {
@@ -175,6 +184,7 @@ export class Room extends EventEmitter<RoomEvents> {
         try {
             peer.send({
                 type: MessageType.RoomJoined,
+                v: PROTOCOL_VERSION,
                 roomId: this.id,
                 peerId: peer.id,
                 peers: otherIds,
@@ -230,6 +240,10 @@ export class Room extends EventEmitter<RoomEvents> {
             peer.send({ type: MessageType.Kicked, peerId, reason })
         } catch {}
         peer.disconnect(CloseCode.PolicyViolation, reason ?? CloseReason.Kicked)
+        // Remove synchronously rather than waiting for the (up to ~30s) ws close
+        // handshake — the kicked peer must not keep receiving broadcasts or hold a
+        // maxPeers slot. The later Disconnected event no-ops (peer already gone).
+        this.removePeer(peerId)
         this.emit(RoomEvent.PeerKicked, peerId, reason)
         return true
     }
@@ -364,6 +378,12 @@ export class Room extends EventEmitter<RoomEvents> {
     dispose(): void {
         this._clearTimers()
         this._transitionTo(RoomState.Closed)
+        // Clear peers so a socket 'close' that fires after shutdown doesn't hit
+        // removePeer (its `_peers.get===peer` guard is now false), which would
+        // re-emit RoomEvent.Closed / peer-left and inflate metrics/audit events
+        // after the server already reported stopped.
+        this._peers.clear()
+        this._peerMeta.clear()
     }
 
     private _clearTimers(): void {

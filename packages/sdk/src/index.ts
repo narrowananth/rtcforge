@@ -1,8 +1,9 @@
 export { RTCForgeClient } from './RTCForgeClient.js'
+export { createClient } from './factory.js'
 export { Room, RoomMediaEvent } from './Room.js'
 export { EventEmitter } from 'rtcforge-core'
 export { ClientEvent, RoomEvent, TransportEvent, noopLogger } from './types.js'
-export { MessageType } from './protocol.js'
+export { MessageType, PROTOCOL_VERSION } from './protocol.js'
 export type {
     RTCForgeClientOptions,
     ConnectionState,

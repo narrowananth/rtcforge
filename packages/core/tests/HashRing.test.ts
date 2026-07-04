@@ -45,6 +45,14 @@ describe('HashRing — basics', () => {
     it('rejects non-positive weight', () => {
         expect(() => new HashRing([{ id: 'x', weight: 0 }])).toThrow()
     })
+
+    it('rejects non-finite weight (NaN / Infinity)', () => {
+        // NaN → node wins zero keys (invisible); Infinity → node wins every key.
+        expect(() => new HashRing([{ id: 'x', weight: Number.NaN }])).toThrow(/finite/)
+        expect(() => new HashRing([{ id: 'x', weight: Number.POSITIVE_INFINITY }])).toThrow(
+            /finite/,
+        )
+    })
 })
 
 describe('HashRing — distribution', () => {

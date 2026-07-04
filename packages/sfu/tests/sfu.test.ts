@@ -456,7 +456,7 @@ describe('SfuCluster — health check', () => {
     it('emits error and fails the node when a health check fails', async () => {
         vi.useFakeTimers()
         const cluster = new SfuCluster({
-            healthCheck: { intervalMs: 100, onCheck: async () => false },
+            healthCheck: { intervalMs: 100, onCheck: async () => false, failureThreshold: 1 },
         })
         const node = new SfuNode('n1', 'us-east')
         cluster.addNode(node)
@@ -479,7 +479,12 @@ describe('SfuCluster — health check', () => {
         vi.useFakeTimers()
         let healthy = false
         const cluster = new SfuCluster({
-            healthCheck: { intervalMs: 100, onCheck: async () => healthy },
+            healthCheck: {
+                intervalMs: 100,
+                onCheck: async () => healthy,
+                failureThreshold: 1,
+                recoveryThreshold: 1,
+            },
         })
         const node = new SfuNode('n1', 'us-east')
         cluster.addNode(node)
@@ -491,6 +496,71 @@ describe('SfuCluster — health check', () => {
         healthy = true
         await vi.advanceTimersByTimeAsync(120)
         expect(node.isFailed).toBe(false)
+
+        cluster.stopHealthChecks()
+        vi.useRealTimers()
+    })
+
+    it('does not fail a node until the failure threshold is reached (anti-flap)', async () => {
+        vi.useFakeTimers()
+        let calls = 0
+        const cluster = new SfuCluster({
+            // Fail the first two sweeps, then recover — default threshold is 3,
+            // so the node must never be marked failed.
+            healthCheck: { intervalMs: 100, onCheck: async () => ++calls > 2 },
+        })
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+        const onError = vi.fn()
+        cluster.on(SfuClusterEvent.Error, onError)
+
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(350)
+
+        expect(node.isFailed).toBe(false)
+        expect(onError).not.toHaveBeenCalled()
+
+        cluster.stopHealthChecks()
+        vi.useRealTimers()
+    })
+
+    it('fails a node after failureThreshold consecutive failures', async () => {
+        vi.useFakeTimers()
+        const cluster = new SfuCluster({
+            healthCheck: { intervalMs: 100, onCheck: async () => false, failureThreshold: 3 },
+        })
+        const node = new SfuNode('n1', 'us-east')
+        cluster.addNode(node)
+
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(120)
+        expect(node.isFailed).toBe(false)
+        await vi.advanceTimersByTimeAsync(200)
+        expect(node.isFailed).toBe(true)
+
+        cluster.stopHealthChecks()
+        vi.useRealTimers()
+    })
+
+    it('clears health streaks on removeNode so a reused id starts fresh', async () => {
+        // Regression (re-review): a stale fail-streak from a prior incarnation
+        // must not trip the threshold on a restarted node's first probe.
+        vi.useFakeTimers()
+        const healthy = false
+        const cluster = new SfuCluster({
+            healthCheck: { intervalMs: 100, onCheck: async () => healthy, failureThreshold: 3 },
+        })
+        cluster.addNode(new SfuNode('n1', 'us-east'))
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(220) // 2 failed sweeps → _failStreak['n1'] = 2
+        cluster.stopHealthChecks()
+
+        cluster.removeNode('n1') // must clear the streak
+        const fresh = new SfuNode('n1', 'us-east')
+        cluster.addNode(fresh)
+        cluster.startHealthChecks()
+        await vi.advanceTimersByTimeAsync(120) // one failed sweep on the fresh node
+        expect(fresh.isFailed).toBe(false) // would be true if streak leaked (2+1≥3)
 
         cluster.stopHealthChecks()
         vi.useRealTimers()

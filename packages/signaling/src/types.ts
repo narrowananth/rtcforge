@@ -233,6 +233,10 @@ export const CloseReason = {
     Kicked: 'Kicked from room',
     /** The room already holds `maxPeersPerRoom` peers. */
     RoomFull: 'Room is full',
+    /** The room closed (last peer left) while this peer's join was in flight. */
+    RoomClosing: 'Room is closing',
+    /** The server is at its global connection cap. */
+    ServerAtCapacity: 'Server at capacity',
     /** In cluster mode, this room is owned by another node; the client should reconnect to the owner. */
     WrongNode: 'Room owned by another node — reconnect to owner',
 } as const
@@ -312,6 +316,23 @@ export interface SignalingServerOptions {
     auth?: AuthFunction
     /** Hard cap on concurrent peers per room; excess peers are closed with {@link CloseReason.RoomFull}. */
     maxPeersPerRoom?: number
+    /**
+     * Maximum inbound WebSocket message size in bytes; larger frames are
+     * rejected by `ws` before reaching application code. Blunts memory-exhaustion
+     * floods. @defaultValue `262144` (256 KiB)
+     */
+    maxPayloadBytes?: number
+    /**
+     * Hard cap on total concurrent connections across all rooms. Connections
+     * beyond the cap are closed with {@link CloseReason.ServerAtCapacity}.
+     * @defaultValue `10000`
+     */
+    maxConnections?: number
+    /**
+     * Hard cap on the number of concurrent rooms. A connection that would create
+     * a new room past this cap is rejected. @defaultValue `10000`
+     */
+    maxRooms?: number
     /** Maximum lifetime of a room in milliseconds; on expiry all peers are disconnected and the room closes. */
     roomMaxDurationMs?: number
     /** Idle timeout in milliseconds; a room with no relay/broadcast activity for this long is closed. */
@@ -326,9 +347,23 @@ export interface SignalingServerOptions {
     metrics?: MetricsCollector
     /** When `true`, the server assigns each peer's id rather than trusting the client-supplied id. */
     serverAssignedPeerId?: boolean
-    /** Per-peer inbound rate limiting. */
+    /**
+     * Allowlist of `Origin` header values that may connect (CSWSH defense for
+     * browser clients). A connection whose `Origin` is not listed is closed with
+     * {@link CloseCode.PolicyViolation}. Omit to allow any origin (non-browser
+     * clients typically send no `Origin`, which is always allowed).
+     */
+    allowedOrigins?: string[]
+    /**
+     * Per-peer inbound rate limiting. Enabled by default at 100 msg/s; set
+     * `maxMessagesPerSecond` to `0` (or a negative value) to disable.
+     */
     rateLimit?: {
-        /** Maximum inbound messages per second per peer; excess messages are dropped and {@link PeerEvent.RateLimitExceeded} fires. */
+        /**
+         * Maximum inbound messages per second per peer; excess messages are
+         * dropped and {@link PeerEvent.RateLimitExceeded} fires. `0` or negative
+         * disables the limiter. @defaultValue `100`
+         */
         maxMessagesPerSecond?: number
     }
     /** Sink for {@link AuditEvent}s covering peer and room lifecycle transitions. */

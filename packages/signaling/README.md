@@ -34,11 +34,24 @@ import { SignalingServer } from "rtcforge-signaling";
 
 const server = new SignalingServer({
   port: 3001,
-  auth: async (token) => ({ peerId: verify(token) }), // optional auth hook
+  // The auth hook MUST return roomId, peerId, and role (validated by
+  // AuthPayloadSchema) — returning only { peerId } rejects every connection.
+  auth: async (token) => {
+    const user = await verify(token);
+    return { roomId: user.roomId, peerId: user.id, role: user.role ?? "" };
+  },
   maxPeersPerRoom: 50,
 });
 
 await server.start();
+```
+
+Or use the one-call helper, which starts the server with safe defaults on
+(rate-limit, payload cap, connection/room caps) and a `warn`-level logger:
+
+```ts
+import { createSignalingServer } from "rtcforge-signaling";
+const server = await createSignalingServer({ port: 3001, auth });
 ```
 
 ---

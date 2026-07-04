@@ -1,6 +1,13 @@
 import { z } from 'zod'
 
 /**
+ * Signaling wire protocol version. Exposed so a client and server (or a
+ * load balancer) can detect a protocol skew and fail fast instead of hanging on
+ * silently-dropped, newer-shaped frames. Bump on any breaking wire change.
+ */
+export const PROTOCOL_VERSION = 1
+
+/**
  * The `type` discriminator carried by every wire message exchanged over the
  * signaling WebSocket. Some values flow server→client, some client→server, and
  * a few both ways (see {@link ServerMessage} and {@link ClientMessage}).
@@ -71,6 +78,8 @@ export type ClientMessage = z.infer<typeof ClientMessageSchema>
 export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal(MessageType.RoomJoined),
+        /** Server's signaling protocol version; see {@link PROTOCOL_VERSION}. Optional for back-compat. */
+        v: z.number().int().optional(),
         roomId: z.string(),
         peerId: z.string(),
         peers: z.array(z.string()),

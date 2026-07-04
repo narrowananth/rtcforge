@@ -38,10 +38,18 @@ export const ControlType = {
  */
 export type ControlType = (typeof ControlType)[keyof typeof ControlType]
 
+/**
+ * Wire protocol version carried on the file-transfer offer, for forward-compat
+ * negotiation. Receivers may reject or adapt to an unknown/mismatched version.
+ */
+export const FT_PROTOCOL_VERSION = 1
+
 export const ControlMessageSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal(ControlType.Offer),
         transferId: z.string(),
+        /** Protocol version of the sender; see {@link FT_PROTOCOL_VERSION}. Optional for back-compat. */
+        version: z.number().int().optional(),
         name: z.string(),
         mimeType: z.string(),
         size: z.number().int().nonnegative(),

@@ -25,5 +25,11 @@ export type {
     IceServerConfig,
 } from './types.js'
 export type { ServerStats } from './SignalingServer.js'
-export { MessageType } from './protocol.js'
+export {
+    MessageType,
+    PROTOCOL_VERSION,
+    ClientMessageSchema,
+    ServerMessageSchema,
+} from './protocol.js'
 export type { ServerMessage, ClientMessage } from './protocol.js'
+export { createSignalingServer } from './factory.js'

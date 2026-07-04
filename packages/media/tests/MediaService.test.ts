@@ -66,7 +66,7 @@ describe('media plane (real mediasoup worker)', () => {
 
         it('connectTransport throws for unknown transport', async () => {
             await expect(
-                router.connectTransport('ghost', {} as MsTypes.DtlsParameters),
+                router.connectTransport('alice', 'ghost', {} as MsTypes.DtlsParameters),
             ).rejects.toThrow('Transport not found')
         })
 
@@ -124,8 +124,17 @@ describe('media plane (real mediasoup worker)', () => {
             const { producer, rxId } = await produceWithRx(router)
             const consumer = await router.consume('bob', rxId, producer.id, router.rtpCapabilities)
 
-            await router.resumeConsumer(consumer.id)
+            await router.resumeConsumer('bob', consumer.id)
             expect(consumer.paused).toBe(false)
+        })
+
+        it('resumeConsumer rejects a peer that does not own the consumer', async () => {
+            const { producer, rxId } = await produceWithRx(router)
+            const consumer = await router.consume('bob', rxId, producer.id, router.rtpCapabilities)
+            await expect(router.resumeConsumer('mallory', consumer.id)).rejects.toThrow(
+                /does not belong to peer/,
+            )
+            expect(consumer.paused).toBe(true) // untouched
         })
 
         it('closing a producer closes its consumers and emits producerClosed', async () => {

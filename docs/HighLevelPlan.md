@@ -4,6 +4,15 @@
 >
 > *Forge your own real-time infrastructure.*
 
+> ⚠️ **This is the original design/vision document.** It predates the shipped
+> package layout and still uses the planning-era `@rtcforge/*` scoped names. The
+> published packages are **unscoped** (`rtcforge-core`, `rtcforge-sdk`, …), fronted
+> by the one-install **`rtcforge`** meta-package; `mediasoup` is an optional peer
+> dependency of `rtcforge-media`; and `@rtcforge/adapter-udp` shipped as
+> `rtcforge-sfu/udp` (the standalone `rtcforge-adapter-udp` is a deprecated
+> re-export). For accurate install/usage see [`../README.md`](../README.md),
+> [`PUBLISHING.md`](PUBLISHING.md), and [`BUILDING_APPS.md`](BUILDING_APPS.md).
+
 ---
 
 ## Overview
@@ -36,7 +45,7 @@ Application-level features (chat, presence, whiteboard, recording, streaming log
 RTCForge is consumed as npm packages inside **your own Node.js project**.
 
 ```bash
-npm install @rtcforge/signaling @rtcforge/media
+npm i rtcforge            # shipped name (add `mediasoup` for the SFU media plane)
 ```
 
 You import the classes, configure them, and build your **application layer** on top.
@@ -305,10 +314,10 @@ Anything else (storage, messaging, queues, egress) is entirely your application'
 
 * `@rtcforge/core` — EventEmitter, Logger, noopLogger, MetricsCollector, noopMetrics, Metric, toError, **HashRing, GossipMembership, Membership, Clock, StateStore, MessageBus, Lock, IdGenerator** — zero dependencies
 * `@rtcforge/signaling` — SignalingServer, Room, Peer, session lifecycle, built-in auth hook, **RoomRouter (cluster sharding)**
-* `@rtcforge/media` — MediaService, MediaRouter, Producer, Consumer, WorkerPool (mediasoup), PeerConnection (mesh), MediaManager
-* `@rtcforge/sfu` — SfuNode, SfuCluster, CascadingRouter, SfuBridge, SimpleBandwidthEstimator, **HashRingStrategy, CascadeTree, CascadeBridge**
+* `@rtcforge/media` — MediaService, MediaRouter, SfuSignalHandler, Producer, Consumer, WorkerPool (mediasoup — **optional peer dep**), PeerConnection (mesh), MediaManager
+* `@rtcforge/sfu` — SfuNode, SfuCluster, CascadingRouter, SfuBridge, SimpleBandwidthEstimator, ReferenceSfuMedia, **HashRingStrategy, CascadeTree, CascadeBridge**; gossip wire at `rtcforge-sfu/udp`
 * `@rtcforge/sdk` — Browser + Node.js client SDK
-* `@rtcforge/adapter-udp` — UdpGossipTransport (gossip network wire)
+* `@rtcforge/adapter-udp` — **deprecated**, re-exports `rtcforge-sfu/udp` (`UdpGossipTransport`)
 
 ### Application Layer — You Provide
 
@@ -348,22 +357,25 @@ Anything else (storage, messaging, queues, egress) is entirely your application'
 mkdir my-rtc-app && cd my-rtc-app
 npm init -y
 
-# Install what you need
-npm install @rtcforge/signaling @rtcforge/media @rtcforge/sdk
+# Install what you need (shipped names)
+npm i rtcforge            # or cherry-pick: rtcforge-signaling rtcforge-sdk rtcforge-media
 ```
 
 ---
 
 ## Package Structure (Core Layer)
 
-| Package | Purpose | Status |
+> Shipped names are unscoped (drop the `@` and slash: `@rtcforge/core` → `rtcforge-core`), fronted by the `rtcforge` meta-package.
+
+| Package (shipped name) | Purpose | Status |
 | ------- | ------- | ------ |
-| `@rtcforge/core` | Shared primitives: EventEmitter, Logger, noopLogger, MetricsCollector, noopMetrics, Metric, toError — **plus shared-nothing scale primitives**: HashRing, GossipMembership (SWIM), Membership, Clock, StateStore, MessageBus, Lock, IdGenerator (interfaces + in-memory/pure defaults) — zero dependencies | ✅ Done |
-| `@rtcforge/signaling` | SignalingServer, Room, Peer, session lifecycle, auth hook, **`RoomRouter` cluster routing** | ✅ Done |
-| `@rtcforge/media` | PeerConnection (mesh), MediaService, MediaRouter, Producer, Consumer, WorkerPool | ✅ Mesh · ✅ SFU (mediasoup-backed) |
-| `@rtcforge/sfu` | SfuNode, SfuCluster, CascadingRouter, SfuBridge, `HashRingStrategy`, `CascadeTree`/`CascadeBridge` (broadcast fan-out), bandwidth estimation | ✅ Cluster/cascading/estimator + `error` event · ✅ media-plane pipe bridging engine · ✅ shared-nothing placement + 1M-viewer fan-out tree |
-| `@rtcforge/sdk` | Browser + Node.js client SDK | ✅ Done |
-| `@rtcforge/adapter-udp` | `UdpGossipTransport` — real network wire for gossip (the only socket code; swap for WS/TLS if needed) | ✅ Done |
+| `rtcforge` | One-install meta-package — subpaths `rtcforge/client`, `/server`, `/media`, `/filetransfer` | ✅ Done |
+| `rtcforge-core` | Shared primitives: EventEmitter, Logger, consoleLogger, noopLogger, MetricsCollector, noopMetrics, Metric, toError — **plus shared-nothing scale primitives**: HashRing, GossipMembership (SWIM), Membership, Clock, StateStore, MessageBus, Lock, IdGenerator (interfaces + in-memory/pure defaults) — zero dependencies | ✅ Done |
+| `rtcforge-signaling` | SignalingServer (+ `createSignalingServer`), Room, Peer, session lifecycle, auth hook, safe defaults on, **`RoomRouter` cluster routing** | ✅ Done |
+| `rtcforge-media` | PeerConnection (mesh), MediaService, MediaRouter, SfuSignalHandler, Producer, Consumer, WorkerPool — **`mediasoup` is an optional peer dep** | ✅ Mesh · ✅ SFU (mediasoup-backed) |
+| `rtcforge-sfu` | SfuNode, SfuCluster, CascadingRouter, SfuBridge, `HashRingStrategy`, `CascadeTree`/`CascadeBridge`, `ReferenceSfuMedia`, bandwidth estimation; gossip wire at `rtcforge-sfu/udp` | ✅ Cluster/cascading/estimator + `error` event · ✅ media-plane pipe bridging engine · ✅ shared-nothing placement + 1M-viewer fan-out tree |
+| `rtcforge-sdk` | Browser + Node.js client SDK (+ `createClient`, `/filetransfer`) | ✅ Done |
+| `rtcforge-adapter-udp` | **Deprecated** — re-exports `rtcforge-sfu/udp` (`UdpGossipTransport`) | ⚠️ Deprecated |
 
 ---
 

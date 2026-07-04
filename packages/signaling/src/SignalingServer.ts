@@ -21,6 +21,11 @@ import {
 } from './types.js'
 import type { IceServerConfig, Logger, MetricsCollector, SignalingServerOptions } from './types.js'
 
+const DEFAULT_MAX_PAYLOAD_BYTES = 262_144
+const DEFAULT_MAX_CONNECTIONS = 10_000
+const DEFAULT_MAX_ROOMS = 10_000
+const DEFAULT_MAX_MESSAGES_PER_SECOND = 100
+
 /**
  * A point-in-time snapshot of server activity, returned by
  * {@link SignalingServer.getStats}.
@@ -96,6 +101,11 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private ownServer?: http.Server
     private startedAt = 0
     private _stopped = false
+    private _connections = 0
+    private readonly maxConnections: number
+    private readonly maxRooms: number
+    private readonly maxPayloadBytes: number
+    private readonly effectiveRateLimit: number | undefined
 
     /**
      * Creates a signaling server. No socket is opened until
@@ -111,6 +121,14 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
         this.opts = opts
         this.logger = opts.logger ?? noopLogger
         this.metrics = opts.metrics ?? noopMetrics
+
+        this.maxConnections = opts.maxConnections ?? DEFAULT_MAX_CONNECTIONS
+        this.maxRooms = opts.maxRooms ?? DEFAULT_MAX_ROOMS
+        this.maxPayloadBytes = opts.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES
+        // Rate limiting is on by default; an explicit 0 or negative disables it.
+        const rl = opts.rateLimit?.maxMessagesPerSecond
+        this.effectiveRateLimit =
+            rl === undefined ? DEFAULT_MAX_MESSAGES_PER_SECOND : rl > 0 ? rl : undefined
 
         this.registry = new RoomRegistry({
             maxPeers: opts.maxPeersPerRoom,
@@ -156,21 +174,63 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
      * @throws If the underlying HTTP server fails to bind (e.g. port in use).
      */
     async start(): Promise<void> {
+        // Re-entrancy guard: a second start() would overwrite this.wss and leak
+        // the first server + its listeners.
+        if (this.wss) throw new Error('SignalingServer already started')
+        this._stopped = false
         if (this.opts.server) {
-            this.wss = new WebSocketServer({ server: this.opts.server })
+            this.wss = new WebSocketServer({
+                server: this.opts.server,
+                maxPayload: this.maxPayloadBytes,
+            })
         } else {
             const ownServer = http.createServer()
             this.ownServer = ownServer
-            this.wss = new WebSocketServer({ server: ownServer })
-            await new Promise<void>((resolve, reject) => {
-                ownServer.on('error', reject)
-                ownServer.listen(this.opts.port ?? 3000, resolve)
-            })
+            this.wss = new WebSocketServer({ server: ownServer, maxPayload: this.maxPayloadBytes })
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    ownServer.on('error', reject)
+                    ownServer.listen(this.opts.port ?? 3000, resolve)
+                })
+            } catch (err) {
+                // Bind failed (e.g. EADDRINUSE): reset so a retry start() works and
+                // a recovery stop() doesn't close a never-listening server.
+                this.wss = undefined
+                this.ownServer = undefined
+                throw err
+            }
         }
 
         this.startedAt = Date.now()
 
         this.wss.on('connection', (ws, req) => {
+            // Attach a socket 'error' handler SYNCHRONOUSLY, before any await.
+            // The Peer's own listener is added only after async auth/iceServersHook,
+            // so without this a client that RSTs during auth — or on any rejection
+            // path below — would emit 'error' with no listener and crash the process.
+            ws.on('error', (err: Error) => {
+                this.logger.warn('Client socket error', { err: err.message })
+            })
+            // CSWSH defense: if an origin allowlist is configured, reject any
+            // browser Origin not on it. Non-browser clients send no Origin (allowed).
+            const allowed = this.opts.allowedOrigins
+            const origin = req.headers.origin
+            if (allowed && origin !== undefined && !allowed.includes(origin)) {
+                this.logger.warn('Connection rejected — origin not allowed', { origin })
+                ws.close(CloseCode.PolicyViolation, CloseReason.AuthFailed)
+                return
+            }
+            if (this._connections >= this.maxConnections) {
+                this.logger.warn('Connection rejected — server at capacity', {
+                    connections: this._connections,
+                })
+                ws.close(CloseCode.PolicyViolation, CloseReason.ServerAtCapacity)
+                return
+            }
+            this._connections++
+            ws.once('close', () => {
+                this._connections--
+            })
             this.handleConnection(ws, req).catch((err: Error) => {
                 this.logger.error('Connection handler error', { err: err.message })
                 ws.close(CloseCode.PolicyViolation, 'Internal error')
@@ -221,7 +281,20 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             })
         }
 
+        this.wss = undefined
+        this.ownServer = undefined
         this.logger.info('SignalingServer stopped')
+    }
+
+    /**
+     * The TCP port the server is actually listening on, or `undefined` before
+     * {@link SignalingServer.start} resolves. Resolves the OS-assigned port when
+     * the server was created with `port: 0`.
+     */
+    get port(): number | undefined {
+        const addr = this.ownServer?.address()
+        if (addr && typeof addr === 'object') return addr.port
+        return this.startedAt > 0 ? (this.opts.port ?? 3000) : undefined
     }
 
     /**
@@ -333,6 +406,16 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             return
         }
 
+        // Reject connections that would create a new room past the global cap.
+        if (!this.registry.get(roomId) && this.registry.size >= this.maxRooms) {
+            this.logger.warn('Connection rejected — room cap reached', {
+                roomId,
+                rooms: this.registry.size,
+            })
+            ws.close(CloseCode.PolicyViolation, CloseReason.ServerAtCapacity)
+            return
+        }
+
         const { room, isNew } = this.registry.getOrCreate(roomId)
 
         const onSignal = (to: string, data: unknown) => {
@@ -344,7 +427,7 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             ws,
             onSignal,
             metadata,
-            maxMessagesPerSecond: this.opts.rateLimit?.maxMessagesPerSecond,
+            maxMessagesPerSecond: this.effectiveRateLimit,
         })
 
         peer.on(PeerEvent.Error, (err) => {

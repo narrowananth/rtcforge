@@ -75,6 +75,20 @@ describe('GossipMembership — convergence', () => {
         const last = watcher.mock.lastCall?.[0] as NodeInfo[]
         expect(last.map((n) => n.id).sort()).toEqual(['n1', 'n2', 'n3'])
     })
+
+    it('propagates a deregister of a departed node (SWIM dead-override)', async () => {
+        // Regression (REVIEW.md #21): once a node departs (stops refuting), a
+        // deregister must propagate its death rather than being ignored/revived.
+        clock.advance(2000) // everyone converged
+        expect(await aliveIds(n2)).toEqual(['n1', 'n2', 'n3'])
+
+        n3.stop() // n3 leaves — it no longer refutes
+        await n1.deregister('n3')
+        clock.advance(600) // < deadTimeoutMs (1000): the deregister, not a timeout, does it
+
+        expect(await aliveIds(n1)).not.toContain('n3')
+        expect(await aliveIds(n2)).not.toContain('n3')
+    })
 })
 
 describe('GossipMembership — tombstone GC (no unbounded growth)', () => {

@@ -241,6 +241,29 @@ describe('RTCForgeClient', () => {
         vi.useRealTimers()
     })
 
+    it('a 1008 close before room-joined rejects joinRoom now (not after timeout) and emits Terminated', async () => {
+        const client = new RTCForgeClient({ serverUrl: 'ws://localhost:3000', reconnect: true })
+        const terminated = vi.fn()
+        client.on(ClientEvent.Terminated, terminated)
+        const promise = client.joinRoom('r1')
+        await tick()
+
+        const ws = latestWs()
+        ws.open() // socket opens, but server rejects before room-joined
+        ws.closeWith(1008, 'bad token')
+
+        await expect(promise).rejects.toThrow(/terminated|1008/i)
+        expect(terminated).toHaveBeenCalledWith(1008, 'bad token')
+
+        // Client is reset — a fresh join works without leave() (no "Already in a room").
+        const p2 = client.joinRoom('r1')
+        await tick()
+        const ws2 = latestWs()
+        ws2.open()
+        ws2.message({ type: MessageType.RoomJoined, roomId: 'r1', peerId: 'p1', peers: [] })
+        await expect(p2).resolves.toBeTruthy()
+    })
+
     it('logger receives info on connect and disconnect', async () => {
         const logger = {
             debug: vi.fn(),

@@ -2,7 +2,7 @@
 
 The one guide to implementing RTCForge in your app. **Pick your app type → get the exact packages, the wiring, and a working example.** For per-class signatures and options, see the **[API reference](https://narrowananth.github.io/rtcforge/)**.
 
-You never install all six packages. Every real app uses 2–4. `rtcforge-core` always arrives transitively — never install it directly.
+Most apps install one package — **`rtcforge`** — and import from its subpaths (`rtcforge/client`, `rtcforge/server`, `rtcforge/media`, `rtcforge/filetransfer`); add `mediasoup` only for the SFU media plane, and `rtcforge-sfu` only for multi-node scale. Prefer to cherry-pick? The individual `rtcforge-*` packages below still work, and `rtcforge-core` always arrives transitively — never install it directly.
 
 ---
 
@@ -45,37 +45,39 @@ Each lists the package set, install, backend + frontend sketch, and the key clas
 `rtcforge-signaling` (server) · `rtcforge-sdk` (client). No media. The signaling channel is a fast, authenticated, room-scoped message bus — chat, typing, presence, and reactions are just messages you relay.
 
 ```bash
-npm i rtcforge-signaling   # backend
-npm i rtcforge-sdk         # frontend
+npm i rtcforge            # frontend + backend (or: rtcforge-signaling + rtcforge-sdk)
 ```
 
-**Backend:**
+**Backend:** (`createSignalingServer` starts with safe defaults on — rate-limit, payload cap, connection/room caps — and a `warn` logger)
 
 ```ts
-import { SignalingServer } from "rtcforge-signaling";
+import { createSignalingServer } from "rtcforge/server";   // or "rtcforge-signaling"
 
-const server = new SignalingServer({
+const server = await createSignalingServer({
   port: 3001,
+  // auth MUST return roomId + peerId + role (validated) — returning only peerId rejects everyone.
   auth: async (token) => {
     const user = await myAuth.verify(token);            // your JWT/session check
-    return { roomId: user.roomId, peerId: user.id, metadata: { name: user.name } };
+    return { roomId: user.roomId, peerId: user.id, role: user.role ?? "", metadata: { name: user.name } };
   },
   maxPeersPerRoom: 200,
 });
-await server.start();
 ```
 
-**Frontend:**
+**Frontend:** (`peer-joined`/`peer-left` payloads are the peer id string)
 
 ```ts
-import { RTCForgeClient, RoomEvent } from "rtcforge-sdk";
+import { createClient, RoomEvent } from "rtcforge/client";   // or "rtcforge-sdk"
 
-const client = new RTCForgeClient({ serverUrl: "wss://rtc.myapp.com", token });
+const client = createClient({ serverUrl: "wss://rtc.myapp.com", token });
 const room = await client.joinRoom("general");
 
-room.on(RoomEvent.PeerJoined, (peer) => showPresence(peer));
+room.on(RoomEvent.PeerJoined, (peerId) => showPresence(peerId));
 room.broadcast("chat", { text: "hello", at: Date.now() });   // fan out to the room
-room.on("chat", (msg, from) => renderMessage(from, msg));
+// One "broadcast" event carries (from, channel, data) — filter by channel:
+room.on("broadcast", (from, channel, data) => {
+  if (channel === "chat") renderMessage(from, data);
+});
 ```
 
 **Key classes:** `SignalingServer`, `Room`, `Peer`, `RTCForgeClient`.
@@ -92,7 +94,9 @@ Same package set as chat — collaboration is high-frequency structured messages
 ```ts
 const room = await client.joinRoom("board-42");
 room.broadcast("stroke", { points, color });
-room.on("stroke", (op) => applyStroke(op));
+room.on("broadcast", (_from, channel, op) => {
+  if (channel === "stroke") applyStroke(op);
+});
 ```
 
 **Key classes:** `RTCForgeClient`, `Room`.
@@ -101,15 +105,15 @@ room.on("stroke", (op) => applyStroke(op));
 
 ### 3. P2P file transfer
 
-`rtcforge-sdk/filetransfer` (+ `signaling` for peer discovery). Files move **directly peer-to-peer** over a DataChannel — chunked, checksummed, resumable — the server never sees the bytes.
+`rtcforge/filetransfer` (or `rtcforge-sdk/filetransfer`) + `signaling` for peer discovery. Files move **directly peer-to-peer** over a DataChannel — chunked, checksummed, backpressured — the server never sees the bytes.
 
 ```ts
-import { FileTransferManager } from "rtcforge-sdk/filetransfer";
+import { FileTransferManager } from "rtcforge/filetransfer";
 // Node receivers: import sinks from "rtcforge-sdk/filetransfer/node"
 
-const ft = new FileTransferManager(/* signaling room / data channel */);
-await ft.sendFile(file);                                  // File | Blob in the browser
-ft.on("progress", ({ sent, total }) => updateBar(sent / total));
+const ft = new FileTransferManager(hub, { maxFileSize: 2 * 1024 ** 3 }); // hub = your DataChannel source
+const transfer = ft.sendFile(peerId, file);              // File | Blob in the browser
+transfer.on("progress", (p) => updateBar(p.ratio));
 ```
 
 **Key classes:** `FileTransferManager`, `SendTransfer`, `ReceiveTransfer`, sinks (`MemorySink`, `StorageSink`, `FileSystemAccessSink`, Node `NodeFileSink`). See the `filetransfer` module in the API reference.
@@ -121,14 +125,15 @@ ft.on("progress", ({ sent, total }) => updateBar(sent / total));
 `signaling` + `sdk` + **`rtcforge-media`** (`Call`). Media flows **directly between browsers** (P2P/TURN); the server only relays SDP/ICE. Cheapest and lowest-latency, but each client's uplink grows with peer count — cap around 4.
 
 ```bash
-npm i rtcforge-media rtcforge-core rtcforge-sdk rtcforge-signaling   # media peer-deps are NOT auto-installed
+npm i rtcforge            # gives you rtcforge/client + rtcforge/media
+# P2P mesh needs no mediasoup; add `mediasoup` only for the SFU plane (blueprint 5+)
 ```
 
 ```ts
-import { Call, MediaEvent, getUserMedia } from "rtcforge-media";
-import { RTCForgeClient } from "rtcforge-sdk";
+import { Call, MediaEvent, getUserMedia } from "rtcforge/media";   // or "rtcforge-media"
+import { createClient } from "rtcforge/client";
 
-const client = new RTCForgeClient({ serverUrl: "wss://rtc.myapp.com", token });
+const client = createClient({ serverUrl: "wss://rtc.myapp.com", token });
 const room = await client.joinRoom("r1");
 
 const stream = await getUserMedia({ audio: true, video: true });
@@ -147,20 +152,22 @@ Backend = the same `SignalingServer`, plus per-peer TURN (see [Backend setup](#b
 
 ### 5. Group rooms & webinars (5–50) — single-node SFU
 
-Add `rtcforge-media` **`MediaService`** (mediasoup SFU). Each client uploads **once**; the server forwards each stream to everyone. Client bandwidth stays flat regardless of room size; server CPU scales across cores via `WorkerPool`.
+Add `rtcforge-media` **`MediaService`** (mediasoup SFU — install `mediasoup` alongside). Each client uploads **once**; the server forwards each stream to everyone. Client bandwidth stays flat regardless of room size; server CPU scales across cores via `WorkerPool`.
 
 ```ts
-import { SignalingServer } from "rtcforge-signaling";
-import { MediaService } from "rtcforge-media";
+import { createSignalingServer } from "rtcforge/server";
+import { MediaService, SfuSignalHandler } from "rtcforge/media";
 
-const server = new SignalingServer({ port: 3001, auth });
+const server = await createSignalingServer({ port: 3001, auth });
 const media = new MediaService({ /* worker settings, codecs */ });
-await server.start();
-// per room: media.attachRoom(room) → a MediaRouter answers
-// createWebRtcTransport / produce / consume over your signaling messages
+await media.init();
+// per room: attach a router and let SfuSignalHandler drive the SFU handshake
+const router = await media.attachRoom(room);
+const sfu = new SfuSignalHandler(router);   // caps → transport → connect → produce/consume → resume
+// on an inbound SFU message from `peerId`: room.send(peerId, await sfu.handle(peerId, msg))
 ```
 
-Frontend: instead of a mesh `Call`, request a transport against the server's `MediaRouter`, then `produce` your tracks and `consume` others'.
+`SfuSignalHandler` implements the server side of the SFU control protocol (with transport-ownership enforcement and ingress validation), so you no longer hand-roll it. Frontend: request a transport against the server's `MediaRouter` (via `mediasoup-client`), then `produce` your tracks and `consume` others'.
 
 **Key classes:** `MediaService`, `MediaRouter`, `WorkerPool`, `Producer`, `Consumer`.
 
@@ -186,11 +193,18 @@ Everything above **+ `rtcforge-sfu` + `rtcforge-adapter-udp`** — many SFU node
 
 ```ts
 import { SfuCluster, HashRingStrategy } from "rtcforge-sfu";
-import { UdpGossipTransport } from "rtcforge-adapter-udp";
+import { UdpGossipTransport } from "rtcforge-sfu/udp";        // was: rtcforge-adapter-udp
 import { GossipMembership } from "rtcforge-core";
 
-const transport = new UdpGossipTransport({ port: 7946, advertiseHost: "10.0.0.5" });
+const transport = new UdpGossipTransport({
+  port: 7946,
+  advertiseHost: "10.0.0.5",                                 // real routable host — NOT 127.0.0.1
+  secret: process.env.GOSSIP_SECRET,                         // HMAC-authenticate gossip (recommended)
+});
+await transport.listen();                                    // bind before starting membership
+
 const membership = new GossipMembership({ id: "sfu-eu-1", address: "10.0.0.5:7946" }, transport);
+membership.start();
 
 const cluster = new SfuCluster({ membership, placementStrategy: new HashRingStrategy() });
 const owner = cluster.assignNode(undefined, "stream-42");   // which node hosts this room
@@ -243,11 +257,13 @@ const client = new RTCForgeClient({
 ## Going to production
 
 - **TURN** — production needs it for ~15% of users behind strict NAT. Run coturn; mint per-peer creds in `iceServersHook` → delivered in `room-joined.iceServers`.
-- **Reconnect** — built in (`reconnect: true`): backoff + a send queue that replays buffered messages on reconnect. Nothing to wire. Tune `maxReconnectAttempts`, `maxQueueSize`.
-- **Observability** — pass `rtcforge-core` `Logger` + `MetricsCollector` into every package; consume `auditLog` for join/leave/kick.
+- **Reconnect** — built in (`reconnect: true`): backoff + a send queue that replays buffered messages on reconnect. Nothing to wire. Tune `maxReconnectAttempts`, `maxQueueSize`. A non-retryable close (default `1008`, e.g. an expired token) stops the loop and emits `TransportEvent.Terminated` instead of retrying forever.
+- **Safe defaults** — `SignalingServer` ships with per-peer rate limiting, a `maxPayloadBytes` cap, and connection/room caps **on by default**; raise or disable them explicitly (`rateLimit.maxMessagesPerSecond: 0` disables). `createSignalingServer` / `createClient` also default a `warn`-level `consoleLogger` so silent drops are visible.
+- **Observability** — pass `rtcforge-core` `Logger` (or `consoleLogger`) + `MetricsCollector` into every package; consume `auditLog` for join/leave/kick.
 - **Room limits** — `roomIdleTimeoutMs`, `roomMaxDurationMs`, `rateLimit.maxMessagesPerSecond` to blunt floods.
 - **Scaling signaling** — `SignalingServer` is per-process. For HA, run a fleet with `cluster: { selfId, membership }`; `RoomRouter` shards rooms by `HashRing` over gossip. Put a **sticky** load balancer in front (a peer's WebSocket stays on one instance), and either redirect via `onRedirect(peerId, roomId, owner)` or route at the edge (`ring.get(roomId)`).
-- **Scaling SFU** — `new SfuCluster({ membership, placementStrategy: new HashRingStrategy() })` with a `nodeFactory` that sets each host's real `capacity`. `SfuNode.drain()` for graceful deploys. A dead node stops gossiping → ring rebalances → rooms reroute automatically.
+- **Scaling SFU** — `new SfuCluster({ membership, placementStrategy: new HashRingStrategy() })` with a `nodeFactory` that sets each host's real `capacity`. Provide `healthCheck.onCheck` and call `startHealthChecks()` — a node is only failed after `failureThreshold` consecutive misses (no flapping). `SfuNode.drain()` for graceful deploys. A dead node stops gossiping → ring rebalances → rooms reroute automatically.
+- **Gossip security** — set a shared `secret` on `UdpGossipTransport` (from `rtcforge-sfu/udp`) on any network that isn't fully trusted; without it, datagrams are unauthenticated.
 - **Bandwidth** — `SimpleBandwidthEstimator` (high/medium/low + hysteresis) drives simulcast layer selection per subscriber; enable `CallOptions.simulcast`.
 
 ---

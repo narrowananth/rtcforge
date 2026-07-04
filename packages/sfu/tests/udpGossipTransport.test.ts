@@ -1,12 +1,14 @@
+import { createHmac } from 'node:crypto'
+import dgram from 'node:dgram'
 import { GossipMembership } from 'rtcforge-core'
 import type { GossipMessage } from 'rtcforge-core'
 import { afterEach, describe, expect, it } from 'vitest'
-import { UdpGossipTransport } from '../src/UdpGossipTransport.js'
+import { UdpGossipTransport } from '../src/udp.js'
 
 const LOCAL = '127.0.0.1'
 
-function transport(): UdpGossipTransport {
-    return new UdpGossipTransport({ port: 0, bindHost: LOCAL, advertiseHost: LOCAL })
+function transport(secret?: string): UdpGossipTransport {
+    return new UdpGossipTransport({ port: 0, bindHost: LOCAL, advertiseHost: LOCAL, secret })
 }
 
 const nextMessage = (t: UdpGossipTransport): Promise<GossipMessage> =>
@@ -44,6 +46,70 @@ describe('UdpGossipTransport — wire', () => {
         }
         a.send(b.address, msg)
         expect(await received).toEqual(msg)
+    })
+
+    it('with a shared secret, accepts HMAC-signed peers and drops unsigned/wrong-secret ones', async () => {
+        // Regression (REVIEW.md HIGH #22/#23): unauthenticated gossip lets anyone
+        // inject/reflect membership. With a secret, only correctly-signed
+        // datagrams are delivered.
+        const a = transport('shared-secret')
+        const b = transport('shared-secret')
+        const attacker = transport('wrong-secret')
+        cleanup.push(a, b, attacker)
+        await a.listen()
+        await b.listen()
+        await attacker.listen()
+
+        const delivered: GossipMessage[] = []
+        b.onReceive((m) => delivered.push(m))
+
+        const legit: GossipMessage = {
+            from: 'a',
+            members: [{ id: 'a', incarnation: 1, alive: true }],
+        }
+        const spoof: GossipMessage = {
+            from: 'evil',
+            members: [{ id: 'victim', incarnation: 999, alive: false }],
+        }
+        attacker.send(b.address, spoof) // wrong MAC → dropped
+        a.send(b.address, legit) // valid MAC → delivered
+        await sleep(50)
+
+        expect(delivered).toEqual([legit])
+    })
+
+    it('drops a replayed datagram with a stale timestamp (valid MAC, old ts)', async () => {
+        // Regression (checklist): even a correctly-signed datagram must be
+        // rejected once outside the replay window.
+        const secret = 'shared-secret'
+        const b = new UdpGossipTransport({
+            port: 0,
+            bindHost: LOCAL,
+            advertiseHost: LOCAL,
+            secret,
+            replayWindowMs: 1000,
+        })
+        cleanup.push(b)
+        await b.listen()
+        const delivered: GossipMessage[] = []
+        b.onReceive((m) => delivered.push(m))
+
+        // Hand-craft the authenticated wire: [mac(32)] [ts(8)] [json], with a ts
+        // far in the past. MAC is valid (computed with the shared secret).
+        const json = Buffer.from(JSON.stringify({ from: 'evil', members: [] }))
+        const ts = Buffer.allocUnsafe(8)
+        ts.writeDoubleBE(Date.now() - 60_000, 0) // 60s old, window is 1s
+        const signed = Buffer.concat([ts, json])
+        const mac = createHmac('sha256', Buffer.from(secret)).update(signed).digest()
+        const wire = Buffer.concat([mac, signed])
+
+        const raw = dgram.createSocket('udp4')
+        const port = Number(b.address.split(':')[1])
+        await new Promise<void>((res) => raw.send(wire, port, LOCAL, () => res()))
+        raw.close()
+        await sleep(50)
+
+        expect(delivered).toHaveLength(0) // stale → dropped despite valid MAC
     })
 
     it('drops malformed and invalid datagrams but still delivers valid ones', async () => {

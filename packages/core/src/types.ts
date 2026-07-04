@@ -52,6 +52,40 @@ export const noopLogger: Logger = {
     fatal: () => {},
 }
 
+/** Ordered severity levels used by {@link consoleLogger}. */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal'
+
+const LEVEL_ORDER: Record<LogLevel, number> = {
+    debug: 10,
+    info: 20,
+    warn: 30,
+    error: 40,
+    fatal: 50,
+}
+
+/**
+ * A {@link Logger} that writes to the console at or above `minLevel`. Handy as a
+ * sensible default (so silent drops and validation failures are visible) instead
+ * of {@link noopLogger}; swap in your own structured logger in production.
+ *
+ * @param minLevel - Lowest level to emit. @defaultValue `'warn'`
+ */
+export function consoleLogger(minLevel: LogLevel = 'warn'): Logger {
+    const min = LEVEL_ORDER[minLevel]
+    const at =
+        (level: LogLevel, sink: (msg: string, ctx?: Record<string, unknown>) => void) =>
+        (msg: string, ctx?: Record<string, unknown>): void => {
+            if (LEVEL_ORDER[level] >= min) ctx ? sink(msg, ctx) : sink(msg)
+        }
+    return {
+        debug: at('debug', (m, c) => console.debug(m, c ?? '')),
+        info: at('info', (m, c) => console.info(m, c ?? '')),
+        warn: at('warn', (m, c) => console.warn(m, c ?? '')),
+        error: at('error', (m, c) => console.error(m, c ?? '')),
+        fatal: at('fatal', (m, c) => console.error(m, c ?? '')),
+    }
+}
+
 /**
  * Sink for operational metrics emitted by RTCForge.
  *

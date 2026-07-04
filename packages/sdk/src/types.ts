@@ -40,6 +40,13 @@ export interface TransportOptions {
     /** Maximum reconnect attempts before giving up; unlimited when omitted. */
     maxReconnectAttempts?: number
     /**
+     * WebSocket close codes that must NOT trigger a reconnect — retrying would
+     * be futile (e.g. a rejected/expired auth token closes with `1008`). On such
+     * a close the transport emits {@link TransportEvent.Terminated} and stops.
+     * @defaultValue `[1008]`
+     */
+    nonRetryableCloseCodes?: number[]
+    /**
      * Timeout (ms) for a single connect attempt. `0` disables the timeout.
      * @defaultValue `10000`
      */
@@ -88,6 +95,12 @@ export interface RTCForgeClientOptions {
     maxReconnectDelay?: number
     /** Maximum reconnect attempts before failing; unlimited when omitted. */
     maxReconnectAttempts?: number
+    /**
+     * Close codes that must NOT trigger a reconnect (retrying is futile, e.g. a
+     * rejected/expired token → `1008`). Forwarded to the transport; on such a
+     * close the client emits {@link ClientEvent.Terminated}. @defaultValue `[1008]`
+     */
+    nonRetryableCloseCodes?: number[]
     /** Timeout (ms) for a single connect attempt. */
     connectTimeoutMs?: number
     /** Maximum number of messages queued while offline. @defaultValue `100` */
@@ -230,6 +243,13 @@ export const ClientEvent = {
     Reconnecting: 'reconnecting',
     /** A transport or server error occurred; handler receives an `Error`. */
     Error: 'error',
+    /**
+     * The connection is permanently terminated — a non-retryable close (e.g.
+     * expired/rejected token, `code` 1008) or reconnect exhaustion. Handler
+     * receives `code` and `reason`. The client resets so you can `joinRoom` again
+     * (e.g. after refreshing credentials) without calling `leave()` first.
+     */
+    Terminated: 'terminated',
 } as const
 
 /** Union of the {@link ClientEvent} string values. */
@@ -247,6 +267,12 @@ export const TransportEvent = {
     Error: 'error',
     /** A reconnect attempt started; handler receives the attempt number. */
     Reconnecting: 'reconnecting',
+    /**
+     * The transport gave up permanently — either a non-retryable close code
+     * (e.g. auth failure / expired token) or reconnect exhaustion. No further
+     * reconnects will be attempted. Handler receives `code` and `reason`.
+     */
+    Terminated: 'terminated',
 } as const
 
 /** Union of the {@link TransportEvent} string values. */
@@ -256,6 +282,12 @@ export type TransportEvent = (typeof TransportEvent)[keyof typeof TransportEvent
 export const CloseCode = {
     /** Normal closure (RFC 6455 code 1000), sent when the client closes intentionally. */
     Normal: 1000,
+    /**
+     * Policy violation (RFC 6455 code 1008), sent by the server on auth failure,
+     * rejected/expired token, rate/room-full rejection, or kick. Treated as
+     * non-retryable by default (see {@link TransportOptions.nonRetryableCloseCodes}).
+     */
+    PolicyViolation: 1008,
 } as const
 
 /** Union of the {@link CloseCode} numeric values. */

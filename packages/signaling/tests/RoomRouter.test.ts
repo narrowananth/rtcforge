@@ -62,14 +62,45 @@ describe('RoomRouter', () => {
     })
 })
 
-function waitClose(ws: WebSocket): Promise<{ code: number; reason: string }> {
-    return new Promise((resolve) => {
-        ws.once('close', (code, reason) => resolve({ code, reason: reason.toString() }))
-    })
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Ephemeral (port: 0) servers recycle ports across parallel workers, so a fresh
+// client occasionally races the http→ws upgrade and sees a transient 'error'.
+// Retry the whole connect until the expected outcome (close / first message).
+async function connectExpectClose(
+    url: string,
+    open: WebSocket[],
+    attempts = 5,
+): Promise<{ code: number; reason: string }> {
+    for (let i = 0; i < attempts; i++) {
+        const ws = new WebSocket(url)
+        open.push(ws)
+        const r = await new Promise<{ code: number; reason: string } | null>((resolve) => {
+            ws.once('close', (code, reason) => resolve({ code, reason: reason.toString() }))
+            ws.once('error', () => resolve(null))
+        })
+        if (r) return r
+        await sleep(15)
+    }
+    throw new Error('connectExpectClose: exhausted retries')
 }
 
-function firstMessage(ws: WebSocket): Promise<unknown> {
-    return new Promise((resolve) => ws.once('message', (d) => resolve(JSON.parse(d.toString()))))
+async function connectExpectMessage(
+    url: string,
+    open: WebSocket[],
+    attempts = 5,
+): Promise<unknown> {
+    for (let i = 0; i < attempts; i++) {
+        const ws = new WebSocket(url)
+        open.push(ws)
+        const r = await new Promise<unknown>((resolve) => {
+            ws.once('message', (d) => resolve(JSON.parse(d.toString())))
+            ws.once('error', () => resolve(null))
+        })
+        if (r !== null) return r
+        await sleep(15)
+    }
+    throw new Error('connectExpectMessage: exhausted retries')
 }
 
 describe('SignalingServer — shared-nothing redirect', () => {
@@ -104,9 +135,10 @@ describe('SignalingServer — shared-nothing redirect', () => {
             (r) => ring.get(r) === 'self',
         ) as string
 
-        const wsRemote = new WebSocket(`ws://localhost:${port}?roomId=${remoteRoom}&peerId=p1`)
-        open.push(wsRemote)
-        const closed = await waitClose(wsRemote)
+        const closed = await connectExpectClose(
+            `ws://localhost:${port}?roomId=${remoteRoom}&peerId=p1`,
+            open,
+        )
         expect(closed.code).toBe(CloseCode.PolicyViolation)
         expect(onRedirect).toHaveBeenCalledWith(
             'p1',
@@ -115,9 +147,10 @@ describe('SignalingServer — shared-nothing redirect', () => {
         )
         expect(server.getOwner(remoteRoom)?.id).toBe('other')
 
-        const wsLocal = new WebSocket(`ws://localhost:${port}?roomId=${localRoom}&peerId=p2`)
-        open.push(wsLocal)
-        const msg = await firstMessage(wsLocal)
+        const msg = await connectExpectMessage(
+            `ws://localhost:${port}?roomId=${localRoom}&peerId=p2`,
+            open,
+        )
         expect(msg).toMatchObject({ type: 'room-joined', roomId: localRoom, peerId: 'p2' })
         expect(server.getOwner(localRoom)?.id).toBe('self')
     })

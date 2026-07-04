@@ -10,6 +10,7 @@ export class JoinHandshake {
     private _timer: ReturnType<typeof setTimeout> | null = null
     private _onMessage: ((msg: ServerMessage) => void) | null = null
     private _reject: ((err: Error) => void) | null = null
+    private _buffer: ServerMessage[] = []
 
     constructor(
         private readonly transport: Transport,
@@ -21,8 +22,21 @@ export class JoinHandshake {
             this._reject = reject
 
             const onMessage = (msg: ServerMessage) => {
+                // After a successful join the listener stays attached and buffers
+                // any frames that arrive before steady-state handling is wired up
+                // (ws can deliver room-joined and a following signal/peer-joined
+                // synchronously in one batch). Those are replayed via drain().
+                if (this._settled) {
+                    this._buffer.push(msg)
+                    return
+                }
                 if (msg.type === MessageType.RoomJoined) {
-                    this._settle(() => resolve(msg))
+                    this._settled = true
+                    if (this._timer !== null) {
+                        clearTimeout(this._timer)
+                        this._timer = null
+                    }
+                    resolve(msg)
                 } else if (msg.type === MessageType.Error) {
                     this._settle(() => reject(new Error(msg.message)))
                 }
@@ -42,8 +56,33 @@ export class JoinHandshake {
         })
     }
 
+    /**
+     * Detach the handshake listener and replay any frames buffered between the
+     * `room-joined` settle and now, so no early signal is lost. Call once, after
+     * the steady-state message handler is attached.
+     */
+    drain(handler: (msg: ServerMessage) => void): void {
+        this._detach()
+        const buffered = this._buffer
+        this._buffer = []
+        for (const msg of buffered) handler(msg)
+    }
+
+    /** Detach the listener and drop any buffered frames without replaying them. */
+    dispose(): void {
+        this._detach()
+        this._buffer = []
+    }
+
     cancel(reason: string): void {
         this._settle(() => this._reject?.(new Error(reason)))
+    }
+
+    private _detach(): void {
+        if (this._onMessage !== null) {
+            this.transport.off(TransportEvent.Message, this._onMessage)
+            this._onMessage = null
+        }
     }
 
     private _settle(fn: () => void): void {
@@ -53,10 +92,7 @@ export class JoinHandshake {
             clearTimeout(this._timer)
             this._timer = null
         }
-        if (this._onMessage !== null) {
-            this.transport.off(TransportEvent.Message, this._onMessage)
-            this._onMessage = null
-        }
+        this._detach()
         fn()
     }
 }

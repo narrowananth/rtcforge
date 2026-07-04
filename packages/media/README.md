@@ -25,16 +25,23 @@ rtcforge-sdk (Room)  →  rtcforge-media
 
 ## Install
 
-Peer dependencies are **not** auto-installed — add them explicitly:
-
 ```bash
-npm install rtcforge-media rtcforge-core rtcforge-sdk rtcforge-signaling
+npm i rtcforge-media            # browser P2P mesh (Call) — no native build
+npm i rtcforge-media mediasoup  # add mediasoup for the server-side SFU
 ```
+
+`mediasoup` is an **optional peer dependency** (a native addon): browser-only
+consumers never download or compile it, and it is lazily imported so importing
+this package without it only fails when you actually spawn an SFU worker. Import
+the browser plane from **`rtcforge-media/browser`** (or the `browser` export
+condition) to keep bundlers clear of any Node/mediasoup types.
 
 ## How to use
 
+Browser P2P mesh:
+
 ```ts
-import { Call, MediaEvent } from "rtcforge-media";
+import { Call, MediaEvent } from "rtcforge-media"; // or "rtcforge-media/browser"
 
 // `room` comes from rtcforge-sdk: await client.joinRoom("my-room")
 const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -45,7 +52,18 @@ call.start();
 call.on(MediaEvent.RemoteStream, (peerId, remoteStream) => attachToVideoEl(peerId, remoteStream));
 ```
 
-For server-side SFU, use `MediaService` with a `WorkerPool`.
+Server-side SFU — `MediaService` (+ `WorkerPool`) with `SfuSignalHandler` driving
+the caps→transport→produce→consume handshake over your signaling:
+
+```ts
+import { MediaService, SfuSignalHandler } from "rtcforge-media";
+
+const media = new MediaService();
+await media.init();
+const router = await media.attachRoom(room);
+const sfu = new SfuSignalHandler(router);
+// on an inbound SFU message from `peerId`: reply with await sfu.handle(peerId, msg)
+```
 
 ---
 

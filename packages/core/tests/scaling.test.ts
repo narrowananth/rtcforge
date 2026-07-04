@@ -117,6 +117,19 @@ describe('LocalMessageBus', () => {
         await bus.publish('t', {})
         expect(handler).not.toHaveBeenCalled()
     })
+
+    it('one throwing subscriber does not abort delivery or reject publish', async () => {
+        const onError = vi.fn()
+        const bus = new LocalMessageBus(onError)
+        const after = vi.fn()
+        bus.subscribe('t', () => {
+            throw new Error('boom')
+        })
+        bus.subscribe('t', after)
+        await expect(bus.publish('t', { x: 1 })).resolves.toBeUndefined()
+        expect(after).toHaveBeenCalledWith({ x: 1 })
+        expect(onError).toHaveBeenCalledWith(expect.any(Error), 't')
+    })
 })
 
 describe('Lock', () => {
@@ -197,6 +210,22 @@ describe('MemoryMembership', () => {
         clock.advance(80)
         expect(await m.list()).toEqual([{ id: 'n1' }])
     })
+
+    it('optional TTL sweeper fires watchers on expiry without polling list()', () => {
+        // Regression (REVIEW.md #20): failover was invisible to pure watch
+        // consumers because pruning only happened inside list().
+        vi.useFakeTimers()
+        const clock = new ManualClock()
+        const m = new MemoryMembership(clock, 50)
+        const seen: number[] = []
+        m.watch((nodes) => seen.push(nodes.length))
+        void m.register({ id: 'n1' }, 100) // synchronous notify → [1]
+        clock.advance(150) // node now past its TTL per the clock
+        vi.advanceTimersByTime(60) // a sweep tick prunes + notifies → [0]
+        m.stop()
+        expect(seen[seen.length - 1]).toBe(0)
+        vi.useRealTimers()
+    })
 })
 
 describe('MembershipReconciler', () => {
@@ -258,5 +287,37 @@ describe('MembershipReconciler', () => {
         r.dispose()
         await m.register({ id: 'n1' }, 1000)
         expect(added).toEqual([])
+    })
+
+    it('a handler that synchronously mutates membership does not corrupt tracking', async () => {
+        // Re-entrancy: onAdd registers another node, re-entering _sync mid-loop.
+        const m = new MemoryMembership()
+        const added: string[] = []
+        const r = new MembershipReconciler(m, {
+            onAdd: (n) => {
+                added.push(n.id)
+                if (n.id === 'n1') void m.register({ id: 'n2' }, 1000) // re-enters watch synchronously
+            },
+            onRemove: () => {},
+        })
+        r.start()
+        await m.register({ id: 'n1' }, 1000)
+        await flush()
+        // Each id added exactly once — no double onAdd from the re-entrant sync.
+        expect(added).toEqual(['n1', 'n2'])
+        expect([...r.trackedIds].sort()).toEqual(['n1', 'n2'])
+    })
+
+    it('start() is idempotent — a second call does not double-subscribe', async () => {
+        const m = new MemoryMembership()
+        const added: string[] = []
+        const r = new MembershipReconciler(m, {
+            onAdd: (n) => added.push(n.id),
+            onRemove: () => {},
+        })
+        r.start()
+        r.start() // must be a no-op, not a second watch
+        await m.register({ id: 'n1' }, 1000)
+        expect(added).toEqual(['n1']) // once, not twice
     })
 })

@@ -13,7 +13,7 @@ interface TestClient {
     close(): void
 }
 
-function connect(url: string): Promise<TestClient> {
+function connectOnce(url: string): Promise<TestClient> {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(url)
         const queue: unknown[] = []
@@ -47,10 +47,48 @@ function connect(url: string): Promise<TestClient> {
     })
 }
 
+// Ephemeral (port: 0) servers are cycled rapidly across tests and the OS can
+// recycle a just-freed port, so a fresh client occasionally races the http→ws
+// upgrade wiring and sees a transient "Unexpected server response: 200"/reset.
+// Retry a bounded number of times; a genuinely broken server fails all attempts.
+async function connect(url: string): Promise<TestClient> {
+    let lastErr: unknown
+    for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+            return await connectOnce(url)
+        } catch (err) {
+            lastErr = err
+            await new Promise((r) => setTimeout(r, 15))
+        }
+    }
+    throw lastErr
+}
+
 async function waitClose(ws: WebSocket): Promise<{ code: number; reason: string }> {
     return new Promise((resolve) => {
         ws.once('close', (code, reason) => resolve({ code, reason: reason.toString() }))
     })
+}
+
+// Connect and wait for the server to close us, retrying on a transient connect
+// 'error' (an ephemeral port recycled onto another worker's server — see the
+// connect() note). A legitimate rejection closes the upgraded socket with a
+// code, so this returns that; only pre-upgrade errors are retried.
+async function awaitClose(url: string, attempts = 5): Promise<{ code: number; reason: string }> {
+    let lastErr: unknown
+    for (let i = 0; i < attempts; i++) {
+        const ws = new WebSocket(url)
+        const result = await new Promise<{ code: number; reason: string } | null>((resolve) => {
+            ws.once('close', (code, reason) => resolve({ code, reason: reason.toString() }))
+            ws.once('error', (err) => {
+                lastErr = err
+                resolve(null)
+            })
+        })
+        if (result) return result
+        await new Promise((r) => setTimeout(r, 15))
+    }
+    throw lastErr ?? new Error('awaitClose: exhausted retries')
 }
 
 describe('SignalingServer', () => {
@@ -155,9 +193,7 @@ describe('SignalingServer', () => {
     })
 
     it('closes connection when roomId or peerId is missing (no auth)', async () => {
-        const ws = new WebSocket(`ws://localhost:${port}?roomId=r1`)
-        openClients.push(ws)
-        const { code } = await waitClose(ws)
+        const { code } = await awaitClose(`ws://localhost:${port}?roomId=r1`)
         expect(code).toBe(1008)
     })
 
@@ -173,8 +209,7 @@ describe('SignalingServer', () => {
             authServer as never as { ownServer: { address(): AddressInfo } }
         ).ownServer.address().port
 
-        const ws = new WebSocket(`ws://localhost:${authPort}?token=bad`)
-        const { code } = await waitClose(ws)
+        const { code } = await awaitClose(`ws://localhost:${authPort}?token=bad`)
         expect(code).toBe(1008)
         await authServer.stop()
     })
@@ -260,6 +295,12 @@ describe('SignalingServer — Phase 3: observability & reliability', () => {
         expect(server.getStats().uptime).toBe(0)
     })
 
+    it('start() twice rejects instead of leaking a second server', async () => {
+        server = new SignalingServer({ port: 0 })
+        await server.start()
+        await expect(server.start()).rejects.toThrow(/already started/)
+    })
+
     it('logger receives info calls on peer join and room creation', async () => {
         const logger = makeLogger()
         server = new SignalingServer({ port: 0, logger })
@@ -296,8 +337,7 @@ describe('SignalingServer — Phase 3: observability & reliability', () => {
             authServer as never as { ownServer: { address(): AddressInfo } }
         ).ownServer.address().port
 
-        const ws = new WebSocket(`ws://localhost:${authPort}?token=bad`)
-        await waitClose(ws)
+        await awaitClose(`ws://localhost:${authPort}?token=bad`)
         await authServer.stop()
 
         expect(logger.warn).toHaveBeenCalledWith(
@@ -446,8 +486,7 @@ describe('SignalingServer — maxPeersPerRoom', () => {
         const c1 = await connect(`ws://localhost:${limitPort}?roomId=r1&peerId=p1`)
         await c1.nextMessage()
 
-        const c2ws = new WebSocket(`ws://localhost:${limitPort}?roomId=r1&peerId=p2`)
-        const { code } = await waitClose(c2ws)
+        const { code } = await awaitClose(`ws://localhost:${limitPort}?roomId=r1&peerId=p2`)
         expect(code).toBe(1008)
 
         c1.close()
@@ -464,11 +503,22 @@ describe('SignalingServer — health endpoint', () => {
         await new Promise<void>((resolve) => httpServer.listen(0, resolve))
 
         const addr = httpServer.address() as AddressInfo
-        const res = await fetch(`http://localhost:${addr.port}/health`)
-        expect(res.status).toBe(200)
-        const body = (await res.json()) as Record<string, unknown>
+        // Tolerate transient cross-worker ephemeral-port collisions (a recycled
+        // port briefly served by another test's server) by retrying for JSON.
+        let body: Record<string, unknown> | undefined
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const res = await fetch(`http://localhost:${addr.port}/health`)
+            const text = await res.text()
+            try {
+                body = JSON.parse(text) as Record<string, unknown>
+                expect(res.status).toBe(200)
+                break
+            } catch {
+                await new Promise((r) => setTimeout(r, 20))
+            }
+        }
         expect(body).toMatchObject({ status: 'ok', rooms: 0, peers: 0 })
-        expect(typeof body.uptime).toBe('number')
+        expect(typeof body?.uptime).toBe('number')
 
         await sigServer.stop()
         await new Promise<void>((resolve) => httpServer.close(() => resolve()))

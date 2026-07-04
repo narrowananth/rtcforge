@@ -48,12 +48,32 @@ export interface MessageBus {
  */
 export class LocalMessageBus implements MessageBus {
     private readonly _topics = new Map<string, Set<(message: unknown) => void>>()
+    private readonly _onError: (err: unknown, topic: string) => void
+
+    /**
+     * @param onError - Invoked when a subscriber throws. Delivery continues to the
+     *   remaining subscribers regardless. Defaults to `console.error`.
+     */
+    constructor(onError?: (err: unknown, topic: string) => void) {
+        this._onError =
+            onError ??
+            ((err, topic) =>
+                console.error(`[rtcforge] MessageBus subscriber threw on '${topic}'`, err))
+    }
 
     /** {@inheritDoc MessageBus.publish} */
     async publish(topic: string, message: unknown): Promise<void> {
         const handlers = this._topics.get(topic)
         if (!handlers) return
-        for (const handler of [...handlers]) handler(message)
+        // Isolate subscribers: one throwing handler must not abort delivery to the
+        // rest or reject the publish promise.
+        for (const handler of [...handlers]) {
+            try {
+                handler(message)
+            } catch (err) {
+                this._onError(err, topic)
+            }
+        }
     }
 
     /** {@inheritDoc MessageBus.subscribe} */

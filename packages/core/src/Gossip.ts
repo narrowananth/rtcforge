@@ -39,6 +39,20 @@ interface MemberRecord {
     lastSeen: number
 }
 
+/**
+ * Decentralized {@link Membership} that spreads node state across a cluster with
+ * SWIM-style anti-entropy gossip — no Redis/etcd, no central coordinator.
+ *
+ * @remarks
+ * Each node periodically gossips its view (self + known peers, each tagged with a
+ * monotonic incarnation and alive flag) to a random fanout of peers over a
+ * {@link GossipTransport}. Newer incarnations win; at equal incarnation a dead
+ * claim overrides a live one, and a node refutes a false death report by
+ * advancing its own incarnation. Peers not heard from within `deadTimeoutMs` are
+ * marked dead and eventually tombstone-GC'd. Pair with {@link MembershipReconciler}
+ * to react to joins/leaves. This is AP (available under partition) with no
+ * quorum, so treat ownership derived from it as advisory unless fenced.
+ */
 export class GossipMembership implements Membership {
     private readonly _self: NodeInfo
     private readonly _transport: GossipTransport
@@ -100,6 +114,9 @@ export class GossipMembership implements Membership {
                 self.incarnation += 1
                 self.lastSeen = this._clock.now()
             }
+            // Notify local watchers of a self re-register (e.g. changed
+            // region/metadata), matching deregister's behavior.
+            this._notify()
             this._gossip()
             return
         }
@@ -222,6 +239,17 @@ export class GossipMembership implements Membership {
             })
             if (entry.address) this._seeds.add(entry.address)
             return entry.alive
+        }
+
+        // SWIM precedence: at equal incarnation a dead claim overrides a live
+        // one. A departed node can no longer advance its own incarnation, so
+        // without this its `deregister`/timeout death is ignored and the stale
+        // live entry lingers (or revives). A genuinely live node still refutes
+        // by broadcasting a higher incarnation, which the block below applies.
+        if (entry.incarnation === known.incarnation && !entry.alive && known.alive) {
+            known.alive = false
+            known.lastSeen = this._clock.now()
+            return true
         }
 
         if (entry.incarnation > known.incarnation) {

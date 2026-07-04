@@ -8,7 +8,7 @@
 
 The base package every other `rtcforge-*` package depends on. Two kinds of primitives:
 
-- **Shared** — `EventEmitter`, `Logger`/`MetricsCollector` interfaces, typed errors, `IdGenerator`, `Clock`.
+- **Shared** — `EventEmitter`, `Logger`/`MetricsCollector` interfaces (+ `noopLogger`, `consoleLogger`), typed errors, `IdGenerator`, `Clock`.
 - **Scale-out** — `HashRing` (consistent hashing), `GossipMembership` + `GossipNetwork` (SWIM-style cluster membership), `Membership`, `StateStore`, `MessageBus`, `Lock`. These let RTCForge cluster across nodes **without Redis or etcd**.
 
 ## Why

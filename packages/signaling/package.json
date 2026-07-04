@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-signaling",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "description": "SignalingServer, Room, Peer — session lifecycle and auth hook",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -22,17 +22,22 @@
             "require": "./dist/index.js"
         }
     },
-    "files": ["dist"],
+    "sideEffects": false,
+    "files": ["dist", "LICENSE"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean"
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+        "test": "vitest run"
     },
     "keywords": ["webrtc", "signaling", "realtime", "rtcforge"],
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "publishConfig": {
         "access": "public"
     },
     "dependencies": {
-        "rtcforge-core": "^0.1.0",
+        "rtcforge-core": "^1.0.0",
         "ws": "^8.20.1",
         "zod": "^4.4.3"
     },

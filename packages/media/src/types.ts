@@ -28,6 +28,8 @@ export const MediaEvent = {
     RemoteStreamRemoved: 'remote-stream-removed',
     /** A local track was published to the mesh. Payload: `(track, stream)`. */
     TrackPublished: 'track-published',
+    /** A local track was unpublished — removed, or ended (e.g. device unplugged). Payload: `(track)`. */
+    TrackUnpublished: 'track-unpublished',
     /** A recoverable per-peer error occurred. Payload: `(peerId, error)`. */
     Error: 'error',
     /** A remote-initiated data channel opened. Payload: `(peerId, channel)`. */
@@ -80,6 +82,18 @@ export interface CallOptions {
     maxBitrate?: number
     /** If set, a peer whose renegotiation does not complete within this many milliseconds is dropped. */
     negotiationTimeoutMs?: number
+    /**
+     * Number of ICE restarts to attempt (impolite side) before dropping a
+     * connection that reaches the `failed` state, letting a transient network
+     * blip recover instead of tearing down the call. @defaultValue `1`
+     */
+    maxIceRestarts?: number
+    /**
+     * When `true`, {@link Call.close} calls `track.stop()` on the local tracks
+     * (turning off the camera/mic). Leave `false` if the app owns and reuses the
+     * stream elsewhere. @defaultValue `false`
+     */
+    stopTracksOnClose?: boolean
     /** Logger used for diagnostics. Defaults to a no-op logger. */
     logger?: Logger
     /** Optional metrics collector. */

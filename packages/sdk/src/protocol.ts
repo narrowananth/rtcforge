@@ -1,6 +1,13 @@
 import { z } from 'zod'
 
 /**
+ * Signaling wire protocol version this client speaks. Compared against the
+ * server's `v` on `room-joined`; a mismatch is surfaced so a skew fails fast
+ * instead of hanging on silently-dropped, newer-shaped frames.
+ */
+export const PROTOCOL_VERSION = 1
+
+/**
  * Discriminator values for every message exchanged over the signaling
  * {@link Transport}. Each value is the `type` field of a wire message; the same
  * constant is reused as the event name emitted by {@link Room} for the
@@ -51,6 +58,8 @@ export type MessageType = (typeof MessageType)[keyof typeof MessageType]
 export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal(MessageType.RoomJoined),
+        /** Server's signaling protocol version; compared against {@link PROTOCOL_VERSION}. */
+        v: z.number().int().optional(),
         roomId: z.string(),
         peerId: z.string(),
         peers: z.array(z.string()),

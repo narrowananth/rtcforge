@@ -69,6 +69,15 @@ export class CascadingRouter extends EventEmitter<CascadingRouterEvents> {
             if (assigned.id === node.id) {
                 node.untrackRoom(roomId)
                 this._assignments.delete(roomId)
+                // The primary is gone, so its cascade nodes have nothing to relay
+                // from. Tear them down here — a later detachRoom() early-returns
+                // for a room with no primary and would leave them tracking forever.
+                const cascades = this._cascadeLinks.get(roomId) ?? []
+                for (const n of cascades) {
+                    n.untrackRoom(roomId)
+                    this.emit(CascadingRouterEvent.CascadeDropped, roomId, n)
+                }
+                this._cascadeLinks.delete(roomId)
                 this._logger.warn('Room assignment cleared — node failed', {
                     roomId,
                     nodeId: node.id,

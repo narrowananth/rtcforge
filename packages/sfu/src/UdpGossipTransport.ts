@@ -1,8 +1,16 @@
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import dgram from 'node:dgram'
 import { type Logger, noopLogger } from 'rtcforge-core'
 import type { GossipMessage, GossipTransport } from 'rtcforge-core'
 
 const MAX_DATAGRAM = 65_507
+const MAC_LEN = 32
+const TS_LEN = 8
+const DEFAULT_REPLAY_WINDOW_MS = 30_000
+
+function hmac(secret: Buffer, body: Buffer): Buffer {
+    return createHmac('sha256', secret).update(body).digest()
+}
 
 /**
  * Configuration for a {@link UdpGossipTransport}.
@@ -39,6 +47,23 @@ export interface UdpGossipTransportOptions {
      * @defaultValue a no-op logger that discards all output
      */
     logger?: Logger
+    /**
+     * Shared secret enabling HMAC-SHA256 authentication of every datagram. When
+     * set, outbound datagrams are prefixed with a 32-byte MAC and inbound
+     * datagrams with a missing/invalid MAC are dropped, preventing membership
+     * poisoning and reflection by anyone who can send UDP to the port. All nodes
+     * in the cluster must share the same secret. **Strongly recommended on any
+     * network that is not fully trusted.** @defaultValue unauthenticated
+     */
+    secret?: string
+    /**
+     * Replay-protection window in milliseconds (only active when `secret` is set).
+     * Each authenticated datagram carries a timestamp under its MAC; datagrams
+     * whose timestamp differs from local time by more than this are dropped, so a
+     * captured datagram can only be replayed within the window. Tolerant of UDP
+     * reordering and process restarts. @defaultValue `30000`
+     */
+    replayWindowMs?: number
 }
 
 /**
@@ -63,7 +88,7 @@ export interface UdpGossipTransportOptions {
  * @example
  * ```ts
  * import { GossipMembership } from 'rtcforge-core'
- * import { UdpGossipTransport } from 'rtcforge-adapter-udp'
+ * import { UdpGossipTransport } from 'rtcforge-sfu/udp'
  *
  * const transport = new UdpGossipTransport({
  *   port: 7946,
@@ -93,6 +118,8 @@ export class UdpGossipTransport implements GossipTransport {
     private _closed = false
     private _lastMsg: GossipMessage | undefined
     private _lastPayload: Buffer | undefined
+    private readonly _secret: Buffer | null
+    private readonly _replayWindowMs: number
 
     /**
      * Creates the transport and its underlying `udp4` socket.
@@ -109,6 +136,16 @@ export class UdpGossipTransport implements GossipTransport {
         this._bindHost = opts.bindHost ?? '0.0.0.0'
         this._advertiseHost = opts.advertiseHost ?? '127.0.0.1'
         this._logger = opts.logger ?? noopLogger
+        this._secret = opts.secret ? Buffer.from(opts.secret) : null
+        this._replayWindowMs = opts.replayWindowMs ?? DEFAULT_REPLAY_WINDOW_MS
+        if (!this._secret) {
+            const warning =
+                'UDP gossip: no secret set — datagrams are unauthenticated; anyone who can send UDP to this port can inject membership. Set `secret` on any untrusted network.'
+            this._logger.warn(warning)
+            // Also surface to the console: the default logger is a no-op, and this
+            // security notice must not be silently swallowed.
+            if (this._logger === noopLogger) console.warn(`[rtcforge-sfu] ${warning}`)
+        }
         this._socket = dgram.createSocket('udp4')
 
         this._socket.on('message', (data) => this._onDatagram(data))
@@ -188,11 +225,24 @@ export class UdpGossipTransport implements GossipTransport {
         if (msg === this._lastMsg && this._lastPayload !== undefined) {
             payload = this._lastPayload
         } else {
+            let json: Buffer
             try {
-                payload = Buffer.from(JSON.stringify(msg))
+                json = Buffer.from(JSON.stringify(msg))
             } catch (err) {
                 this._logger.error('UDP gossip: serialize failed', { err: String(err) })
                 return
+            }
+            if (this._secret) {
+                // Authenticated wire: [mac(32)] [timestamp(8)] [json]. The timestamp
+                // is under the MAC and gives receivers replay protection (a captured
+                // datagram is only usable within the freshness window). One timestamp
+                // per message object, so a fan-out to many peers shares it (cache-safe).
+                const ts = Buffer.allocUnsafe(TS_LEN)
+                ts.writeDoubleBE(Date.now(), 0)
+                const signed = Buffer.concat([ts, json])
+                payload = Buffer.concat([hmac(this._secret, signed), signed])
+            } else {
+                payload = json
             }
             this._lastMsg = msg
             this._lastPayload = payload
@@ -239,9 +289,31 @@ export class UdpGossipTransport implements GossipTransport {
 
     private _onDatagram(data: Buffer): void {
         if (!this._handler) return
+        let body = data
+        if (this._secret) {
+            if (data.byteLength < MAC_LEN + TS_LEN) {
+                this._logger.warn('UDP gossip: dropped datagram shorter than MAC+timestamp')
+                return
+            }
+            const mac = data.subarray(0, MAC_LEN)
+            const signed = data.subarray(MAC_LEN) // timestamp(8) + json
+            const expected = hmac(this._secret, signed)
+            if (mac.byteLength !== expected.byteLength || !timingSafeEqual(mac, expected)) {
+                this._logger.warn('UDP gossip: dropped datagram with invalid MAC')
+                return
+            }
+            // Replay protection: reject datagrams outside the freshness window. A
+            // symmetric window tolerates modest clock skew, UDP reorder, and restart.
+            const ts = signed.readDoubleBE(0)
+            if (Math.abs(Date.now() - ts) > this._replayWindowMs) {
+                this._logger.warn('UDP gossip: dropped stale/replayed datagram', { ts })
+                return
+            }
+            body = signed.subarray(TS_LEN)
+        }
         let parsed: unknown
         try {
-            parsed = JSON.parse(data.toString())
+            parsed = JSON.parse(body.toString())
         } catch {
             return
         }

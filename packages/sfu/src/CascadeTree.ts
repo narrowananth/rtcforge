@@ -181,6 +181,7 @@ type CascadeTreeEvents = {
     [CascadeTreeEvent.LeafAssigned]: [roomId: string, nodeId: string, viewerSlots: number]
     [CascadeTreeEvent.TreeDropped]: [roomId: string]
     [CascadeTreeEvent.CapacityShortfall]: [roomId: string, unmetViewers: number]
+    [CascadeTreeEvent.OriginLost]: [roomId: string, originId: string]
 }
 
 interface RoomTree {
@@ -247,7 +248,19 @@ export class CascadeTree extends EventEmitter<CascadeTreeEvents> {
 
     private _onNodeGone(nodeId: string): void {
         for (const [roomId, room] of [...this._rooms]) {
-            if (room.plan.nodes.has(nodeId)) {
+            if (!room.plan.nodes.has(nodeId)) continue
+            if (nodeId === room.originId) {
+                // The origin ingests the source media; re-rooting the tree at the
+                // dead origin (as an unconditional rebuild would) leaves the whole
+                // broadcast dark while falsely reporting success. Tear down and
+                // signal that the room needs a fresh origin instead.
+                this._logger.error('Cascade origin gone — tree unrecoverable', {
+                    roomId,
+                    nodeId,
+                })
+                this.detach(roomId)
+                this.emit(CascadeTreeEvent.OriginLost, roomId, nodeId)
+            } else {
                 this._logger.warn('Rebuilding cascade tree — node gone', { roomId, nodeId })
                 this.build(roomId, room.originId, room.viewerCount)
             }

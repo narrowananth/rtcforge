@@ -187,6 +187,26 @@ describe('CascadeTree — cluster-integrated', () => {
         expect(after?.servedViewers).toBe(35)
     })
 
+    it('emits OriginLost and tears down when the ORIGIN fails (no dark re-root)', () => {
+        // Regression (REVIEW.md CRITICAL #3): failing the origin must not rebuild
+        // the tree rooted at the dead origin — the whole broadcast would go dark
+        // while reporting success.
+        const c = cluster(10)
+        const tree = new CascadeTree(c, { fanout: 2, viewersPerNode: 10 })
+        tree.build('stream1', 'origin', 35)
+
+        const originLost = vi.fn()
+        const rebuilt = vi.fn()
+        tree.on(CascadeTreeEvent.OriginLost, originLost)
+        tree.on(CascadeTreeEvent.TreeBuilt, rebuilt)
+
+        c.nodes.find((n) => n.id === 'origin')?.markFailed()
+
+        expect(originLost).toHaveBeenCalledWith('stream1', 'origin')
+        expect(rebuilt).not.toHaveBeenCalled()
+        expect(tree.getPlan('stream1')).toBeUndefined()
+    })
+
     it('detach tears down the tree and untracks nodes', () => {
         const c = cluster(6)
         const tree = new CascadeTree(c, { fanout: 2, viewersPerNode: 10 })

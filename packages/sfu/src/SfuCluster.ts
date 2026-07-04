@@ -53,6 +53,8 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
     private readonly _opts: SfuClusterOptions
     private readonly _placement: PlacementStrategy
     private _healthChecker: HealthChecker | null = null
+    private readonly _failStreak = new Map<string, number>()
+    private readonly _passStreak = new Map<string, number>()
     private readonly _membership: Membership | undefined
     private readonly _nodeFactory: (info: NodeInfo) => SfuNode
     private _reconciler: MembershipReconciler | undefined
@@ -139,6 +141,11 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
         if (!entry) return false
         entry.node.off(SfuNodeEvent.Overloaded, entry.overloadListener)
         this._nodes.delete(id)
+        // Clear health streaks so a node id reused later (e.g. a restart via
+        // MembershipReconciler onRemove→onAdd) starts fresh — otherwise a stale
+        // fail-streak would trip the anti-flap threshold on its first probe.
+        this._failStreak.delete(id)
+        this._passStreak.delete(id)
         this._logger.info('SFU node removed', { id })
         this.emit(SfuClusterEvent.NodeRemoved, entry.node)
         return true
@@ -174,6 +181,7 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
                 onCheck,
                 onResult: (node, healthy) => this._onHealthResult(node, healthy),
                 intervalMs: this._opts.healthCheck?.intervalMs ?? 30_000,
+                probeTimeoutMs: this._opts.healthCheck?.probeTimeoutMs,
             })
         }
         this._healthChecker.start()
@@ -185,8 +193,17 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
     }
 
     private _onHealthResult(node: SfuNode, healthy: boolean): void {
+        // Require N consecutive results before flipping state, so a single
+        // transient probe failure doesn't trigger a cluster-wide migration storm
+        // (and one lucky pass doesn't prematurely un-fail a dying node).
+        const failThreshold = this._opts.healthCheck?.failureThreshold ?? 3
+        const recoverThreshold = this._opts.healthCheck?.recoveryThreshold ?? 2
         if (!healthy) {
-            if (!node.isFailed) {
+            this._passStreak.delete(node.id)
+            const streak = (this._failStreak.get(node.id) ?? 0) + 1
+            this._failStreak.set(node.id, streak)
+            if (!node.isFailed && streak >= failThreshold) {
+                this._failStreak.delete(node.id)
                 node.markFailed()
                 this.emit(
                     SfuClusterEvent.Error,
@@ -194,8 +211,16 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
                 )
                 this.rebalance()
             }
-        } else if (node.isFailed) {
-            node.markRecovered()
+        } else {
+            this._failStreak.delete(node.id)
+            if (node.isFailed) {
+                const streak = (this._passStreak.get(node.id) ?? 0) + 1
+                this._passStreak.set(node.id, streak)
+                if (streak >= recoverThreshold) {
+                    this._passStreak.delete(node.id)
+                    node.markRecovered()
+                }
+            }
         }
     }
 

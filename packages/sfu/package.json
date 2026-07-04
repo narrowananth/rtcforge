@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-sfu",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "description": "Cascading SFU cluster management — multi-node routing, load balancing, bandwidth estimation",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -20,16 +20,26 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
+        },
+        "./udp": {
+            "types": "./dist/udp.d.ts",
+            "import": "./dist/udp.mjs",
+            "require": "./dist/udp.js"
         }
     },
-    "files": ["dist"],
+    "sideEffects": false,
+    "files": ["dist", "LICENSE"],
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts --clean"
+        "build": "tsup src/index.ts src/udp.ts --format cjs,esm --dts --clean",
+        "test": "vitest run"
     },
-    "keywords": ["sfu", "webrtc", "cascading", "cluster", "rtcforge"],
+    "keywords": ["sfu", "webrtc", "cascading", "cluster", "gossip", "udp", "rtcforge"],
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "dependencies": {
-        "rtcforge-core": "^0.1.0"
+        "rtcforge-core": "^1.0.0"
     },
     "publishConfig": {
         "access": "public"

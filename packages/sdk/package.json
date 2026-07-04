@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-sdk",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "description": "Browser + Node.js client SDK — RTCForgeClient",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -32,17 +32,22 @@
             "require": "./dist/filetransfer/node/index.js"
         }
     },
-    "files": ["dist"],
+    "sideEffects": false,
+    "files": ["dist", "LICENSE"],
     "scripts": {
-        "build": "tsup src/index.ts src/filetransfer/index.ts src/filetransfer/node/index.ts --format cjs,esm --dts --clean --target es2020"
+        "build": "tsup src/index.ts src/filetransfer/index.ts src/filetransfer/node/index.ts --format cjs,esm --dts --clean --target es2020",
+        "test": "vitest run"
     },
     "keywords": ["webrtc", "sdk", "browser", "realtime", "rtcforge"],
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "publishConfig": {
         "access": "public"
     },
     "dependencies": {
-        "rtcforge-core": "^0.1.0",
+        "rtcforge-core": "^1.0.0",
         "zod": "^4.4.3"
     },
     "optionalDependencies": {

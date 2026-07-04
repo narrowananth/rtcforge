@@ -1,9 +1,28 @@
 import os from 'node:os'
-import * as mediasoup from 'mediasoup'
 import type { types as MsTypes } from 'mediasoup'
 import { EventEmitter, noopLogger } from 'rtcforge-core'
 import type { Logger } from 'rtcforge-core'
 import type { WorkerSettings } from './types.js'
+
+// mediasoup is a native, server-only addon and an *optional* peer dependency, so
+// it is imported lazily: `import 'rtcforge-media'` must not fail in environments
+// that never run an SFU (or where the native build is absent). It is resolved
+// only when a worker actually spawns.
+type MediasoupModule = typeof import('mediasoup')
+let _mediasoupPromise: Promise<MediasoupModule> | null = null
+async function loadMediasoup(): Promise<MediasoupModule> {
+    if (_mediasoupPromise === null) {
+        _mediasoupPromise = import('mediasoup').catch((err: unknown) => {
+            _mediasoupPromise = null
+            const error = new Error(
+                "rtcforge-media SFU features require the optional peer dependency 'mediasoup'. Install it with `npm i mediasoup`.",
+            )
+            ;(error as { cause?: unknown }).cause = err
+            throw error
+        })
+    }
+    return _mediasoupPromise
+}
 
 /**
  * Events emitted by a {@link WorkerPool}.
@@ -108,6 +127,7 @@ export class WorkerPool extends EventEmitter<WorkerPoolEvents> {
     }
 
     private async _spawn(): Promise<MsTypes.Worker> {
+        const mediasoup = await loadMediasoup()
         const worker = await mediasoup.createWorker({
             logLevel: this.settings.logLevel ?? 'warn',
             logTags: this.settings.logTags,

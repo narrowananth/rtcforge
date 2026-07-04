@@ -6,8 +6,26 @@ export interface HealthCheckerDeps {
     onCheck: (nodeId: string) => Promise<boolean>
     onResult: (node: SfuNode, healthy: boolean) => void
     intervalMs: number
+    /**
+     * Milliseconds a single probe may run before it is treated as a failure.
+     * Prevents a hung `onCheck` from leaving the node permanently in-flight and
+     * never re-checked. Defaults to {@link HealthCheckerDeps.intervalMs}.
+     */
+    probeTimeoutMs?: number
 }
 
+/**
+ * Periodically probes every registered {@link SfuNode} for liveness and reports
+ * each result back to the cluster.
+ *
+ * @remarks
+ * On a fixed interval it runs the injected `onCheck` probe for each non-draining
+ * node, deduping in-flight probes and racing each against a timeout so a hung
+ * probe cannot wedge a node out of future sweeps. Results are delivered via
+ * `onResult`; the {@link SfuCluster} applies a consecutive-failure threshold on
+ * top so a single transient failure does not trigger a migration storm. The
+ * interval timer is `unref`'d, so it never keeps the process alive on its own.
+ */
 export class HealthChecker {
     private _timer: ReturnType<typeof setInterval> | null = null
     private _running = false
@@ -38,7 +56,7 @@ export class HealthChecker {
                 (async () => {
                     this._inFlight.add(node.id)
                     try {
-                        const healthy = await this.deps.onCheck(node.id)
+                        const healthy = await this._probe(node.id)
                         if (!this._running || !this.deps.stillRegistered(node.id)) return
                         this.deps.onResult(node, healthy)
                     } catch {
@@ -51,5 +69,28 @@ export class HealthChecker {
             )
         }
         void Promise.allSettled(checks)
+    }
+
+    // Race the probe against a timeout so a never-settling onCheck is treated as
+    // a failure (rejects) rather than pinning the node's id in _inFlight forever.
+    private _probe(nodeId: string): Promise<boolean> {
+        const timeoutMs = this.deps.probeTimeoutMs ?? this.deps.intervalMs
+        if (!(timeoutMs > 0)) return this.deps.onCheck(nodeId)
+        return new Promise<boolean>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('health probe timed out')), timeoutMs)
+            if (typeof (timer as { unref?: () => void }).unref === 'function') {
+                ;(timer as { unref: () => void }).unref()
+            }
+            this.deps.onCheck(nodeId).then(
+                (healthy) => {
+                    clearTimeout(timer)
+                    resolve(healthy)
+                },
+                (err) => {
+                    clearTimeout(timer)
+                    reject(err)
+                },
+            )
+        })
     }
 }

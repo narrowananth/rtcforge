@@ -128,8 +128,47 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
         const source = this._toSource(input)
         const id = opts.transferId ?? randomId.next()
 
+        const channels = this._openChannels(peerId, id, tuning.parallelChannels)
+
+        const transfer = new SendTransfer({
+            id,
+            peerId,
+            source,
+            channels,
+            sendControl: (msg) => this._sendControl(peerId, msg),
+            chunkSize: tuning.chunkSize,
+            highWaterMark: tuning.highWaterMark,
+            lowWaterMark: tuning.lowWaterMark,
+            checksum: tuning.checksum,
+            offerTimeoutMs: tuning.offerTimeoutMs,
+            resumable: tuning.resumable,
+        })
+        this._register(transfer)
+        transfer.start()
+        return transfer
+    }
+
+    /**
+     * Resume an interrupted resumable send by re-announcing it on freshly opened
+     * data channels (call after the peer connection reconnects). Only the chunks
+     * the receiver is still missing are resent. No-op unless the transfer exists,
+     * is a {@link SendTransfer}, and was interrupted.
+     *
+     * @param transferId - Id of the interrupted send transfer.
+     */
+    resumeSend(transferId: string): void {
+        const transfer = this._transfers.get(transferId)
+        if (!(transfer instanceof SendTransfer)) return
+        // Only open channels if the transfer is actually interrupted — otherwise
+        // reoffer() no-ops and the freshly opened channels would leak.
+        if (!transfer.interrupted) return
+        const channels = this._openChannels(transfer.peerId, transferId, transfer.channelCount)
+        transfer.reoffer(channels)
+    }
+
+    private _openChannels(peerId: string, id: string, count: number): RTCDataChannel[] {
         const channels: RTCDataChannel[] = []
-        for (let i = 0; i < tuning.parallelChannels; i += 1) {
+        for (let i = 0; i < count; i += 1) {
             const ch = this._hub.createDataChannel(peerId, dataChannelLabel(id, i), {
                 ordered: true,
             })
@@ -143,21 +182,7 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
             ch.binaryType = 'arraybuffer'
             channels.push(ch)
         }
-
-        const transfer = new SendTransfer({
-            id,
-            peerId,
-            source,
-            channels,
-            sendControl: (msg) => this._sendControl(peerId, msg),
-            chunkSize: tuning.chunkSize,
-            highWaterMark: tuning.highWaterMark,
-            lowWaterMark: tuning.lowWaterMark,
-            checksum: tuning.checksum,
-        })
-        this._register(transfer)
-        transfer.start()
-        return transfer
+        return channels
     }
 
     /**
@@ -194,7 +219,21 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
             pc.in?.close()
         }
         this._control.clear()
-        this._pendingChannels.clear()
+        for (const id of [...this._pendingChannels.keys()]) this._discardPendingChannels(id)
+    }
+
+    /** Close and forget any data channels buffered for a transfer that will never start. */
+    private _discardPendingChannels(transferId: string): void {
+        const pending = this._pendingChannels.get(transferId)
+        if (!pending) return
+        this._pendingChannels.delete(transferId)
+        for (const ch of pending) {
+            try {
+                ch.close()
+            } catch {
+                // already closing/closed
+            }
+        }
     }
 
     private _register(transfer: Transfer): void {
@@ -239,7 +278,46 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
 
     private _routeControl(peerId: string, msg: ControlMessage): void {
         if (msg.type === ControlType.Offer) {
-            if (this._transfers.has(msg.transferId)) return
+            const existing = this._transfers.get(msg.transferId)
+            if (existing) {
+                // A re-offer for an in-progress receive = the sender reconnected.
+                // Ask it to resume so only the missing chunks are resent.
+                if (existing instanceof ReceiveTransfer) existing.requestResume()
+                return
+            }
+            // Cross-validate the offer before constructing a transfer. The schema
+            // checks field types but not consistency: totalChunks=0 with size>0
+            // would "complete" an empty file instantly, and an oversized size
+            // makes the sink allocate it at accept. Reject internally-inconsistent
+            // or too-large offers.
+            const expectedChunks = msg.size === 0 ? 0 : Math.ceil(msg.size / msg.chunkSize)
+            const tooLarge =
+                this._tuning.maxFileSize !== undefined && msg.size > this._tuning.maxFileSize
+            // Enforce the receiver's OWN checksum policy: if this manager requires
+            // integrity, reject an offer that declines to send a digest rather than
+            // trusting the sender's `checksum` flag.
+            const checksumRequired = this._tuning.checksum && !msg.checksum
+            if (msg.totalChunks !== expectedChunks || tooLarge || checksumRequired) {
+                this._sendControl(peerId, {
+                    type: ControlType.Reject,
+                    transferId: msg.transferId,
+                    reason: tooLarge
+                        ? 'file exceeds size limit'
+                        : checksumRequired
+                          ? 'checksum required'
+                          : 'inconsistent offer',
+                })
+                this.emit(
+                    FileTransferEvent.Error,
+                    new FileTransferError(
+                        `rejected invalid offer '${msg.transferId}' (size=${msg.size}, chunkSize=${msg.chunkSize}, totalChunks=${msg.totalChunks})`,
+                        FileTransferErrorCode.InvalidFrame,
+                        { transferId: msg.transferId },
+                    ),
+                )
+                this._discardPendingChannels(msg.transferId)
+                return
+            }
             const transfer = new ReceiveTransfer({
                 id: msg.transferId,
                 peerId,

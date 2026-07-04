@@ -37,14 +37,22 @@ import { SfuCluster, SfuNode, HashRingStrategy } from "rtcforge-sfu";
 
 const cluster = new SfuCluster({
   placementStrategy: new HashRingStrategy(),
-  healthCheck: { intervalMs: 5000 },
+  // Provide an onCheck probe — without it, health checks do nothing.
+  healthCheck: {
+    intervalMs: 5000,
+    onCheck: async (nodeId) => probeNode(nodeId), // your liveness probe → boolean
+  },
 });
 
 cluster.addNode(new SfuNode("node-a", "us-east"));
 cluster.addNode(new SfuNode("node-b", "eu-west"));
+cluster.startHealthChecks(); // REQUIRED to begin probing
 
 const node = cluster.assignNode(undefined, "room-42"); // → which node hosts the room
 ```
+
+The UDP gossip transport for multi-host clustering lives at `rtcforge-sfu/udp`
+(formerly the separate `rtcforge-adapter-udp` package).
 
 ---
 

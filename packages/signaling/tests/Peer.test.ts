@@ -46,6 +46,39 @@ describe('Peer', () => {
         expect(ws.close).toHaveBeenCalledWith(1000, 'Normal closure')
     })
 
+    it('surfaces a raw socket error via PeerEvent.Error instead of crashing', () => {
+        // Regression: with no 'error' listener, a raw ws error is an
+        // uncaughtException that kills the whole server (REVIEW.md CRITICAL #1).
+        const onError = vi.fn()
+        peer.on(PeerEvent.Error, onError)
+        expect(() => ws.emit('error', new Error('ECONNRESET'))).not.toThrow()
+        expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'ECONNRESET' }))
+    })
+
+    it('rate-limits every frame type (malformed and pong floods are bounded)', () => {
+        const limited = new Peer({ id: 'p9', ws: ws as never, onSignal, maxMessagesPerSecond: 1 })
+        const onLimit = vi.fn()
+        limited.on(PeerEvent.RateLimitExceeded, onLimit)
+        // First frame consumes the budget of 1; subsequent ones (incl. pong and
+        // garbage) are dropped by the limiter, not parsed/handled.
+        ws.emit('message', Buffer.from(JSON.stringify({ type: MessageType.Pong })))
+        ws.emit('message', Buffer.from(JSON.stringify({ type: MessageType.Pong })))
+        ws.emit('message', Buffer.from('garbage{'))
+        expect(onLimit).toHaveBeenCalledTimes(2)
+    })
+
+    it('treats any accepted frame as liveness so a busy peer is not pruned', () => {
+        vi.useFakeTimers()
+        const before = peer.lastPong
+        vi.advanceTimersByTime(50)
+        // A non-pong frame (broadcast) still advances liveness.
+        ws.emit(
+            'message',
+            Buffer.from(JSON.stringify({ type: MessageType.Broadcast, channel: 'c' })),
+        )
+        expect(peer.lastPong).toBeGreaterThan(before)
+    })
+
     it('calls onSignal when signal message received', () => {
         ws.emit(
             'message',

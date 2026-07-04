@@ -156,8 +156,16 @@ export abstract class Transfer extends EventEmitter<TransferEvents> {
         const previous = this._state
         this._state = next
         this.emit(TransferEvent.StateChanged, next, previous)
+        if (TERMINAL.includes(next)) this._onTerminal()
         return true
     }
+
+    /**
+     * Hook invoked once when the transfer first reaches a terminal state
+     * (completed/failed/cancelled). Subclasses override it to release resources —
+     * close per-transfer data channels, drain any suspended workers, clear timers.
+     */
+    protected _onTerminal(): void {}
 
     /**
      * Transitions the transfer to {@link TransferState.Failed} and emits {@link TransferEvent.Error}.
@@ -166,13 +174,24 @@ export abstract class Transfer extends EventEmitter<TransferEvents> {
      * @param error - The error describing the failure.
      * @returns The same `error`, for convenient `throw`/`return` chaining.
      */
-    protected fail(error: FileTransferError): FileTransferError {
+    protected fail(error: FileTransferError, notifyRemote = false): FileTransferError {
         if (!this.isTerminal) {
             this.transitionTo(TransferState.Failed)
+            // A purely local failure (disk full, source read error, bad frame)
+            // must tell the peer, or the other side waits forever. Remote-initiated
+            // failures (reject, checksum-mismatch, remote cancel) pass false.
+            if (notifyRemote) this._notifyRemoteFailure(error)
             this.emit(TransferEvent.Error, error)
         }
         return error
     }
+
+    /**
+     * Hook invoked by {@link Transfer.fail} when a local failure must be signalled
+     * to the remote peer. Overridden by the concrete subclasses to send a cancel
+     * over the control channel; a no-op by default.
+     */
+    protected _notifyRemoteFailure(_error: FileTransferError): void {}
 
     /**
      * Normalizes an unknown thrown value into a {@link FileTransferError} tagged with this

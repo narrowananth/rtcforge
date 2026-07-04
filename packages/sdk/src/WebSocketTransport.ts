@@ -50,6 +50,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
     private readonly tokenRefresh: (() => Promise<string>) | undefined
     private readonly _queue: MessageQueue<ClientMessage>
     private readonly _reconnect: BackoffStrategy
+    private readonly _nonRetryable: Set<number>
 
     /**
      * @param url - Full signaling socket URL including any auth/room query parameters.
@@ -66,6 +67,21 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
         this._reconnect =
             options.reconnectStrategy ??
             new ReconnectStrategy(options.maxReconnectDelay ?? 32_000, options.maxReconnectAttempts)
+        this._nonRetryable = new Set(options.nonRetryableCloseCodes ?? [CloseCode.PolicyViolation])
+    }
+
+    /**
+     * The socket URL with the `token` query parameter redacted, so auth tokens
+     * are never written to logs or proxy/aggregator sinks. Use for all logging.
+     */
+    private get _safeUrl(): string {
+        try {
+            const u = new URL(this.url)
+            if (u.searchParams.has('token')) u.searchParams.set('token', 'REDACTED')
+            return u.toString()
+        } catch {
+            return this.url
+        }
     }
 
     private get isTerminal(): boolean {
@@ -134,7 +150,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                 ws.onopen = () => {
                     if (connectTimer) clearTimeout(connectTimer)
                     this._reconnect.reset()
-                    this.logger.info('WebSocket connected', { url: this.url })
+                    this.logger.info('WebSocket connected', { url: this._safeUrl })
                     this.emit(TransportEvent.Open)
                     if (!settled) {
                         settled = true
@@ -149,6 +165,19 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                     this.logger.info('WebSocket closed', { code, reason })
                     this.emit(TransportEvent.Close, code, reason)
                     if (this._closed || !this.shouldReconnect) return
+                    // A non-retryable close (default: 1008, e.g. rejected/expired
+                    // token) would loop forever against the same dead credential.
+                    // Terminate instead of reconnecting, and surface it distinctly.
+                    if (this._nonRetryable.has(code)) {
+                        this.logger.warn('Non-retryable close — giving up', { code, reason })
+                        this._exhausted = true
+                        this.emit(TransportEvent.Terminated, code, reason)
+                        if (!settled) {
+                            settled = true
+                            onError?.(new Error(`Connection closed (${code}): ${reason}`))
+                        }
+                        return
+                    }
                     if (this._reconnect.isExhausted()) {
                         this.logger.warn('Max reconnect attempts reached', {
                             attempts: this._reconnect.attempt,
@@ -156,6 +185,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                         this._exhausted = true
                         const exhaustedErr = new Error('Max reconnect attempts reached')
                         this.emit(TransportEvent.Error, exhaustedErr)
+                        this.emit(TransportEvent.Terminated, code, reason)
                         if (!settled) {
                             settled = true
                             onError?.(exhaustedErr)
@@ -184,7 +214,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                 ws.onerror = () => {
                     if (connectTimer) clearTimeout(connectTimer)
                     const err = new Error('WebSocket error')
-                    this.logger.error('WebSocket error', { url: this.url })
+                    this.logger.error('WebSocket error', { url: this._safeUrl })
                     this.emit(TransportEvent.Error, err)
                     if (!settled) {
                         settled = true

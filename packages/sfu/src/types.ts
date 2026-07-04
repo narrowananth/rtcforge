@@ -104,14 +104,14 @@ export type SfuClusterEvent = (typeof SfuClusterEvent)[keyof typeof SfuClusterEv
  * fan-out routes) to your SFU's actual forwarding tables.
  */
 export interface SfuMediaInterface {
-    /** Add a forwarding route for `roomId` targeting the node `nodeId`. */
-    addRoute(roomId: string, nodeId: string): void
+    /** Add a forwarding route for `roomId` targeting the node `nodeId`. May be async so real pipe setup can be awaited and surface failures. */
+    addRoute(roomId: string, nodeId: string): void | Promise<void>
     /** Remove all forwarding routes for `roomId`. */
-    removeRoute(roomId: string): void
+    removeRoute(roomId: string): void | Promise<void>
     /** Return the node ids currently routed for `roomId`. */
     getRoutes(roomId: string): string[]
     /** Remove only the cascade route from `roomId` to `nodeId`. */
-    removeCascadeRoute(roomId: string, nodeId: string): void
+    removeCascadeRoute(roomId: string, nodeId: string): void | Promise<void>
 }
 
 /**
@@ -122,10 +122,10 @@ export interface SfuMediaInterface {
  * {@link CascadeTree} as real media forwarding between SFU nodes.
  */
 export interface CascadePipeInterface {
-    /** Establish a media pipe carrying `roomId` from `fromNodeId` to `toNodeId`. */
-    pipeLink(roomId: string, fromNodeId: string, toNodeId: string): void
+    /** Establish a media pipe carrying `roomId` from `fromNodeId` to `toNodeId`. May be async so the pipe setup can be awaited and surface failures. */
+    pipeLink(roomId: string, fromNodeId: string, toNodeId: string): void | Promise<void>
     /** Tear down the media pipe carrying `roomId` from `fromNodeId` to `toNodeId`. */
-    unpipeLink(roomId: string, fromNodeId: string, toNodeId: string): void
+    unpipeLink(roomId: string, fromNodeId: string, toNodeId: string): void | Promise<void>
 }
 
 /**
@@ -148,6 +148,22 @@ export interface SfuClusterOptions {
         intervalMs?: number
         /** Probe returning whether the node with `nodeId` is currently healthy. */
         onCheck?: (nodeId: string) => Promise<boolean>
+        /**
+         * Milliseconds a single probe may run before being treated as failed.
+         * Guards against a hung probe wedging a node. @defaultValue `intervalMs`
+         */
+        probeTimeoutMs?: number
+        /**
+         * Consecutive failed sweeps required before a node is marked failed.
+         * Higher values suppress flapping from a single transient timeout.
+         * @defaultValue `3`
+         */
+        failureThreshold?: number
+        /**
+         * Consecutive passing sweeps required before a failed node is marked
+         * recovered. @defaultValue `2`
+         */
+        recoveryThreshold?: number
     }
     /**
      * Callback invoked for each drained or failed node during a rebalance,
@@ -217,6 +233,13 @@ export const CascadeTreeEvent = {
     TreeDropped: 'treeDropped',
     /** Fired when the plan cannot seat all viewers, with the unmet viewer count. */
     CapacityShortfall: 'capacityShortfall',
+    /**
+     * Fired when a room's origin node fails. The tree is torn down and cannot be
+     * rebuilt automatically — the origin ingests the source media, so recovery
+     * requires re-originating the room (host re-publish / failover) and calling
+     * {@link CascadeTree.build} with a new origin.
+     */
+    OriginLost: 'originLost',
 } as const
 
 /** Union of the string values of {@link CascadeTreeEvent}. */

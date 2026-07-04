@@ -1,7 +1,7 @@
 import type { types as MsTypes } from 'mediasoup'
 import { EventEmitter, noopLogger } from 'rtcforge-core'
 import type { Logger } from 'rtcforge-core'
-import { MediaRouter } from './MediaRouter.js'
+import { MediaRouter, MediaRouterEvent } from './MediaRouter.js'
 import { WorkerPool, WorkerPoolEvent } from './WorkerPool.js'
 import { DEFAULT_MEDIA_CODECS, RoomLikeEvent } from './types.js'
 import type {
@@ -14,11 +14,13 @@ import type {
 export const MediaServiceEvent = {
     Error: 'error',
     RouterCreated: 'routerCreated',
+    WorkerDied: 'workerDied',
 } as const
 
 type MediaServiceEvents = {
     [MediaServiceEvent.Error]: [err: Error]
     [MediaServiceEvent.RouterCreated]: [router: MediaRouter]
+    [MediaServiceEvent.WorkerDied]: [pid: number]
 }
 
 export class MediaService extends EventEmitter<MediaServiceEvents> {
@@ -38,9 +40,10 @@ export class MediaService extends EventEmitter<MediaServiceEvents> {
         this._webRtcConfig = options.webRtcTransport ?? {}
         this._pool = new WorkerPool(options.worker, this._logger)
         this._pool.on(WorkerPoolEvent.Error, (err) => this.emit(MediaServiceEvent.Error, err))
-        this._pool.on(WorkerPoolEvent.WorkerDied, (pid) =>
-            this._logger.error('Worker died — routers on it are lost', { pid }),
-        )
+        this._pool.on(WorkerPoolEvent.WorkerDied, (pid) => {
+            this._logger.error('Worker died — routers on it are lost', { pid })
+            this.emit(MediaServiceEvent.WorkerDied, pid)
+        })
     }
 
     async init(): Promise<void> {
@@ -84,6 +87,16 @@ export class MediaService extends EventEmitter<MediaServiceEvents> {
             throw new Error(`Room ${room.id} closed during router creation`)
         }
         this._routers.set(room.id, router)
+
+        // Reap the router if it closes for any reason — explicit close OR its
+        // worker dying underneath it — so getRouter/attachRoom never hand back a
+        // dead router whose transports all throw.
+        router.once(MediaRouterEvent.Closed, () => {
+            if (this._routers.get(room.id) === router) {
+                this._detach(room.id)
+                this._routers.delete(room.id)
+            }
+        })
 
         const onPeerLeft = (peer: RoomMemberLike) => router.closeTransportsForPeer(peer.id)
         const onRoomClosed = () => {

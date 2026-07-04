@@ -14,6 +14,7 @@ type CallEvents = {
     [MediaEvent.RemoteStream]: [peerId: string, stream: MediaStream]
     [MediaEvent.RemoteStreamRemoved]: [peerId: string]
     [MediaEvent.TrackPublished]: [track: MediaStreamTrack, stream: MediaStream]
+    [MediaEvent.TrackUnpublished]: [track: MediaStreamTrack]
     [MediaEvent.Error]: [peerId: string, err: Error]
     [MediaEvent.DataChannel]: [peerId: string, channel: RTCDataChannel]
     [MediaEvent.ActiveSpeaker]: [peerId: string | null, audioLevel: number]
@@ -55,7 +56,14 @@ export class Call extends EventEmitter<CallEvents> {
     private readonly logger: Logger
     private readonly connections = new Map<string, PeerConnection>()
     private readonly _negTimers = new Map<string, ReturnType<typeof setTimeout>>()
+    private readonly _iceRestarts = new Map<string, number>()
     private readonly tracks: LocalTrackRegistry
+    // Stream ids already announced per peer, so an audio+video peer sharing one
+    // MediaStream fires RemoteStream once, not once per track.
+    private readonly _remoteStreams = new Map<string, Set<string>>()
+    // Per-local-track 'ended' listener removers, so they can be detached on
+    // remove/replace/close instead of leaking the closure.
+    private readonly _trackEndedCleanups = new Map<MediaStreamTrack, () => void>()
     private started = false
     private closed = false
     private _activeSpeaker: ActiveSpeakerDetector | null = null
@@ -70,6 +78,35 @@ export class Call extends EventEmitter<CallEvents> {
         this.opts = opts
         this.logger = opts.logger ?? noopLogger
         this.tracks = new LocalTrackRegistry(opts.stream)
+        for (const { track } of this.tracks.entries) this._wireTrackEnded(track)
+    }
+
+    // When a local track ends (e.g. the camera is unplugged or revoked), drop it
+    // from the registry and every peer connection so a dead track isn't re-added
+    // to future peers; removing it from the PCs triggers renegotiation. The
+    // listener is tracked in _trackEndedCleanups so it can be detached when the
+    // track is removed/replaced/closed (otherwise the closure leaks the Call and
+    // can fire a spurious TrackUnpublished after removal).
+    private _wireTrackEnded(track: MediaStreamTrack): void {
+        if (typeof track.addEventListener !== 'function') return
+        if (this._trackEndedCleanups.has(track)) return
+        const onEnded = () => {
+            this._unwireTrackEnded(track)
+            if (this.closed) return
+            this.tracks.remove(track)
+            for (const pc of this.connections.values()) pc.removeTrack(track)
+            this.emit(MediaEvent.TrackUnpublished, track)
+        }
+        track.addEventListener('ended', onEnded)
+        this._trackEndedCleanups.set(track, () => track.removeEventListener('ended', onEnded))
+    }
+
+    private _unwireTrackEnded(track: MediaStreamTrack): void {
+        const cleanup = this._trackEndedCleanups.get(track)
+        if (cleanup) {
+            cleanup()
+            this._trackEndedCleanups.delete(track)
+        }
     }
 
     /**
@@ -114,6 +151,7 @@ export class Call extends EventEmitter<CallEvents> {
         }
         const bitrate = opts?.maxBitrate ?? this.opts.maxBitrate
         this.tracks.add(track, stream)
+        this._wireTrackEnded(track)
         for (const pc of this.connections.values()) {
             pc.addTrack(track, stream, bitrate)
         }
@@ -129,6 +167,10 @@ export class Call extends EventEmitter<CallEvents> {
      */
     async replaceTrack(oldTrack: MediaStreamTrack, newTrack: MediaStreamTrack): Promise<void> {
         this.tracks.replace(oldTrack, newTrack)
+        // Move the 'ended' watch from the old track to the new one, so an unplug
+        // of the new track is detected and a stale old-track listener can't fire.
+        this._unwireTrackEnded(oldTrack)
+        this._wireTrackEnded(newTrack)
         await Promise.all(
             Array.from(this.connections.values(), (pc) => pc.replaceTrack(oldTrack, newTrack)),
         )
@@ -216,6 +258,7 @@ export class Call extends EventEmitter<CallEvents> {
      * @param track - The track to remove.
      */
     removeTrack(track: MediaStreamTrack): void {
+        this._unwireTrackEnded(track)
         for (const pc of this.connections.values()) {
             pc.removeTrack(track)
         }
@@ -271,7 +314,15 @@ export class Call extends EventEmitter<CallEvents> {
         this.closed = true
         this.logger.info('Call closed', { localPeerId: this.room.localPeerId })
         this.stopActiveSpeakerDetection()
-        this.tracks.clear()
+        // Stop local tracks (camera/mic) only when the caller opted in — by
+        // default the app owns the stream and may reuse it.
+        // Detach all local-track 'ended' listeners so a still-live reused track
+        // doesn't retain this closed Call (memory leak across sequential calls).
+        for (const cleanup of this._trackEndedCleanups.values()) cleanup()
+        this._trackEndedCleanups.clear()
+        if (this.opts.stopTracksOnClose) this.tracks.stopAll()
+        else this.tracks.clear()
+        this._remoteStreams.clear()
         this._detachRoomListeners()
         this._teardownConnections()
     }
@@ -279,6 +330,10 @@ export class Call extends EventEmitter<CallEvents> {
     private _teardownConnections(): void {
         for (const timer of this._negTimers.values()) clearTimeout(timer)
         this._negTimers.clear()
+        // Reset per-peer transient state so a restart() doesn't inherit a spent
+        // ICE-restart budget or a stale seen-stream set for reused peer ids.
+        this._iceRestarts.clear()
+        this._remoteStreams.clear()
         for (const pc of this.connections.values()) {
             pc.removeAllListeners()
             pc.close()
@@ -304,6 +359,8 @@ export class Call extends EventEmitter<CallEvents> {
 
     private _dropConnection(peerId: string, pc: PeerConnection): void {
         this.connections.delete(peerId)
+        this._iceRestarts.delete(peerId)
+        this._remoteStreams.delete(peerId)
         pc.removeAllListeners()
         pc.close()
     }
@@ -350,6 +407,11 @@ export class Call extends EventEmitter<CallEvents> {
                 case SignalType.Answer:
                     this.logger.debug('Received answer', { from })
                     await pc.handleAnswer(data.sdp)
+                    // The negotiation timer guards "offer sent, awaiting answer".
+                    // Clear it here: a mid-call renegotiation on an already-
+                    // connected PC fires no StateChange, so relying on state
+                    // alone would let the timer expire and tear down a healthy call.
+                    this._clearPeerTimer(from)
                     break
                 case SignalType.Ice:
                     await pc.addIceCandidate(data.candidate)
@@ -411,17 +473,43 @@ export class Call extends EventEmitter<CallEvents> {
 
         pc.on(ConnectionEvent.Track, (_track, streams) => {
             const stream = streams[0]
-            if (stream) {
-                this.logger.debug('Remote stream received', { peerId })
-                this.emit(MediaEvent.RemoteStream, peerId, stream)
-            }
+            if (!stream) return
+            // Dedupe: an audio+video peer shares one stream across two track events.
+            const seen = this._remoteStreams.get(peerId) ?? new Set<string>()
+            if (seen.has(stream.id)) return
+            seen.add(stream.id)
+            this._remoteStreams.set(peerId, seen)
+            this.logger.debug('Remote stream received', { peerId })
+            this.emit(MediaEvent.RemoteStream, peerId, stream)
         })
 
         pc.on(ConnectionEvent.StateChange, (state) => {
             if (state === 'connected' || state === 'closed' || state === 'failed') {
                 this._clearPeerTimer(peerId)
             }
+            if (state === 'connected') {
+                this._iceRestarts.delete(peerId)
+            }
             if (state === 'failed') {
+                if (this.connections.get(peerId) !== pc) return
+                // A `failed` state is often just a network blip that a standard
+                // ICE restart recovers. The impolite (offering) side drives the
+                // restart; only drop after the retry budget is spent.
+                const polite = this.opts.isPolite
+                    ? this.opts.isPolite(this.room.localPeerId, peerId)
+                    : this.room.localPeerId < peerId
+                const attempts = this._iceRestarts.get(peerId) ?? 0
+                const maxRestarts = this.opts.maxIceRestarts ?? 1
+                if (!polite && attempts < maxRestarts) {
+                    this._iceRestarts.set(peerId, attempts + 1)
+                    this.logger.debug('ICE failed — attempting restart', {
+                        peerId,
+                        attempt: attempts + 1,
+                    })
+                    pc.restartIce()
+                    return
+                }
+                this._iceRestarts.delete(peerId)
                 this._dropConnection(peerId, pc)
                 this.emit(MediaEvent.ConnectionFailed, peerId)
             }

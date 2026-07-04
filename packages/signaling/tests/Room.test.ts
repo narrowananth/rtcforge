@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Peer } from '../src/Peer.js'
 import { Room } from '../src/Room.js'
 import { MessageType } from '../src/protocol.js'
-import { RoomEvent, RoomState } from '../src/types.js'
+import { PeerEvent, RoomEvent, RoomState } from '../src/types.js'
 
 class MockWs extends EventEmitter {
     readyState = 1
@@ -33,12 +33,28 @@ describe('Room', () => {
     })
 
     describe('addPeer', () => {
+        it('rejects a peer once the room is closing/closed (zombie-room race)', () => {
+            // Regression (REVIEW.md HIGH #4): a peer admitted into a room that
+            // closed while an async hook was awaited becomes an invisible zombie
+            // whose later close can evict a fresh same-id room.
+            const { peer: p1 } = makePeer('p1')
+            room.addPeer(p1)
+            p1.emit(PeerEvent.Disconnected, 1000, 'bye') // last peer leaves → room closes
+            expect(room.state).toBe(RoomState.Closed)
+
+            const { peer: late, ws } = makePeer('late')
+            expect(room.addPeer(late)).toBe(false)
+            expect(room.getPeerCount()).toBe(0)
+            expect(ws.close).toHaveBeenCalled()
+        })
+
         it('sends room-joined to the joining peer with no existing peers', () => {
             const { peer, ws } = makePeer('p1')
             room.addPeer(peer)
             expect(ws.send).toHaveBeenCalledWith(
                 JSON.stringify({
                     type: MessageType.RoomJoined,
+                    v: 1,
                     roomId: 'r1',
                     peerId: 'p1',
                     peers: [],
@@ -57,6 +73,7 @@ describe('Room', () => {
             expect(ws2.send).toHaveBeenCalledWith(
                 JSON.stringify({
                     type: MessageType.RoomJoined,
+                    v: 1,
                     roomId: 'r1',
                     peerId: 'p2',
                     peers: ['p1'],
@@ -265,6 +282,18 @@ describe('Room', () => {
             expect(room.kickPeer('nonexistent')).toBe(false)
         })
 
+        it('removes the kicked peer synchronously (frees its slot immediately)', () => {
+            const { peer: p1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
+            room.addPeer(p1)
+            room.addPeer(p2)
+            expect(room.getPeerCount()).toBe(2)
+            room.kickPeer('p1')
+            // No waiting for the async ws close — gone right away.
+            expect(room.getPeerCount()).toBe(1)
+            expect(room.getPeer('p1')).toBeUndefined()
+        })
+
         it('still disconnects peer and emits peerKicked when Kicked send fails', () => {
             const { peer: p1, ws: ws1 } = makePeer('p1')
             room.addPeer(p1)
@@ -275,6 +304,23 @@ describe('Room', () => {
             expect(result).toBe(true)
             expect(ws1.close).toHaveBeenCalled()
             expect(kicked).toHaveBeenCalledWith('p1', 'ban')
+        })
+    })
+
+    describe('dispose', () => {
+        it('clears peers so a late socket close does not re-emit Closed', () => {
+            const { peer: p1 } = makePeer('p1')
+            room.addPeer(p1)
+            const closed = vi.fn()
+            room.on(RoomEvent.Closed, closed)
+
+            room.dispose()
+            expect(room.getPeerCount()).toBe(0)
+
+            // A socket 'close' arriving after shutdown must not drive removePeer →
+            // Closed again (which would inflate server metrics/audit).
+            p1.emit(PeerEvent.Disconnected, 1000, 'server stopping')
+            expect(closed).not.toHaveBeenCalled()
         })
     })
 

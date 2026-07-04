@@ -57,8 +57,37 @@ interface MembershipEntry {
 export class MemoryMembership implements Membership {
     private readonly _nodes = new Map<string, MembershipEntry>()
     private readonly _watchers = new Set<(nodes: NodeInfo[]) => void>()
+    private _sweepTimer: ReturnType<typeof setInterval> | null = null
 
-    constructor(private readonly _clock: Clock = systemClock) {}
+    /**
+     * @param _clock - Time source used for TTL expiry.
+     * @param sweepIntervalMs - When set (`> 0`), a background timer prunes
+     *   expired nodes every this-many milliseconds and notifies watchers, so a
+     *   silently-dead node's TTL expiry fires `watch`/reconciler `onRemove`
+     *   without anything having to poll {@link list}. Omit to disable (watchers
+     *   then only fire on register/deregister and explicit `list()`).
+     */
+    constructor(
+        private readonly _clock: Clock = systemClock,
+        sweepIntervalMs?: number,
+    ) {
+        if (sweepIntervalMs !== undefined && sweepIntervalMs > 0) {
+            this._sweepTimer = setInterval(() => {
+                if (this._prune()) this._notify()
+            }, sweepIntervalMs)
+            if (typeof (this._sweepTimer as { unref?: () => void }).unref === 'function') {
+                ;(this._sweepTimer as { unref: () => void }).unref()
+            }
+        }
+    }
+
+    /** Stops the background TTL sweeper (if one was started). Idempotent. */
+    stop(): void {
+        if (this._sweepTimer !== null) {
+            clearInterval(this._sweepTimer)
+            this._sweepTimer = null
+        }
+    }
 
     private _prune(): boolean {
         const now = this._clock.now()

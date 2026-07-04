@@ -20,22 +20,28 @@ rtcforge-core (GossipMembership)  →  rtcforge-adapter-udp (UdpGossipTransport)
 
 Plug it into core's gossip; `rtcforge-sfu` then reads the resulting node roster for placement.
 
+> **Deprecated.** This package has been folded into
+> [`rtcforge-sfu`](https://www.npmjs.com/package/rtcforge-sfu). Install that and
+> import from `rtcforge-sfu/udp`; this package is now a thin re-export.
+
 ## How to use
 
 ```ts
 import { GossipMembership } from "rtcforge-core";
-import { UdpGossipTransport } from "rtcforge-adapter-udp";
+import { UdpGossipTransport } from "rtcforge-sfu/udp"; // was: rtcforge-adapter-udp
 
 const transport = new UdpGossipTransport({
   port: 7946,
   advertiseHost: "10.0.0.5", // address other nodes reach this one on
+  secret: process.env.GOSSIP_SECRET, // HMAC-authenticate datagrams (recommended)
 });
+await transport.listen(); // REQUIRED — bind the socket before starting membership
 
 const membership = new GossipMembership(
   { id: "node-a", address: "10.0.0.5:7946" }, // this node (NodeInfo)
   transport,
 );
-// membership now spreads + receives node state over UDP
+membership.start(); // begin spreading + receiving node state over UDP
 ```
 
 ---

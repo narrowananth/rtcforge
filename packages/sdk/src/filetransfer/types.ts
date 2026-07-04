@@ -160,6 +160,13 @@ export interface TransferTuning {
      * @defaultValue {@link DEFAULT_PARALLEL_CHANNELS}
      */
     parallelChannels?: number
+
+    /**
+     * Milliseconds a sender waits for the receiver to accept an offer before the
+     * transfer fails (releasing its open channels). `0` disables the timeout.
+     * @defaultValue {@link DEFAULT_OFFER_TIMEOUT_MS}
+     */
+    offerTimeoutMs?: number
 }
 
 /** Options accepted by the {@link FileTransferManager} constructor. */
@@ -169,6 +176,22 @@ export interface FileTransferOptions extends TransferTuning {
      * @defaultValue `true`
      */
     checksum?: boolean
+
+    /**
+     * Upper bound (bytes) on an inbound offer's declared file size. Offers
+     * larger than this are auto-rejected before a {@link ReceiveTransfer} is
+     * created, blunting memory/disk-exhaustion from a hostile `size`. Omit for
+     * no limit. @defaultValue unlimited
+     */
+    maxFileSize?: number
+    /**
+     * When `true`, a mid-transfer data-channel drop **pauses** the send instead of
+     * failing it; re-announcing on reconnected channels
+     * ({@link FileTransferManager.resumeSend}) resends only the chunks the receiver
+     * is still missing. In-session only (state is not persisted across reloads),
+     * and best used with `checksum: false`. @defaultValue `false`
+     */
+    resumable?: boolean
 }
 
 /** Per-send overrides accepted by {@link FileTransferManager.sendFile}; merged over the manager defaults. */
@@ -194,6 +217,12 @@ export interface ResolvedTuning {
     readonly parallelChannels: number
     /** Whether SHA-256 checksum verification is enabled. */
     readonly checksum: boolean
+    /** Upper bound (bytes) on an accepted inbound offer's size; `undefined` = unlimited. */
+    readonly maxFileSize: number | undefined
+    /** Milliseconds a sender waits for an accept before failing; `0` disables. */
+    readonly offerTimeoutMs: number
+    /** Whether a mid-transfer channel drop pauses (resumable) instead of failing. */
+    readonly resumable: boolean
 }
 
 /**
@@ -211,6 +240,9 @@ export const DEFAULT_LOW_WATER_MARK = 256 * 1024
 /** Default number of parallel data channels per transfer (single channel). */
 export const DEFAULT_PARALLEL_CHANNELS = 1
 
+/** Default offer-accept timeout (30 seconds) before a sender gives up on an unanswered offer. */
+export const DEFAULT_OFFER_TIMEOUT_MS = 30_000
+
 /**
  * Resolves partial tuning options into a complete {@link ResolvedTuning}, layering
  * `opts` over an optional `base` and finally over the module defaults.
@@ -220,7 +252,7 @@ export const DEFAULT_PARALLEL_CHANNELS = 1
  * @returns A {@link ResolvedTuning} with every field populated.
  */
 export function resolveTuning(
-    opts: TransferTuning & { checksum?: boolean } = {},
+    opts: TransferTuning & { checksum?: boolean; maxFileSize?: number; resumable?: boolean } = {},
     base: Partial<ResolvedTuning> = {},
 ): ResolvedTuning {
     return {
@@ -230,5 +262,8 @@ export function resolveTuning(
         parallelChannels:
             opts.parallelChannels ?? base.parallelChannels ?? DEFAULT_PARALLEL_CHANNELS,
         checksum: opts.checksum ?? base.checksum ?? true,
+        maxFileSize: opts.maxFileSize ?? base.maxFileSize,
+        offerTimeoutMs: opts.offerTimeoutMs ?? base.offerTimeoutMs ?? DEFAULT_OFFER_TIMEOUT_MS,
+        resumable: opts.resumable ?? base.resumable ?? false,
     }
 }

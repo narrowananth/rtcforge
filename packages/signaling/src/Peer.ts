@@ -5,6 +5,14 @@ import { ClientMessageSchema, MessageType } from './protocol.js'
 import type { ServerMessage } from './protocol.js'
 import { PeerEvent } from './types.js'
 
+/** Truncate a string so its UTF-8 encoding fits within `maxBytes` (for ws close reasons). */
+function truncateUtf8(s: string, maxBytes: number): string {
+    if (Buffer.byteLength(s, 'utf8') <= maxBytes) return s
+    let out = s
+    while (Buffer.byteLength(out, 'utf8') > maxBytes) out = out.slice(0, -1)
+    return out
+}
+
 type PeerEvents = {
     [PeerEvent.Disconnected]: [code: number, reason: string]
     [PeerEvent.Signal]: [to: string, data: unknown]
@@ -80,6 +88,12 @@ export class Peer extends EventEmitter<PeerEvents> {
         this.ws.on('close', (code, reason) => {
             this.emit(PeerEvent.Disconnected, code, reason.toString())
         })
+        // A raw socket 'error' (ECONNRESET, malformed frame) is emitted on the
+        // ws EventEmitter; with no listener Node throws uncaughtException and
+        // kills the whole server. Surface it and let 'close' drive cleanup.
+        this.ws.on('error', (err) => {
+            this.emit(PeerEvent.Error, toError(err))
+        })
     }
 
     /**
@@ -149,14 +163,22 @@ export class Peer extends EventEmitter<PeerEvents> {
     }
 
     disconnect(code: number, reason: string): void {
-        this.ws.close(code, reason)
+        // A WebSocket close reason must be ≤123 UTF-8 bytes or ws.close() throws.
+        this.ws.close(code, truncateUtf8(reason, 123))
     }
 
     private handleMessage(raw: string): void {
+        // Rate-limit BEFORE parsing so malformed-frame and pong floods are bounded
+        // too (not just valid app messages) — the earlier "parse first, exempt
+        // pong" ordering left both unbounded.
         if (this._rateLimiter !== null && !this._rateLimiter.allow()) {
             this.emit(PeerEvent.RateLimitExceeded)
             return
         }
+        // Any accepted frame proves liveness, so a peer sending real traffic is
+        // never falsely pruned by the heartbeat even if a pong is rate-limited —
+        // this replaces the fragile pong-exemption without leaving pongs unbounded.
+        this._lastPong = Date.now()
 
         let parsed: unknown
         try {

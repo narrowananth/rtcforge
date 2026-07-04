@@ -1,8 +1,8 @@
 export { SfuNode } from './SfuNode.js'
 export { SfuCluster } from './SfuCluster.js'
 export { CascadingRouter } from './CascadingRouter.js'
-export { SfuBridge } from './SfuBridge.js'
-export { CascadeBridge } from './CascadeBridge.js'
+export { SfuBridge, SfuBridgeEvent } from './SfuBridge.js'
+export { CascadeBridge, CascadeBridgeEvent } from './CascadeBridge.js'
 export { LeastLoadedStrategy, HashRingStrategy } from './PlacementStrategy.js'
 export { CascadeTree, planCascadeTree } from './CascadeTree.js'
 export { NodeFailureTracker } from './NodeFailureTracker.js'
@@ -31,3 +31,5 @@ export type {
     NodeInfo,
 } from './types.js'
 export { SimpleBandwidthEstimator } from './SimpleBandwidthEstimator.js'
+export { ReferenceSfuMedia } from './ReferenceSfuMedia.js'
+export type { SfuMediaDriver } from './ReferenceSfuMedia.js'

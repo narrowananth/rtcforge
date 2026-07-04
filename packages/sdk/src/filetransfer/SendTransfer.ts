@@ -3,7 +3,7 @@ import { awaitDrain, waitForOpen } from './channel.js'
 import { Sha256Digest } from './checksum.js'
 import { FileTransferError, FileTransferErrorCode } from './errors.js'
 import { encodeFrame } from './framing.js'
-import { type ControlMessage, ControlType } from './protocol.js'
+import { type ControlMessage, ControlType, FT_PROTOCOL_VERSION } from './protocol.js'
 import type { FileSource } from './source/FileSource.js'
 import { type FileMetadata, TransferDirection, TransferEvent, TransferState } from './types.js'
 
@@ -30,6 +30,10 @@ export interface SendTransferParams {
     lowWaterMark: number
     /** Whether to compute and send a SHA-256 digest for receiver verification. */
     checksum: boolean
+    /** Milliseconds to wait for the receiver to accept before failing; `0` disables. */
+    offerTimeoutMs: number
+    /** When `true`, a mid-transfer channel drop pauses (not fails) so the send can be resumed. */
+    resumable: boolean
 }
 
 /**
@@ -60,12 +64,20 @@ export class SendTransfer extends Transfer {
     readonly direction = TransferDirection.Send
 
     private readonly _source: FileSource
-    private readonly _channels: RTCDataChannel[]
+    private _channels: RTCDataChannel[]
     private readonly _sendControl: ControlSender
     private readonly _highWaterMark: number
     private readonly _lowWaterMark: number
     private readonly _checksum: boolean
+    private readonly _resumable: boolean
+    private readonly _offerTimeoutMs: number
+    private _offerTimer: ReturnType<typeof setTimeout> | null = null
     private _resumeWaiters: Array<() => void> = []
+    private _interrupted = false
+    // Monotonic run generation. Every `_run` loop captures the current value;
+    // workers exit as soon as it changes, so a superseded run (duplicate accept,
+    // resume, or terminal) can never send concurrently with the live one.
+    private _gen = 0
 
     /**
      * @param params - Fully-resolved send parameters; see {@link SendTransferParams}.
@@ -90,6 +102,73 @@ export class SendTransfer extends Transfer {
         this._highWaterMark = params.highWaterMark
         this._lowWaterMark = params.lowWaterMark
         this._checksum = params.checksum
+        this._resumable = params.resumable
+        this._offerTimeoutMs = params.offerTimeoutMs
+    }
+
+    /** Number of parallel data channels this transfer streams over. */
+    get channelCount(): number {
+        return this._channels.length
+    }
+
+    /** Whether this transfer is paused awaiting a {@link SendTransfer.reoffer} after a channel drop. */
+    get interrupted(): boolean {
+        return this._interrupted
+    }
+
+    /**
+     * Re-announce this transfer on freshly reconnected data channels after an
+     * interrupt. The receiver responds with a resume request so only the chunks
+     * it is missing are resent. No-op unless the transfer was interrupted.
+     *
+     * @param channels - The new binary data channels to stream over.
+     */
+    reoffer(channels: RTCDataChannel[]): void {
+        if (this.isTerminal || !this._interrupted) return
+        this._channels = channels
+        this._sendOffer()
+    }
+
+    private _sendOffer(): void {
+        this._safeControl({
+            type: ControlType.Offer,
+            transferId: this.id,
+            version: FT_PROTOCOL_VERSION,
+            name: this.metadata.name,
+            mimeType: this.metadata.mimeType,
+            size: this.metadata.size,
+            chunkSize: this.chunkSize,
+            totalChunks: this.totalChunks,
+            parallelChannels: this._channels.length,
+            checksum: this._checksum,
+        })
+    }
+
+    protected override _notifyRemoteFailure(error: FileTransferError): void {
+        this._safeControl({ type: ControlType.Cancel, transferId: this.id, reason: error.message })
+    }
+
+    protected override _onTerminal(): void {
+        this._clearOfferTimer()
+        // Bump the generation so any worker still parked at the pause gate exits
+        // when released instead of resuming a dead transfer.
+        this._gen += 1
+        // Release any worker suspended at the pause gate so it doesn't leak.
+        const waiters = this._resumeWaiters
+        this._resumeWaiters = []
+        for (const w of waiters) w()
+        // Close the per-transfer data channels so SCTP streams don't leak across
+        // many transfers.
+        for (const ch of this._channels) {
+            try {
+                ch.close()
+            } catch {
+                // already closing/closed
+            }
+        }
+        // Release the source handle on EVERY terminal state (complete/fail/cancel),
+        // not just cancel — otherwise a Node source leaks an fd on each send.
+        void this._source.close?.()
     }
 
     /**
@@ -99,17 +178,36 @@ export class SendTransfer extends Transfer {
      */
     start(): void {
         if (!this.transitionTo(TransferState.Offered)) return
-        this._safeControl({
-            type: ControlType.Offer,
-            transferId: this.id,
-            name: this.metadata.name,
-            mimeType: this.metadata.mimeType,
-            size: this.metadata.size,
-            chunkSize: this.chunkSize,
-            totalChunks: this.totalChunks,
-            parallelChannels: this._channels.length,
-            checksum: this._checksum,
-        })
+        this._sendOffer()
+        // Don't sit in Offered forever holding open channels if the receiver
+        // never answers. Fail (and notify) once the offer window elapses.
+        // Guard: start() can self-fail via _safeControl above; don't arm a timer
+        // on an already-terminal transfer.
+        if (this._offerTimeoutMs > 0 && this._state === TransferState.Offered) {
+            const timer = setTimeout(() => {
+                this._offerTimer = null
+                if (this._state === TransferState.Offered) {
+                    this.fail(
+                        new FileTransferError(
+                            'offer not accepted before timeout',
+                            FileTransferErrorCode.Timeout,
+                            { transferId: this.id },
+                        ),
+                        true,
+                    )
+                }
+            }, this._offerTimeoutMs)
+            // Don't keep the Node event loop alive just for the offer window.
+            ;(timer as { unref?: () => void }).unref?.()
+            this._offerTimer = timer
+        }
+    }
+
+    private _clearOfferTimer(): void {
+        if (this._offerTimer !== null) {
+            clearTimeout(this._offerTimer)
+            this._offerTimer = null
+        }
     }
 
     /**
@@ -121,12 +219,17 @@ export class SendTransfer extends Transfer {
      * @param msg - The decoded control message.
      */
     handleControl(msg: ControlMessage): void {
+        // Any control message from the receiver ends the "awaiting accept" window.
+        this._clearOfferTimer()
         switch (msg.type) {
             case ControlType.Accept:
                 this._begin(new Set(msg.haveChunks ?? []))
                 break
             case ControlType.ResumeRequest:
-                this._begin(this._complement(new Set(msg.haveChunks)))
+                // haveChunks = what the receiver already has; the worker skips
+                // those and sends the rest (same semantics as Accept). Passing the
+                // complement here was an inverted bug in this previously-dead path.
+                this._begin(new Set(msg.haveChunks))
                 break
             case ControlType.Reject:
                 this.fail(
@@ -196,22 +299,62 @@ export class SendTransfer extends Transfer {
     }
 
     private _begin(haveChunks: Set<number>): void {
-        if (this._state === TransferState.Offered && !this.transitionTo(TransferState.Accepted)) {
+        this._clearOfferTimer()
+        if (this._state === TransferState.Offered) {
+            if (!this.transitionTo(TransferState.Accepted)) return
+        } else if (this._state === TransferState.Paused && this._interrupted) {
+            // Reoffer resume: go back to Active for a fresh run on the reconnected
+            // channels. The generation bump below makes any worker still parked
+            // from the interrupted run exit when _applyResume releases it.
+            this._interrupted = false
+            if (!this._applyResume()) return
+        } else {
+            // Already Active/running, a user-pause, or any other state: ignore a
+            // duplicate Accept / spurious ResumeRequest so we never spawn a second
+            // concurrent worker set.
             return
         }
-        this._run(haveChunks).catch((err: unknown) => {
-            this.fail(this.toTransferError(err, FileTransferErrorCode.SourceReadFailed))
+        // State is now Accepted (fresh) or Active (resume); _run transitions
+        // Accepted→Active itself and bails if it isn't Active.
+        const gen = ++this._gen
+        this._run(haveChunks, gen).catch((err: unknown) => {
+            // Ignore failures from a superseded run.
+            if (gen !== this._gen) return
+            const e = this.toTransferError(err, FileTransferErrorCode.SourceReadFailed)
+            // When resumable, a channel dropping mid-transfer is recoverable:
+            // pause (don't fail, don't cancel the receiver) and await a reoffer.
+            if (
+                this._resumable &&
+                e.code === FileTransferErrorCode.ChannelClosed &&
+                !this.isTerminal
+            ) {
+                this._interrupt()
+                return
+            }
+            this.fail(e, true)
         })
     }
 
-    private async _run(haveChunks: Set<number>): Promise<void> {
+    // Suspend on a recoverable channel drop without notifying the receiver, so it
+    // keeps its partial state and can drive a resume.
+    private _interrupt(): void {
+        if (this._state === TransferState.Active && this.transitionTo(TransferState.Paused)) {
+            this._interrupted = true
+        }
+    }
+
+    private async _run(haveChunks: Set<number>, gen: number): Promise<void> {
         if (this._state === TransferState.Accepted && !this.transitionTo(TransferState.Active)) {
             return
         }
+        if (this._state !== TransferState.Active) return
 
         const digest = this._checksum ? new Sha256Digest() : null
-        await Promise.all(this._channels.map((ch, i) => this._worker(i, ch, haveChunks, digest)))
-        if (this.isTerminal) return
+        await Promise.all(
+            this._channels.map((ch, i) => this._worker(i, ch, haveChunks, digest, gen)),
+        )
+        // Bail if a newer run superseded this one (resume) or the transfer ended.
+        if (this.isTerminal || gen !== this._gen) return
         const hex = digest ? await digest.finalize() : undefined
         this.transitionTo(TransferState.Completing)
         this._safeControl({ type: ControlType.Sent, transferId: this.id, digest: hex })
@@ -222,13 +365,14 @@ export class SendTransfer extends Transfer {
         channel: RTCDataChannel,
         haveChunks: Set<number>,
         digest: Sha256Digest | null,
+        gen: number,
     ): Promise<void> {
         const stride = this._channels.length
         await waitForOpen(channel, this.id)
         for (let seq = index; seq < this.totalChunks; seq += stride) {
-            if (this.isTerminal) return
+            if (this.isTerminal || gen !== this._gen) return
             await this._pauseGate()
-            if (this.isTerminal) return
+            if (this.isTerminal || gen !== this._gen) return
             const need = !haveChunks.has(seq)
 
             if (!need && !digest) continue
@@ -239,8 +383,8 @@ export class SendTransfer extends Transfer {
             if (digest) await digest.update(seq, bytes)
             if (!need) continue
 
-            await awaitDrain(channel, this._highWaterMark, this._lowWaterMark)
-            if (this.isTerminal) return
+            await awaitDrain(channel, this._highWaterMark, this._lowWaterMark, this.id)
+            if (this.isTerminal || gen !== this._gen) return
             if (channel.readyState !== 'open') {
                 throw new FileTransferError(
                     `data channel '${channel.label}' closed mid-transfer`,
@@ -274,18 +418,11 @@ export class SendTransfer extends Transfer {
         return new Promise<void>((resolve) => this._resumeWaiters.push(resolve))
     }
 
-    private _complement(have: Set<number>): Set<number> {
-        const missing = new Set<number>()
-        for (let seq = 0; seq < this.totalChunks; seq += 1) {
-            if (!have.has(seq)) missing.add(seq)
-        }
-        return missing
-    }
-
     private _markCancelled(reason?: string): void {
         if (this.isTerminal) return
+        this._clearOfferTimer()
+        // transitionTo(Cancelled) triggers _onTerminal, which closes the source.
         this.transitionTo(TransferState.Cancelled)
-        void this._source.close?.()
         if (reason !== undefined) {
             this.emit(
                 TransferEvent.Error,

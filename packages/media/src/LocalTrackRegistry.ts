@@ -36,6 +36,18 @@ export class LocalTrackRegistry {
         this._tracks.length = 0
     }
 
+    /** Stop every registered track (turns off the camera/mic), then clear. */
+    stopAll(): void {
+        for (const { track } of this._tracks) {
+            try {
+                track.stop()
+            } catch {
+                // already stopped
+            }
+        }
+        this._tracks.length = 0
+    }
+
     setKindEnabled(kind: MediaKind, enabled: boolean): void {
         for (const { track } of this._tracks) {
             if (track.kind === kind) track.enabled = enabled
