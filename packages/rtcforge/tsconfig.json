@@ -9,7 +9,9 @@
             "rtcforge-sdk": ["../sdk/src/index.ts"],
             "rtcforge-sdk/filetransfer": ["../sdk/src/filetransfer/index.ts"],
             "rtcforge-signaling": ["../signaling/src/index.ts"],
-            "rtcforge-media": ["../media/src/index.ts"]
+            "rtcforge-media": ["../media/src/index.ts"],
+            "rtcforge-sfu": ["../sfu/src/index.ts"],
+            "rtcforge-sfu/udp": ["../sfu/src/udp.ts"]
         }
     },
     "include": ["src"]

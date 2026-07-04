@@ -9,7 +9,8 @@
             "rtcforge-sdk": ["./packages/sdk/src/index.ts"],
             "rtcforge-sdk/filetransfer": ["./packages/sdk/src/filetransfer/index.ts"],
             "rtcforge-media": ["./packages/media/src/index.ts"],
-            "rtcforge-sfu": ["./packages/sfu/src/index.ts"]
+            "rtcforge-sfu": ["./packages/sfu/src/index.ts"],
+            "rtcforge-sfu/udp": ["./packages/sfu/src/udp.ts"]
         }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"]

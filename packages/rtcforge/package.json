@@ -33,6 +33,16 @@
             "types": "./dist/filetransfer.d.ts",
             "import": "./dist/filetransfer.mjs",
             "require": "./dist/filetransfer.cjs"
+        },
+        "./sfu": {
+            "types": "./dist/sfu.d.ts",
+            "import": "./dist/sfu.mjs",
+            "require": "./dist/sfu.cjs"
+        },
+        "./sfu/udp": {
+            "types": "./dist/sfu/udp.d.ts",
+            "import": "./dist/sfu/udp.mjs",
+            "require": "./dist/sfu/udp.cjs"
         }
     },
     "files": ["dist", "LICENSE", "README.md"],
@@ -60,7 +70,8 @@
         "rtcforge-core": "^1.0.1",
         "rtcforge-sdk": "^1.0.1",
         "rtcforge-signaling": "^1.0.1",
-        "rtcforge-media": "^1.0.1"
+        "rtcforge-media": "^1.0.1",
+        "rtcforge-sfu": "^1.0.1"
     },
     "publishConfig": {
         "access": "public"
