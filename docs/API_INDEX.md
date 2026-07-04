@@ -1,10 +1,10 @@
 # RTCForge API Reference
 
-Complete class-level API documentation for every published RTCForge package. Generated from the TypeScript source with [TypeDoc](https://typedoc.org).
+Complete class-level API documentation for RTCForge, generated from the TypeScript source with [TypeDoc](https://typedoc.org).
 
-RTCForge is a composable set of packages for building real-time communication systems on WebRTC. Install the `rtcforge` meta-package for a one-line setup, or cherry-pick a layer (each pulls `rtcforge-core` transitively).
+RTCForge ships as a **single package — `rtcforge`** — that bundles the signaling server, the browser/Node client, the media plane (P2P mesh + mediasoup SFU), file transfer, and the multi-node cluster tools. You import each layer from a subpath.
 
-> **New here? Start with the [Building Apps guide](BUILDING_APPS.md)** — it maps each app type (chat, video call, live stream, whiteboard, file transfer, 1M-viewer scale) to the exact packages and wiring. This API reference is the per-class detail underneath it.
+> **New here? Start with the [Building Apps guide](BUILDING_APPS.md)** — it maps each app type (chat, video call, live stream, whiteboard, file transfer, 1M-viewer scale) to the exact subpaths and wiring. This API reference is the per-class detail underneath it.
 
 ## Quick start
 
@@ -18,16 +18,17 @@ import { createSignalingServer } from "rtcforge/server";
 const server = await createSignalingServer({ port: 3001, auth });
 ```
 
-Cherry-picking the underlying packages works too (`import { RTCForgeClient } from "rtcforge-sdk"`, `import { SignalingServer } from "rtcforge-signaling"`).
+## Entry points
 
-## Packages
+Everything is `npm i rtcforge` (add `mediasoup` only for the server-side SFU). The old `rtcforge-core`/`-sdk`/`-signaling`/`-media`/`-sfu` packages are **deprecated** — use the subpaths below.
 
-| Package | Install | What it gives you |
+| Subpath | Runtime | What it gives you |
 | ------- | ------- | ----------------- |
-| **rtcforge** | `npm i rtcforge` | One-install front door: `rtcforge/client`, `/server`, `/media`, `/filetransfer` |
-| **rtcforge-core** | _(transitive)_ | Shared primitives (`EventEmitter`, `Logger`, `consoleLogger`) + shared-nothing scale primitives (`HashRing`, `GossipMembership`, `StateStore`, …) |
-| **rtcforge-signaling** | `npm i rtcforge-signaling` | `SignalingServer`, `createSignalingServer`, `Room`, `Peer`, `RoomRouter` — WebSocket signaling backend |
-| **rtcforge-sdk** | `npm i rtcforge-sdk` | `RTCForgeClient`, `createClient`, `Room`, `Transport` — browser + Node client; also `rtcforge-sdk/filetransfer` |
-| **rtcforge-media** | `npm i rtcforge-media` (+ `mediasoup` for the SFU) | `Call` (P2P mesh) + `MediaService`/`MediaRouter` + `SfuSignalHandler` (mediasoup SFU) |
-| **rtcforge-sfu** | `npm i rtcforge-sfu` | `SfuCluster`, `CascadingRouter`, `CascadeTree`, `ReferenceSfuMedia` — multi-node cascade fan-out; gossip wire at `rtcforge-sfu/udp` |
-| **rtcforge-adapter-udp** | _deprecated → `rtcforge-sfu/udp`_ | `UdpGossipTransport` — real network wire for gossip membership |
+| **`rtcforge/server`** | Node | `SignalingServer`, `createSignalingServer`, `Room`, `Peer`, `RoomRouter` — WebSocket signaling backend |
+| **`rtcforge/client`** | Browser + Node | `RTCForgeClient`, `createClient`, `Room`, `Transport`, `ClientEvent`, `RoomEvent` |
+| **`rtcforge/media`** | Browser + Node | `Call` + `getUserMedia` (browser P2P mesh) · `MediaService`/`MediaRouter`/`SfuSignalHandler` (mediasoup SFU, Node). Resolves to a mediasoup-free build under a bundler's `browser` condition. |
+| **`rtcforge/filetransfer`** | Browser | `FileTransferManager`, `MemorySink`, `FileSystemAccessSink`, `DataChannelHub` |
+| **`rtcforge/filetransfer/node`** | Node | `fs`-backed file sources & sinks |
+| **`rtcforge/sfu`** | Node | `SfuCluster`, `CascadingRouter`, `CascadeTree`, `HashRingStrategy`, `ReferenceSfuMedia` — multi-node cascade fan-out |
+| **`rtcforge/sfu/udp`** | Node | `UdpGossipTransport` — real network wire for gossip membership |
+| **`rtcforge/core`** | Any | Shared primitives (`EventEmitter`, `Logger`, `consoleLogger`, `MetricsCollector`) + scale primitives (`HashRing`, `GossipMembership`, `Membership`, `StateStore`, …) |
