@@ -10,6 +10,7 @@ import { defineConfig } from 'tsup'
 // peer stay external and resolve from the consumer's node_modules.
 export default defineConfig({
     entry: {
+        core: 'src/core.ts',
         client: 'src/client.ts',
         server: 'src/server.ts',
         media: 'src/media.ts',
