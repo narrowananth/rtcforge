@@ -1,5 +1,7 @@
 # rtcforge-sfu
 
+> ⚠️ **Internal package.** This is a building block of **[`rtcforge`](https://www.npmjs.com/package/rtcforge)**. Unless you need advanced/custom wiring, install **`rtcforge`** and import from `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, or `rtcforge/filetransfer` instead.
+
 > Multi-node SFU cluster management for RTCForge — routing, placement, cascade fan-out, and health.
 
 📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-sfu.html)**

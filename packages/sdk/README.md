@@ -1,5 +1,7 @@
 # rtcforge-sdk
 
+> ⚠️ **Internal package.** This is a building block of **[`rtcforge`](https://www.npmjs.com/package/rtcforge)**. Unless you need advanced/custom wiring, install **`rtcforge`** and import from `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, or `rtcforge/filetransfer` instead.
+
 > Browser + Node.js client for RTCForge — connect, join rooms, exchange signaling.
 
 📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-sdk.html)**

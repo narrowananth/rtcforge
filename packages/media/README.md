@@ -1,5 +1,7 @@
 # rtcforge-media
 
+> ⚠️ **Internal package.** This is a building block of **[`rtcforge`](https://www.npmjs.com/package/rtcforge)**. Unless you need advanced/custom wiring, install **`rtcforge`** and import from `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, or `rtcforge/filetransfer` instead.
+
 > The media plane for RTCForge — P2P mesh calls and a mediasoup-backed SFU.
 
 📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-media.html)**

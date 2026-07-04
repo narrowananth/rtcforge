@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-media",
     "version": "1.0.0",
-    "description": "WebRTC peer connections, media capture, and call management",
+    "description": "Internal to rtcforge — install `rtcforge` instead. WebRTC peer connections, media capture, and calls.",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
         "type": "git",

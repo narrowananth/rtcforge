@@ -1,5 +1,7 @@
 # rtcforge-core
 
+> ⚠️ **Internal package.** This is a building block of **[`rtcforge`](https://www.npmjs.com/package/rtcforge)**. Unless you need advanced/custom wiring, install **`rtcforge`** and import from `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, or `rtcforge/filetransfer` instead.
+
 > Zero-dependency foundation for RTCForge — shared primitives plus the building blocks for shared-nothing multi-node scale-out.
 
 📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-core.html)**

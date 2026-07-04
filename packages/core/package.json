@@ -1,7 +1,7 @@
 {
     "name": "rtcforge-core",
     "version": "1.0.0",
-    "description": "Shared zero-dependency primitives for RTCForge — EventEmitter, Logger, and scale-out building blocks (HashRing, gossip membership, state store)",
+    "description": "Internal to rtcforge — install `rtcforge` instead. Zero-dependency primitives (EventEmitter, Logger, HashRing, gossip membership).",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
         "type": "git",

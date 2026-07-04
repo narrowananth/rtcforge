@@ -1,5 +1,7 @@
 # rtcforge-signaling
 
+> ⚠️ **Internal package.** This is a building block of **[`rtcforge`](https://www.npmjs.com/package/rtcforge)**. Unless you need advanced/custom wiring, install **`rtcforge`** and import from `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, or `rtcforge/filetransfer` instead.
+
 > WebSocket signaling server for RTCForge — session lifecycle, rooms, auth, and cluster sharding.
 
 📖 **[Full API reference →](https://narrowananth.github.io/rtcforge/modules/rtcforge-signaling.html)**
