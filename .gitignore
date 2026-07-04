@@ -27,6 +27,10 @@ dist/
 # Generated API docs (TypeDoc → deployed to GitHub Pages via CI)
 docs-site/
 
+# Playwright E2E output
+test-results/
+playwright-report/
+
 # Environment
 .env
 .env.local
