@@ -1,6 +1,6 @@
 {
     "name": "rtcforge-core",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Internal to rtcforge — install `rtcforge` instead. Zero-dependency primitives (EventEmitter, Logger, HashRing, gossip membership).",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
