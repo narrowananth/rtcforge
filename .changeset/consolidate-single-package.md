@@ -1,9 +1,16 @@
 ---
-"rtcforge": major
+"rtcforge": minor
 ---
 
-Consolidate into a single self-contained package. `rtcforge` no longer depends on `rtcforge-sdk`, `rtcforge-signaling`, or `rtcforge-media` — all first-party code is now bundled directly into the package. The public import surface is unchanged (`rtcforge/client`, `rtcforge/server`, `rtcforge/media`, `rtcforge/filetransfer`).
+Consolidate into a single self-contained package. `rtcforge` no longer depends on any `rtcforge-*` package — all first-party code is bundled directly into the package.
 
-The `rtcforge-core`, `rtcforge-sdk`, `rtcforge-signaling`, `rtcforge-media`, and `rtcforge-sfu` packages are now private and are being deprecated + unpublished from npm. Install `rtcforge` instead.
+Every feature is now reachable from `rtcforge` via its subpaths:
 
-`mediasoup` is now an optional peer dependency of `rtcforge` (only needed for server-side `rtcforge/media`).
+- `rtcforge/server` — signaling server
+- `rtcforge/client` — browser + Node client
+- `rtcforge/media` — P2P mesh media; resolves to a **mediasoup-free browser build** under a bundler's `browser` condition, and to the full mediasoup SFU server plane in Node
+- `rtcforge/filetransfer` and `rtcforge/filetransfer/node` — P2P file transfer (browser + Node fs sources/sinks)
+- `rtcforge/sfu` and `rtcforge/sfu/udp` — multi-node SFU cluster + gossip transport
+- `rtcforge/core` — shared primitives (`EventEmitter`, `Logger`, `consoleLogger`, `GossipMembership`, `HashRing`, …)
+
+The `rtcforge-core`, `rtcforge-sdk`, `rtcforge-signaling`, `rtcforge-media`, and `rtcforge-sfu` packages are now private and deprecated on npm — install `rtcforge` instead. `mediasoup` is an optional peer dependency (only needed for the server-side SFU media plane).

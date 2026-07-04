@@ -14,6 +14,11 @@
     "author": "narrowananth",
     "sideEffects": false,
     "exports": {
+        "./core": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.mjs",
+            "require": "./dist/core.cjs"
+        },
         "./client": {
             "types": "./dist/client.d.ts",
             "import": "./dist/client.mjs",
@@ -25,6 +30,11 @@
             "require": "./dist/server.cjs"
         },
         "./media": {
+            "browser": {
+                "types": "./dist/media.browser.d.ts",
+                "import": "./dist/media.browser.mjs",
+                "require": "./dist/media.browser.cjs"
+            },
             "types": "./dist/media.d.ts",
             "import": "./dist/media.mjs",
             "require": "./dist/media.cjs"
@@ -33,6 +43,21 @@
             "types": "./dist/filetransfer.d.ts",
             "import": "./dist/filetransfer.mjs",
             "require": "./dist/filetransfer.cjs"
+        },
+        "./filetransfer/node": {
+            "types": "./dist/filetransfer/node.d.ts",
+            "import": "./dist/filetransfer/node.mjs",
+            "require": "./dist/filetransfer/node.cjs"
+        },
+        "./sfu": {
+            "types": "./dist/sfu.d.ts",
+            "import": "./dist/sfu.mjs",
+            "require": "./dist/sfu.cjs"
+        },
+        "./sfu/udp": {
+            "types": "./dist/sfu/udp.d.ts",
+            "import": "./dist/sfu/udp.mjs",
+            "require": "./dist/sfu/udp.cjs"
         }
     },
     "files": ["dist", "LICENSE", "README.md"],
@@ -60,7 +85,8 @@
         "rtcforge-core": "^1.0.1",
         "rtcforge-sdk": "^1.0.1",
         "rtcforge-signaling": "^1.0.1",
-        "rtcforge-media": "^1.0.1"
+        "rtcforge-media": "^1.0.1",
+        "rtcforge-sfu": "^1.0.1"
     },
     "publishConfig": {
         "access": "public"

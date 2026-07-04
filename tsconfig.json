@@ -8,8 +8,11 @@
             "rtcforge-signaling": ["./packages/signaling/src/index.ts"],
             "rtcforge-sdk": ["./packages/sdk/src/index.ts"],
             "rtcforge-sdk/filetransfer": ["./packages/sdk/src/filetransfer/index.ts"],
+            "rtcforge-sdk/filetransfer/node": ["./packages/sdk/src/filetransfer/node/index.ts"],
             "rtcforge-media": ["./packages/media/src/index.ts"],
-            "rtcforge-sfu": ["./packages/sfu/src/index.ts"]
+            "rtcforge-media/browser": ["./packages/media/src/browser.ts"],
+            "rtcforge-sfu": ["./packages/sfu/src/index.ts"],
+            "rtcforge-sfu/udp": ["./packages/sfu/src/udp.ts"]
         }
     },
     "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"]

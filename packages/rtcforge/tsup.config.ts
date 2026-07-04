@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
-// rtcforge is the single published package. Its four entry points re-export the
-// first-party sub-packages (rtcforge-sdk/-signaling/-media/-core), which are
+// rtcforge is the single published package. Its entry points re-export the
+// first-party sub-packages (rtcforge-sdk/-signaling/-media/-sfu/-core), which are
 // private and never published. tsconfig `paths` (see ./tsconfig.json) map those
 // bare specifiers to the sub-packages' TypeScript *source*, so both the JS
 // (esbuild) and the type declarations (rollup-plugin-dts) treat them as local
@@ -10,10 +10,15 @@ import { defineConfig } from 'tsup'
 // peer stay external and resolve from the consumer's node_modules.
 export default defineConfig({
     entry: {
+        core: 'src/core.ts',
         client: 'src/client.ts',
         server: 'src/server.ts',
         media: 'src/media.ts',
+        'media.browser': 'src/media.browser.ts',
         filetransfer: 'src/filetransfer.ts',
+        'filetransfer/node': 'src/filetransfer-node.ts',
+        sfu: 'src/sfu.ts',
+        'sfu/udp': 'src/sfu-udp.ts',
     },
     format: ['cjs', 'esm'],
     dts: true,

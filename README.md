@@ -7,7 +7,8 @@ Composable packages, pick the layers you need: WebSocket **signaling**, a browse
 **One install for most apps** — the [`rtcforge`](packages/rtcforge) meta-package fronts the whole stack:
 
 ```bash
-npm i rtcforge                 # frontend + backend (add rtcforge-media for audio/video)
+npm i rtcforge                 # signaling server + client + P2P media + file transfer
+npm i rtcforge mediasoup       # add the server-side SFU (mediasoup is an optional peer dep)
 ```
 
 ```ts
@@ -15,7 +16,10 @@ import { createClient } from "rtcforge/client"           // browser
 import { createSignalingServer } from "rtcforge/server"   // node
 ```
 
-Prefer to cherry-pick? Install the individual `rtcforge-*` packages below instead.
+`rtcforge` is the **only published package** — everything is imported from its
+subpaths (`rtcforge/server`, `/client`, `/media`, `/filetransfer`, `/sfu`,
+`/core`). The `rtcforge-*` packages listed under [Project Structure](#project-structure)
+are internal modules bundled into `rtcforge`, not separate installs.
 
 ---
 
@@ -71,14 +75,13 @@ npm test --workspace=packages/sdk
 
 ```
 rtcforge/
- ├── packages/                  # CORE LAYER (published to npm)
- │    ├── rtcforge/       # rtcforge             — one-install meta-package (client/server/media/filetransfer)
- │    ├── core/           # rtcforge-core        — shared primitives + scale primitives (zero deps)
- │    ├── signaling/      # rtcforge-signaling   — WebSocket signaling server, RoomRouter cluster
- │    ├── sdk/            # rtcforge-sdk         — browser + Node.js client (+ /filetransfer)
- │    ├── media/          # rtcforge-media       — P2P mesh Call + mediasoup SFU (mediasoup = optional peer)
- │    ├── sfu/            # rtcforge-sfu         — multi-node cluster, cascade fan-out, + /udp gossip wire
- │    └── adapter-udp/    # rtcforge-adapter-udp — DEPRECATED, re-exports rtcforge-sfu/udp
+ ├── packages/                  # rtcforge is the only PUBLISHED package; the rest are internal
+ │    ├── rtcforge/       # rtcforge (PUBLISHED)  — bundles the modules below behind subpaths
+ │    ├── core/           # rtcforge-core        → rtcforge/core   — primitives + scale primitives (zero deps)
+ │    ├── signaling/      # rtcforge-signaling   → rtcforge/server — WebSocket signaling, RoomRouter cluster
+ │    ├── sdk/            # rtcforge-sdk         → rtcforge/client + /filetransfer — browser + Node client
+ │    ├── media/          # rtcforge-media       → rtcforge/media  — P2P mesh Call + mediasoup SFU
+ │    └── sfu/            # rtcforge-sfu         → rtcforge/sfu (+ /udp) — multi-node cluster, cascade fan-out
  │
  ├── docs/BUILDING_APPS.md # Implementation guide — which packages per app type + wiring
  ├── e2e/                  # Real-browser (Playwright) end-to-end tests
@@ -88,10 +91,10 @@ rtcforge/
  └── tsconfig.json         # Root typecheck (references all packages)
 ```
 
-> RTCForge is a **two-layer** library: the published `packages/` are the **core
-> transport layer**; features like chat, presence, and whiteboard live in **your
-> application layer**, built on the transport primitives (`sdk` + `signaling`).
-> See [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md).
+> RTCForge is a **two-layer** library: `rtcforge` is the **core transport
+> layer**; features like chat, presence, and whiteboard live in **your
+> application layer**, built on the transport primitives (`rtcforge/client` +
+> `rtcforge/server`). See [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md).
 
 Each package under `packages/` follows the same layout:
 
@@ -105,28 +108,28 @@ packages/<name>/
 
 ---
 
-## Packages
+## Entry points
 
-| Package | Description |
-| ------- | ----------- |
-| `rtcforge` | **One-install front door.** Re-exports the stack behind subpaths: `rtcforge/client`, `rtcforge/server`, `rtcforge/media`, `rtcforge/filetransfer`. |
-| `rtcforge-core` | Shared primitives — `EventEmitter`, `Logger`, `consoleLogger`, `MetricsCollector` — **plus shared-nothing scale primitives**: `HashRing`, `GossipMembership`, `Membership`, `Clock`, `StateStore`, `MessageBus`, `Lock`, `IdGenerator`. Zero runtime dependencies. |
-| `rtcforge-signaling` | `SignalingServer` (+ `createSignalingServer` factory), `Room`, `Peer` — WebSocket signaling, auth hook, **safe defaults on** (rate-limit, payload cap, connection/room caps), heartbeat, `RoomRouter` cluster sharding |
-| `rtcforge-sdk` | `RTCForgeClient` (+ `createClient` factory), `Room` — browser + Node.js client; reconnect (with terminal-close handling), send queue, injectable `Transport`; also `rtcforge-sdk/filetransfer` |
-| `rtcforge-media` | `Call` (P2P mesh, perfect-negotiation, ICE-restart) + `MediaService`/`MediaRouter` (mediasoup SFU) + `SfuSignalHandler`. **`mediasoup` is an optional peer dependency** — browser-only installs never compile it. |
-| `rtcforge-sfu` | `SfuCluster`, `CascadingRouter`, `HashRingStrategy`, `CascadeTree`/`CascadeBridge`, `ReferenceSfuMedia` — multi-node routing, cascade fan-out, health, bandwidth estimation. Ships the gossip wire at `rtcforge-sfu/udp`. |
-| `rtcforge-adapter-udp` | **Deprecated** — folded into `rtcforge-sfu/udp`; kept as a thin re-export for backwards compatibility. |
+`rtcforge` is the only published package. Import each layer from a subpath:
+
+| Import | Description |
+| ------ | ----------- |
+| `rtcforge/server` | `SignalingServer` (+ `createSignalingServer` factory), `Room`, `Peer`, `RoomRouter` — WebSocket signaling, auth hook, **safe defaults on** (rate-limit, payload cap, connection/room caps), heartbeat, cluster sharding. |
+| `rtcforge/client` | `RTCForgeClient` (+ `createClient` factory), `Room`, `ClientEvent`, `RoomEvent` — browser + Node client; reconnect (with terminal-close handling), send queue, injectable `Transport`. |
+| `rtcforge/media` | `Call` + `getUserMedia` (P2P mesh, perfect-negotiation, ICE-restart) · `MediaService`/`MediaRouter`/`SfuSignalHandler` (mediasoup SFU). Resolves to a **mediasoup-free browser build** under a bundler's `browser` condition; `mediasoup` is an **optional peer dependency**. |
+| `rtcforge/filetransfer` (+ `/node`) | `FileTransferManager`, sinks (`MemorySink`, `FileSystemAccessSink`), `DataChannelHub` — chunked, checksummed P2P file transfer. `/node` adds `fs`-backed sources & sinks. |
+| `rtcforge/sfu` (+ `/udp`) | `SfuCluster`, `CascadingRouter`, `HashRingStrategy`, `CascadeTree`/`CascadeBridge`, `ReferenceSfuMedia` — multi-node routing, cascade fan-out, health, bandwidth estimation. `/udp` is the `UdpGossipTransport` wire. |
+| `rtcforge/core` | `EventEmitter`, `Logger`, `consoleLogger`, `MetricsCollector` + scale primitives: `HashRing`, `GossipMembership`, `Membership`, `Clock`, `StateStore`, `MessageBus`, `Lock`, `IdGenerator`. Zero runtime dependencies. |
 
 ---
 
 ## Install & use
 
-Packages are on the public npm registry, unscoped. Most apps install the `rtcforge` meta-package and import from its subpaths:
+`rtcforge` is on the public npm registry, unscoped. Install it and import from its subpaths:
 
 ```bash
-npm i rtcforge                 # signaling + client (server / client / filetransfer)
-npm i rtcforge rtcforge-media  # add audio/video (rtcforge/media) — optional peer dep
-# ...plus `mediasoup` only for the server-side SFU plane
+npm i rtcforge                 # signaling server + client + P2P media + file transfer
+npm i rtcforge mediasoup       # add the server-side SFU (mediasoup is an optional peer dep)
 ```
 
 ```ts
@@ -137,14 +140,6 @@ const room = await createClient({ serverUrl: "wss://your-signaling-host" }).join
 // backend — safe defaults on (rate-limit, payload cap, caps) + warn logger
 import { createSignalingServer } from "rtcforge/server";
 const server = await createSignalingServer({ port: 3001, auth });
-```
-
-Or cherry-pick the individual packages (each pulls `rtcforge-core` transitively):
-
-```bash
-npm i rtcforge-sdk            # client only
-npm i rtcforge-signaling      # backend only
-npm i rtcforge-sfu            # scale-out clustering
 ```
 
 **New here? Which packages for your app + how to wire them → [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md)** (chat, video call, live stream, whiteboard, file transfer, 1M-viewer scale).

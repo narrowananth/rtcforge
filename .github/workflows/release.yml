@@ -33,5 +33,10 @@ jobs:
           publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Publishing uses npm OIDC trusted publishing — no NPM_TOKEN secret.
+          # It relies on `permissions.id-token: write` (above) + npm >= 11.5.1.
+          # One-time setup on npmjs.org: the `rtcforge` package → Settings →
+          # Trusted Publisher → GitHub Actions → org/user `narrowananth`,
+          # repository `rtcforge`, workflow file `release.yml` (leave Environment
+          # blank). Provenance is attached automatically.
           NPM_CONFIG_PROVENANCE: "true"
