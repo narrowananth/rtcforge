@@ -7,6 +7,7 @@
             "rtcforge-core": ["./packages/core/src/index.ts"],
             "rtcforge-signaling": ["./packages/signaling/src/index.ts"],
             "rtcforge-sdk": ["./packages/sdk/src/index.ts"],
+            "rtcforge-sdk/filetransfer": ["./packages/sdk/src/filetransfer/index.ts"],
             "rtcforge-media": ["./packages/media/src/index.ts"],
             "rtcforge-sfu": ["./packages/sfu/src/index.ts"]
         }
