@@ -29,6 +29,7 @@ jobs:
       # Opens/updates a "Version Packages" PR; when that PR merges, `publish`
       # runs `changeset publish` to release to npm with provenance.
       - uses: changesets/action@v1
+        id: changesets
         with:
           publish: npm run release
         env:
@@ -40,3 +41,38 @@ jobs:
           # repository `rtcforge`, workflow file `release.yml` (leave Environment
           # blank). Provenance is attached automatically.
           NPM_CONFIG_PROVENANCE: "true"
+
+      # After an actual publish, `master` carries the version bump + CHANGELOG +
+      # changeset removal that `dev` lacks. Auto-open (and auto-merge) a
+      # master -> dev back-merge PR so `dev` never lags and the next dev->master
+      # PR can't revert the just-published version.
+      #
+      # SYNC_TOKEN (optional but recommended): a fine-grained PAT scoped to this
+      # repo with `Contents: read/write` + `Pull requests: read/write`. A PR
+      # opened by the default GITHUB_TOKEN does NOT trigger CI, so its required
+      # `build-test` check never runs and auto-merge waits forever. With
+      # SYNC_TOKEN the back-merge PR triggers CI and auto-merges when green.
+      # Without it, the PR still opens but must be merged manually.
+      - name: Back-merge master -> dev after publish
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ahead=$(gh api "repos/$REPO/compare/dev...master" --jq '.ahead_by')
+          if [ "$ahead" = "0" ]; then
+            echo "dev already contains master; nothing to back-merge"
+            exit 0
+          fi
+          num=$(gh pr list --repo "$REPO" --base dev --head master --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -z "$num" ]; then
+            num=$(gh pr create --repo "$REPO" --base dev --head master \
+              --title "chore: sync dev after release" \
+              --body "Automated post-release back-merge: brings the version bump + CHANGELOG from \`master\` into \`dev\` so \`dev\` doesn't lag and the next dev->master PR can't revert the version." \
+              | grep -oE '[0-9]+$')
+          fi
+          echo "back-merge PR #$num"
+          gh pr merge "$num" --repo "$REPO" --merge --auto \
+            || echo "::warning::Could not enable auto-merge on #$num — merge it manually (set the SYNC_TOKEN PAT so its CI runs)."
