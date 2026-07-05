@@ -81,8 +81,14 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
     private readonly _control = new Map<string, PeerControl>()
 
     private readonly _pendingChannels = new Map<string, RTCDataChannel[]>()
+    // Per-transfer TTL timers that discard buffered inbound channels whose offer
+    // never arrives, so orphaned channels can't accumulate unbounded.
+    private readonly _pendingTimers = new Map<string, ReturnType<typeof setTimeout>>()
     private readonly _onHubChannel: (peerId: string, channel: RTCDataChannel) => void
     private _closed = false
+
+    /** How long a buffered inbound channel waits for its offer before being discarded. */
+    private static readonly PENDING_CHANNEL_TTL_MS = 30_000
 
     /**
      * @param hub - The data-channel hub used to open outbound channels and observe inbound ones.
@@ -224,6 +230,7 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
 
     /** Close and forget any data channels buffered for a transfer that will never start. */
     private _discardPendingChannels(transferId: string): void {
+        this._clearPendingTimer(transferId)
         const pending = this._pendingChannels.get(transferId)
         if (!pending) return
         this._pendingChannels.delete(transferId)
@@ -260,6 +267,26 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
             const list = this._pendingChannels.get(parsed.transferId) ?? []
             list.push(channel)
             this._pendingChannels.set(parsed.transferId, list)
+            // Arm a one-shot TTL for this transferId so channels whose offer never
+            // arrives are eventually closed rather than leaking forever.
+            if (!this._pendingTimers.has(parsed.transferId)) {
+                const id = parsed.transferId
+                const timer = setTimeout(
+                    () => this._discardPendingChannels(id),
+                    FileTransferManager.PENDING_CHANNEL_TTL_MS,
+                )
+                ;(timer as { unref?: () => void }).unref?.()
+                this._pendingTimers.set(id, timer)
+            }
+        }
+    }
+
+    /** Cancel and forget the TTL timer guarding a transferId's pending channels. */
+    private _clearPendingTimer(transferId: string): void {
+        const timer = this._pendingTimers.get(transferId)
+        if (timer !== undefined) {
+            clearTimeout(timer)
+            this._pendingTimers.delete(transferId)
         }
     }
 
@@ -333,6 +360,7 @@ export class FileTransferManager extends EventEmitter<FileTransferManagerEvents>
             if (pending) {
                 for (const ch of pending) transfer.attachChannel(ch)
                 this._pendingChannels.delete(msg.transferId)
+                this._clearPendingTimer(msg.transferId)
             }
             this.emit(FileTransferEvent.IncomingOffer, transfer)
             return

@@ -132,8 +132,64 @@ describe('WebSocketTransport — exhaustion closes transport (V5)', () => {
     })
 })
 
+describe('WebSocketTransport — connect timeout (V5)', () => {
+    it('does not schedule a spurious reconnect after a connect timeout', async () => {
+        vi.useFakeTimers()
+        const t = new WebSocketTransport('ws://localhost', {
+            reconnect: true,
+            connectTimeoutMs: 100,
+        })
+        const p = t.connect()
+        await tick()
+        const ws = MockWS.instances[0]
+        if (!ws) throw new Error('no MockWS instance')
+        vi.advanceTimersByTime(101)
+        await expect(p).rejects.toThrow('WebSocket connect timeout')
+        // Simulate the socket close re-entering onclose after the timeout.
+        ws.closeWith(1006)
+        vi.advanceTimersByTime(60_000)
+        expect(MockWS.instances.length).toBe(1)
+        vi.useRealTimers()
+    })
+})
+
+describe('WebSocketTransport — stale-token reconnect (V1)', () => {
+    it('does not reconnect with the stale token when tokenRefresh rejects, and retries', async () => {
+        vi.useFakeTimers()
+        let calls = 0
+        const tokenRefresh = vi.fn(() => {
+            calls += 1
+            return calls === 1
+                ? Promise.reject(new Error('token service down'))
+                : Promise.resolve('t2')
+        })
+        const t = new WebSocketTransport('ws://localhost/?token=t1', {
+            reconnect: true,
+            tokenRefresh,
+        })
+        const p = t.connect()
+        await tick()
+        MockWS.instances[0]?.open()
+        await p
+        // Drop the connection -> schedules a reconnect.
+        MockWS.instances[0]?.closeWith(1006)
+
+        // First reconnect timer fires; tokenRefresh rejects -> must NOT open a
+        // socket with the stale token, just reschedule.
+        await vi.advanceTimersByTimeAsync(1400)
+        expect(calls).toBe(1)
+        expect(MockWS.instances.length).toBe(1)
+
+        // Second reconnect timer fires; tokenRefresh resolves -> new socket with fresh token.
+        await vi.advanceTimersByTimeAsync(4000)
+        expect(MockWS.instances.length).toBe(2)
+        expect(MockWS.instances[1]?.url).toContain('token=t2')
+        vi.useRealTimers()
+    })
+})
+
 describe('WebSocketTransport — send()', () => {
-    it('queues messages when not connected and flushes on explicit flush()', async () => {
+    it('queues messages when not connected and flushes automatically on open', async () => {
         const t = new WebSocketTransport('ws://localhost')
         const p = t.connect()
         await tick()
@@ -143,7 +199,20 @@ describe('WebSocketTransport — send()', () => {
         expect(ws.send).not.toHaveBeenCalled()
         ws.open()
         await p
-        expect(ws.send).not.toHaveBeenCalled()
+        // onopen flushes the offline queue, as documented.
+        expect(ws.send).toHaveBeenCalledTimes(1)
+    })
+
+    it('flush() is idempotent after the queue was auto-flushed on open', async () => {
+        const t = new WebSocketTransport('ws://localhost')
+        const p = t.connect()
+        await tick()
+        const ws = MockWS.instances[0]
+        if (!ws) throw new Error('no MockWS instance')
+        t.send({ type: 'pong' } as never)
+        ws.open()
+        await p
+        expect(ws.send).toHaveBeenCalledTimes(1)
         t.flush()
         expect(ws.send).toHaveBeenCalledTimes(1)
     })

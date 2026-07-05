@@ -122,4 +122,24 @@ describe('EventEmitter', () => {
         ee.emit('data', 'x')
         expect(ee.listenerCount('data')).toBe(0)
     })
+
+    it('emit: a throwing listener does not abort delivery to the rest', () => {
+        const ee = new EventEmitter<TestEvents>()
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const before = vi.fn()
+        const throwing = vi.fn(() => {
+            throw new Error('boom')
+        })
+        const after = vi.fn()
+        ee.on('data', before)
+        ee.on('data', throwing)
+        ee.on('data', after)
+
+        expect(ee.emit('data', 'x')).toBe(true)
+        expect(before).toHaveBeenCalledWith('x')
+        expect(throwing).toHaveBeenCalled()
+        expect(after).toHaveBeenCalledWith('x') // not aborted by the throw
+        expect(errSpy).toHaveBeenCalled() // error surfaced, not swallowed
+        errSpy.mockRestore()
+    })
 })

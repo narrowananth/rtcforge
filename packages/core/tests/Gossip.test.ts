@@ -177,6 +177,119 @@ describe('GossipMembership — failure detection', () => {
     })
 })
 
+describe('GossipMembership — untrusted wire data hardening', () => {
+    it('ignores a non-array members payload without throwing', () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = makeNode(net, clock, 'n1', 'a1', [])
+        n1.start()
+        // Malformed message straight off the wire.
+        expect(() =>
+            net.deliver('attacker', 'a1', { from: 'x', members: null as never }),
+        ).not.toThrow()
+        expect(() => net.deliver('attacker', 'a1', { from: 'x' } as never)).not.toThrow()
+    })
+
+    it('skips malformed entries (bad id/incarnation/alive) instead of inserting junk', async () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = makeNode(net, clock, 'n1', 'a1', [])
+        n1.start()
+        net.deliver('attacker', 'a1', {
+            from: 'x',
+            members: [
+                { id: '', incarnation: 1, alive: true }, // empty id
+                { id: 'noinc', alive: true }, // missing incarnation
+                { id: 'nan', incarnation: Number.NaN, alive: true },
+                { id: 'neg', incarnation: -1, alive: true },
+                { id: 'frac', incarnation: 1.5, alive: true },
+                { id: 'notbool', incarnation: 1, alive: 'yes' },
+                { id: 'good', incarnation: 1, alive: true, address: 'ag' }, // valid
+            ] as never,
+        })
+        expect(await aliveIds(n1)).toEqual(['good', 'n1'])
+    })
+
+    it('rejects an Infinity incarnation so a record cannot be frozen', async () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = makeNode(net, clock, 'n1', 'a1', [])
+        n1.start()
+        // Adversarial: Infinity would otherwise permanently pin the record.
+        net.deliver('attacker', 'a1', {
+            from: 'x',
+            members: [{ id: 'evil', incarnation: Number.POSITIVE_INFINITY, alive: true }] as never,
+        })
+        expect(await aliveIds(n1)).toEqual(['n1']) // 'evil' rejected
+
+        // A later finite incarnation for the same id is accepted normally.
+        net.deliver('attacker', 'a1', {
+            from: 'x',
+            members: [{ id: 'evil', incarnation: 1, alive: true, address: 'ae' }] as never,
+        })
+        expect(await aliveIds(n1)).toEqual(['evil', 'n1'])
+    })
+
+    it('rejects an Infinity incarnation targeting self (no cluster poisoning)', () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = makeNode(net, clock, 'n1', 'a1', [])
+        n1.start()
+        net.deliver('attacker', 'a1', {
+            from: 'x',
+            members: [{ id: 'n1', incarnation: Number.POSITIVE_INFINITY, alive: false }] as never,
+        })
+        const internal = n1 as unknown as { _members: Map<string, { incarnation: number }> }
+        expect(Number.isFinite(internal._members.get('n1')?.incarnation)).toBe(true)
+    })
+})
+
+describe('GossipMembership — restart revives self', () => {
+    it('stop() then start() brings the node back alive to itself and the cluster', async () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = makeNode(net, clock, 'n1', 'a1', [])
+        n1.start()
+        clock.advance(100)
+        expect(await aliveIds(n1)).toEqual(['n1'])
+
+        n1.stop()
+        expect(await aliveIds(n1)).toEqual([]) // dead to itself after stop
+
+        n1.start()
+        expect(await aliveIds(n1)).toContain('n1') // revived on restart
+    })
+})
+
+describe('GossipMembership — seeds do not grow unbounded', () => {
+    it("prunes the seed when its member is tombstone-GC'd", async () => {
+        const net = new GossipNetwork()
+        const clock = new ManualClock()
+        const n1 = new GossipMembership(
+            { id: 'n1', address: 'a1' },
+            new InMemoryGossipTransport('a1', net),
+            { clock, gossipIntervalMs: 200, deadTimeoutMs: 1000, tombstoneMs: 2000 },
+        )
+        const n2 = makeNode(net, clock, 'n2', 'a2', ['a1'])
+        n1.start()
+        n2.start()
+        clock.advance(2000)
+
+        const internal = n1 as unknown as { _seeds: Set<string> }
+        expect(internal._seeds.has('a2')).toBe(true) // learned n2's address
+
+        net.partition('a2')
+        clock.advance(1500)
+        await n1.list() // triggers dead marking
+        clock.advance(3000)
+        await n1.list() // triggers tombstone GC
+
+        const members = n1 as unknown as { _members: Map<string, unknown> }
+        expect(members._members.has('n2')).toBe(false)
+        expect(internal._seeds.has('a2')).toBe(false) // seed pruned with member
+    })
+})
+
 describe('GossipMembership + HashRing — shared-nothing routing', () => {
     it('two nodes with the converged view route every room to the same owner', async () => {
         const net = new GossipNetwork()

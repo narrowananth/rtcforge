@@ -296,11 +296,19 @@ export class Call extends EventEmitter<CallEvents> {
      * automatically when the room signals {@link RoomEvent.Refreshed}.
      */
     restart(): void {
+        // A closed call is terminal (see close()): its local tracks have been
+        // cleared and its listeners detached. Reviving it would produce a
+        // trackless, half-wired call, so refuse rather than resurrect it.
+        if (this.closed) {
+            this.logger.warn('restart() called on a closed Call; ignoring', {
+                localPeerId: this.room.localPeerId,
+            })
+            return
+        }
         this.stopActiveSpeakerDetection()
         this._teardownConnections()
         this._detachRoomListeners()
         this.started = false
-        this.closed = false
         this.start()
     }
 
@@ -394,6 +402,13 @@ export class Call extends EventEmitter<CallEvents> {
                 case SignalType.Offer: {
                     this.logger.debug('Received offer', { from })
                     const answer = await pc.handleOffer(data.sdp)
+                    // Answering an incoming offer resolves the negotiation for
+                    // this peer. On a mid-call renegotiation glare, the polite
+                    // side rolls back its own in-flight offer and answers the
+                    // remote one instead — so the answer it was waiting for will
+                    // never arrive. Clear the timer here or it would expire and
+                    // tear down an otherwise-healthy call.
+                    this._clearPeerTimer(from)
                     if (answer?.sdp) {
                         const signal: MediaSignal = {
                             kind: SignalKind.Media,
@@ -492,15 +507,20 @@ export class Call extends EventEmitter<CallEvents> {
             }
             if (state === 'failed') {
                 if (this.connections.get(peerId) !== pc) return
-                // A `failed` state is often just a network blip that a standard
-                // ICE restart recovers. The impolite (offering) side drives the
-                // restart; only drop after the retry budget is spent.
-                const polite = this.opts.isPolite
-                    ? this.opts.isPolite(this.room.localPeerId, peerId)
-                    : this.room.localPeerId < peerId
+                // A `failed` state is often just a transient network blip that a
+                // standard ICE restart recovers. BOTH sides attempt a bounded
+                // restart: the impolite side's restart offer and the polite
+                // side's are reconciled by perfect negotiation (the polite side
+                // rolls back and answers). Crucially, the polite side must NOT
+                // emit a terminal ConnectionFailed / tear down while recovery is
+                // still possible — on a mutual blip both peers go `failed`, and a
+                // premature polite failure would drop a call the impolite side is
+                // mid-recovering. Only declare terminal failure once the shared
+                // restart budget is spent, which bounds the retries so it can't
+                // loop.
                 const attempts = this._iceRestarts.get(peerId) ?? 0
                 const maxRestarts = this.opts.maxIceRestarts ?? 1
-                if (!polite && attempts < maxRestarts) {
+                if (attempts < maxRestarts) {
                     this._iceRestarts.set(peerId, attempts + 1)
                     this.logger.debug('ICE failed — attempting restart', {
                         peerId,

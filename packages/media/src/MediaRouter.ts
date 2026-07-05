@@ -35,6 +35,9 @@ type MediaRouterEvents = {
 
 const PIPE_PEER_ID = 'pipe'
 
+/** Declared role of a WebRTC transport: only sends media, or only receives it. */
+export type TransportDirection = 'send' | 'recv'
+
 export class MediaRouter extends EventEmitter<MediaRouterEvents> {
     readonly id: string
     private readonly _router: MsTypes.Router
@@ -81,7 +84,10 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
         return this._consumers.size
     }
 
-    async createWebRtcTransport(peerId: string): Promise<WebRtcTransportParams> {
+    async createWebRtcTransport(
+        peerId: string,
+        direction?: TransportDirection,
+    ): Promise<WebRtcTransportParams> {
         this._assertOpen()
         const transport = await this._router.createWebRtcTransport({
             listenInfos: this._config.listenInfos ?? [...DEFAULT_LISTEN_INFOS],
@@ -90,7 +96,9 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
             preferUdp: true,
             enableSctp: this._config.enableSctp ?? false,
             initialAvailableOutgoingBitrate: this._config.initialAvailableOutgoingBitrate,
-            appData: { peerId },
+            // Record the declared direction so produce/consume can enforce it: a
+            // recv-only transport must not produce, a send-only must not consume.
+            appData: { peerId, direction },
         })
 
         if (this._config.maxIncomingBitrate !== undefined) {
@@ -125,6 +133,9 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
     ): Promise<Producer> {
         this._assertOpen()
         const transport = this._requireOwnedTransport(peerId, transportId)
+        if (this._directionOf(transport) === 'recv') {
+            throw new Error(`Transport ${transportId} is recv-only; cannot produce`)
+        }
         const msProducer = await transport.produce({
             kind,
             rtpParameters,
@@ -147,6 +158,9 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
             throw new Error(`Cannot consume producer ${producerId} with given capabilities`)
         }
         const transport = this._requireOwnedTransport(peerId, transportId)
+        if (this._directionOf(transport) === 'send') {
+            throw new Error(`Transport ${transportId} is send-only; cannot consume`)
+        }
         const msConsumer = await transport.consume({
             producerId,
             rtpCapabilities,
@@ -161,8 +175,10 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
     }
 
     async resumeConsumer(peerId: string, consumerId: string): Promise<void> {
-        const consumer = this._consumers.get(consumerId)
-        if (!consumer) return
+        // Throw for an unknown consumer rather than silently succeeding: the
+        // caller (SfuSignalHandler) otherwise replies `sfu-consumer-resumed`
+        // and the client believes media is flowing when nothing resumed.
+        const consumer = requireFrom(this._consumers, consumerId, 'Consumer')
         // Ownership: only the peer the consumer belongs to may resume it.
         if (consumer.peerId !== peerId) {
             throw new Error(`Consumer ${consumerId} does not belong to peer ${peerId}`)
@@ -252,6 +268,9 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
             kind: params.kind,
             rtpParameters: params.rtpParameters,
             paused: params.paused,
+            // Stamp the pipe transport id so Producer.transportId is populated
+            // for producers created over a pipe transport.
+            appData: { transportId: pipeTransportId },
         })
         const producer = new Producer(PIPE_PEER_ID, msProducer)
         this._registerProducer(producer)
@@ -300,6 +319,12 @@ export class MediaRouter extends EventEmitter<MediaRouterEvents> {
             throw new Error(`Transport ${transportId} does not belong to peer ${peerId}`)
         }
         return transport
+    }
+
+    // The direction declared at creation, or undefined for transports created
+    // without one (legacy callers) — in which case direction is not enforced.
+    private _directionOf(transport: MsTypes.WebRtcTransport): TransportDirection | undefined {
+        return (transport.appData as { direction?: TransportDirection }).direction
     }
 
     private _requirePipeTransport(pipeTransportId: string): MsTypes.PipeTransport {

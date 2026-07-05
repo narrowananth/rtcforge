@@ -1,4 +1,6 @@
 import { type FileHandle, open, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
+import { sanitizeFileName } from '../sanitize.js'
 import type { SinkResult, StorageSink } from '../sink/StorageSink.js'
 import type { FileMetadata } from '../types.js'
 
@@ -11,22 +13,45 @@ import type { FileMetadata } from '../types.js'
  * `rtcforge-sdk/filetransfer/node`.
  */
 export class NodeFileSink implements StorageSink {
-    private readonly _path: string
+    private _path: string
+    // When set, the write path is derived from the transfer metadata at open() time
+    // by joining this directory with a sanitized file name; null for a fixed path.
+    private readonly _dir: string | null
     private _handle: FileHandle | null = null
 
     /**
      * @param path - Destination filesystem path; opened for writing (truncating any existing file).
+     * @param deriveName - Internal; when `true`, `path` is treated as a directory and the
+     *   final file name is derived from the (sanitized) transfer metadata at open() time.
+     *   Prefer {@link NodeFileSink.intoDirectory}.
      */
-    constructor(path: string) {
+    constructor(path: string, deriveName = false) {
         this._path = path
+        this._dir = deriveName ? path : null
     }
 
     /**
-     * Open the destination file for writing, truncating any existing contents.
+     * Create a sink that writes into `dir`, deriving the file name from the transfer
+     * metadata with {@link sanitizeFileName} applied automatically. This neutralizes
+     * path-traversal / absolute names (`../../etc/passwd`, `C:\evil`) from a hostile
+     * peer by default, so the written file can never escape `dir`.
      *
-     * @param _meta - File metadata (unused; the destination path is fixed at construction).
+     * @param dir - Destination directory the received file is written into.
      */
-    async open(_meta: FileMetadata): Promise<void> {
+    static intoDirectory(dir: string): NodeFileSink {
+        return new NodeFileSink(dir, true)
+    }
+
+    /**
+     * Open the destination file for writing, truncating any existing contents. In
+     * directory mode the final path is resolved here from the (sanitized) metadata name.
+     *
+     * @param meta - File metadata; its name is used (sanitized) only in directory mode.
+     */
+    async open(meta: FileMetadata): Promise<void> {
+        if (this._dir !== null) {
+            this._path = join(this._dir, sanitizeFileName(meta.name))
+        }
         this._handle = await open(this._path, 'w')
     }
 

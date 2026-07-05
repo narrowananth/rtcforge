@@ -64,6 +64,33 @@ describe('SfuSignalHandler (real mediasoup worker)', () => {
         expect(res).toEqual({ type: 'sfu-error', message: 'invalid SFU request' })
     })
 
+    it('rejects produce on a recv-only transport', async () => {
+        const created = await sfu.handle('alice', {
+            type: SfuMessageType.CreateTransport,
+            direction: 'recv',
+        })
+        const transportId = (created as { transport: { id: string } }).transport.id
+
+        const res = await sfu.handle('alice', {
+            type: SfuMessageType.Produce,
+            transportId,
+            kind: 'audio',
+            rtpParameters: OPUS_PRODUCE_PARAMS as unknown as Record<string, unknown>,
+        })
+        expect(res.type).toBe('sfu-error')
+        expect((res as { message: string }).message).toContain('recv-only')
+        expect(router.producerCount).toBe(0)
+    })
+
+    it('replies sfu-error when resuming an unknown consumer', async () => {
+        const res = await sfu.handle('alice', {
+            type: SfuMessageType.ResumeConsumer,
+            consumerId: 'does-not-exist',
+        })
+        expect(res.type).toBe('sfu-error')
+        expect((res as { message: string }).message).toContain('Consumer not found')
+    })
+
     it('enforces transport ownership across peers', async () => {
         const created = await sfu.handle('alice', {
             type: SfuMessageType.CreateTransport,

@@ -53,6 +53,7 @@ function makeMockPC() {
                 }
             }),
         addIceCandidate: vi.fn().mockResolvedValue(undefined),
+        restartIce: vi.fn(),
         close: vi.fn(),
     }
     return mock
@@ -265,16 +266,44 @@ describe('Call — signal handling', () => {
 })
 
 describe('Call — connection failure', () => {
-    it('emits ConnectionFailed and evicts PC when state becomes failed', () => {
+    function toFailed() {
+        ;(mockPCInstance as unknown as { connectionState: string }).connectionState = 'failed'
+        mockPCInstance.onconnectionstatechange?.({} as never)
+    }
+
+    it('attempts a bounded ICE restart before declaring terminal failure', () => {
+        // localPeerId 'local' < 'remote' → the local side is the *polite* peer.
+        // It must NOT emit a terminal ConnectionFailed on the first `failed`
+        // while a restart-driven recovery is still possible; it should restart
+        // ICE and only fail once the budget (default 1) is spent.
         const room = makeRoom('local', ['remote'])
         const call = new Call(room as never)
         call.start()
 
         const failedHandler = vi.fn()
         call.on(MediaEvent.ConnectionFailed, failedHandler)
-        ;(mockPCInstance as unknown as { connectionState: string }).connectionState = 'failed'
-        mockPCInstance.onconnectionstatechange?.({} as never)
 
+        toFailed()
+        expect(mockPCInstance.restartIce).toHaveBeenCalledTimes(1)
+        expect(failedHandler).not.toHaveBeenCalled()
+        expect(mockPCInstance.close).not.toHaveBeenCalled()
+
+        toFailed()
+        expect(mockPCInstance.restartIce).toHaveBeenCalledTimes(1)
+        expect(failedHandler).toHaveBeenCalledWith('remote')
+        expect(mockPCInstance.close).toHaveBeenCalled()
+    })
+
+    it('fails immediately (no restart) when maxIceRestarts is 0', () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never, { maxIceRestarts: 0 })
+        call.start()
+
+        const failedHandler = vi.fn()
+        call.on(MediaEvent.ConnectionFailed, failedHandler)
+
+        toFailed()
+        expect(mockPCInstance.restartIce).not.toHaveBeenCalled()
         expect(failedHandler).toHaveBeenCalledWith('remote')
         expect(mockPCInstance.close).toHaveBeenCalled()
     })
@@ -339,6 +368,64 @@ describe('Call — close', () => {
         const room = makeRoom('local', [])
         const call = new Call(room as never)
         expect(() => call.close()).not.toThrow()
+    })
+})
+
+describe('Call — restart guard', () => {
+    it('restart() on a closed call is a no-op (does not resurrect)', () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never)
+        call.start()
+        call.close()
+
+        vi.mocked(RTCPeerConnection).mockClear()
+        room.on.mockClear()
+        call.restart()
+
+        // A closed call stays closed: no fresh connections, no re-attached listeners.
+        expect(vi.mocked(RTCPeerConnection)).not.toHaveBeenCalled()
+        expect(room.on).not.toHaveBeenCalled()
+    })
+})
+
+describe('Call — negotiation timer (glare)', () => {
+    it('fires when an offer is left unanswered', async () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never, { negotiationTimeoutMs: 20 })
+        call.start()
+
+        const errorHandler = vi.fn()
+        call.on(MediaEvent.Error, errorHandler)
+
+        // Fire negotiationneeded → we send an offer and arm the timer.
+        await mockPCInstance.onnegotiationneeded?.({} as never)
+        await new Promise((r) => setTimeout(r, 40))
+
+        expect(errorHandler).toHaveBeenCalledWith('remote', expect.any(Error))
+    })
+
+    it('is cleared when answering a glaring incoming offer on our own in-flight offer', async () => {
+        const room = makeRoom('local', ['remote'])
+        const call = new Call(room as never, { negotiationTimeoutMs: 20 })
+        call.start()
+
+        const errorHandler = vi.fn()
+        call.on(MediaEvent.Error, errorHandler)
+
+        // Arm the timer by sending our own offer.
+        await mockPCInstance.onnegotiationneeded?.({} as never)
+
+        // A glaring remote offer arrives; answering it must clear the timer so
+        // it can't later expire and tear down a healthy call.
+        room._emit(MessageType.Signal, 'remote', {
+            kind: SignalKind.Media,
+            type: SignalType.Offer,
+            sdp: 'remote-offer',
+        })
+        await new Promise((r) => setTimeout(r, 0))
+        await new Promise((r) => setTimeout(r, 40))
+
+        expect(errorHandler).not.toHaveBeenCalled()
     })
 })
 

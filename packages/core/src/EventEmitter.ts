@@ -90,12 +90,20 @@ export class EventEmitter<Events extends Record<string, unknown[]>> {
      * @param event - The event name to emit.
      * @param args - The argument tuple to pass to each listener, matching `Events[event]`.
      * @returns `true` if at least one listener was invoked, `false` if there were none.
-     * @remarks The listener list is snapshotted before dispatch, so mutations made by handlers take effect only on subsequent emissions.
+     * @remarks The listener list is snapshotted before dispatch, so mutations made by handlers take effect only on subsequent emissions. Listeners are isolated: if one throws, the remaining listeners still run and the error is surfaced via `console.error` rather than swallowed silently (consistent with `LocalMessageBus`).
      */
     emit<K extends keyof Events>(event: K, ...args: Events[K]): boolean {
         const arr = this._events.get(String(event))
         if (!arr || arr.length === 0) return false
-        for (const reg of arr.slice()) reg.invoke(...args)
+        for (const reg of arr.slice()) {
+            try {
+                reg.invoke(...args)
+            } catch (err) {
+                // Isolate listeners: one throwing handler must not abort delivery
+                // to the rest. Surface the error instead of swallowing it.
+                console.error(`[rtcforge] EventEmitter listener threw on '${String(event)}'`, err)
+            }
+        }
         return true
     }
 
