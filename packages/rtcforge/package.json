@@ -1,6 +1,6 @@
 {
     "name": "rtcforge",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "One-install front door for RTCForge — real-time WebRTC infrastructure. Frontend via rtcforge/client + rtcforge/media, backend via rtcforge/server.",
     "homepage": "https://narrowananth.github.io/rtcforge/",
     "repository": {
@@ -15,16 +15,34 @@
     "sideEffects": false,
     "exports": {
         "./core": {
-            "import": { "types": "./dist/core.d.mts", "default": "./dist/core.mjs" },
-            "require": { "types": "./dist/core.d.ts", "default": "./dist/core.cjs" }
+            "import": {
+                "types": "./dist/core.d.mts",
+                "default": "./dist/core.mjs"
+            },
+            "require": {
+                "types": "./dist/core.d.ts",
+                "default": "./dist/core.cjs"
+            }
         },
         "./client": {
-            "import": { "types": "./dist/client.d.mts", "default": "./dist/client.mjs" },
-            "require": { "types": "./dist/client.d.ts", "default": "./dist/client.cjs" }
+            "import": {
+                "types": "./dist/client.d.mts",
+                "default": "./dist/client.mjs"
+            },
+            "require": {
+                "types": "./dist/client.d.ts",
+                "default": "./dist/client.cjs"
+            }
         },
         "./server": {
-            "import": { "types": "./dist/server.d.mts", "default": "./dist/server.mjs" },
-            "require": { "types": "./dist/server.d.ts", "default": "./dist/server.cjs" }
+            "import": {
+                "types": "./dist/server.d.mts",
+                "default": "./dist/server.mjs"
+            },
+            "require": {
+                "types": "./dist/server.d.ts",
+                "default": "./dist/server.cjs"
+            }
         },
         "./media": {
             "browser": {
@@ -37,15 +55,24 @@
                     "default": "./dist/media.browser.cjs"
                 }
             },
-            "import": { "types": "./dist/media.d.mts", "default": "./dist/media.mjs" },
-            "require": { "types": "./dist/media.d.ts", "default": "./dist/media.cjs" }
+            "import": {
+                "types": "./dist/media.d.mts",
+                "default": "./dist/media.mjs"
+            },
+            "require": {
+                "types": "./dist/media.d.ts",
+                "default": "./dist/media.cjs"
+            }
         },
         "./filetransfer": {
             "import": {
                 "types": "./dist/filetransfer.d.mts",
                 "default": "./dist/filetransfer.mjs"
             },
-            "require": { "types": "./dist/filetransfer.d.ts", "default": "./dist/filetransfer.cjs" }
+            "require": {
+                "types": "./dist/filetransfer.d.ts",
+                "default": "./dist/filetransfer.cjs"
+            }
         },
         "./filetransfer/node": {
             "import": {
@@ -58,12 +85,24 @@
             }
         },
         "./sfu": {
-            "import": { "types": "./dist/sfu.d.mts", "default": "./dist/sfu.mjs" },
-            "require": { "types": "./dist/sfu.d.ts", "default": "./dist/sfu.cjs" }
+            "import": {
+                "types": "./dist/sfu.d.mts",
+                "default": "./dist/sfu.mjs"
+            },
+            "require": {
+                "types": "./dist/sfu.d.ts",
+                "default": "./dist/sfu.cjs"
+            }
         },
         "./sfu/udp": {
-            "import": { "types": "./dist/sfu/udp.d.mts", "default": "./dist/sfu/udp.mjs" },
-            "require": { "types": "./dist/sfu/udp.d.ts", "default": "./dist/sfu/udp.cjs" }
+            "import": {
+                "types": "./dist/sfu/udp.d.mts",
+                "default": "./dist/sfu/udp.mjs"
+            },
+            "require": {
+                "types": "./dist/sfu/udp.d.ts",
+                "default": "./dist/sfu/udp.cjs"
+            }
         }
     },
     "files": ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
