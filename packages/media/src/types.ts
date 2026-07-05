@@ -1,15 +1,36 @@
 import type { types as MsTypes } from 'mediasoup'
 import type { Logger, MediaKind, MetricsCollector } from 'rtcforge-core'
 
+/**
+ * Minimal shape of a room member the media layer needs — just an id.
+ *
+ * @remarks
+ * A structural type so the media package stays decoupled from the concrete
+ * signaling `Room`/`Peer`; anything with a matching `id` fits.
+ */
 export interface RoomMemberLike {
+    /** The member's unique id within the room. */
     readonly id: string
 }
 
+/**
+ * Minimal room contract the media layer subscribes to for lifecycle events.
+ *
+ * @remarks
+ * Structural interface (see {@link RoomMemberLike}) letting {@link MediaService}
+ * bind media resources to a room without depending on the signaling package: it
+ * tears down a peer's media on `peerLeft` and the whole router on `closed`.
+ */
 export interface RoomLike {
+    /** The room's unique id. */
     readonly id: string
+    /** Subscribes to a peer leaving the room. */
     on(event: 'peerLeft', listener: (peer: RoomMemberLike) => void): unknown
+    /** Subscribes once to the room closing. */
     once(event: 'closed', listener: () => void): unknown
+    /** Unsubscribes a `peerLeft` listener. */
     off(event: 'peerLeft', listener: (peer: RoomMemberLike) => void): unknown
+    /** Unsubscribes a `closed` listener. */
     off(event: 'closed', listener: () => void): unknown
 }
 

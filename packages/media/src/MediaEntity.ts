@@ -1,14 +1,29 @@
 import { EventEmitter } from 'rtcforge-core'
 import type { MediaKind } from 'rtcforge-core'
 
+/**
+ * Common control surface shared by a {@link Producer} and a {@link Consumer}.
+ *
+ * @remarks
+ * The pause/resume/close lifecycle both media entity kinds expose, abstracted so
+ * callers can hold either behind one handle. Backed by {@link MediaEntity}.
+ */
 export interface MediaEntityHandle {
+    /** The entity's unique id. */
     readonly id: string
+    /** Whether this entity carries audio or video. */
     readonly kind: MediaKind
+    /** Whether the entity is currently paused. */
     readonly paused: boolean
+    /** Whether the entity has been closed. */
     readonly closed: boolean
+    /** Pauses media flow. */
     pause(): Promise<void>
+    /** Resumes media flow after a pause. */
     resume(): Promise<void>
+    /** Closes the entity and releases its resources. */
     close(): void
+    /** Subscribes to the underlying transport closing (which closes this entity). */
     on(event: 'transportclose', listener: () => void): unknown
 }
 

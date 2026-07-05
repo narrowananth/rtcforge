@@ -5,6 +5,17 @@ import type {
     SimpleBandwidthEstimatorOptions,
 } from './types.js'
 
+/**
+ * Threshold-based {@link BandwidthEstimator} mapping network stats to a quality tier.
+ *
+ * @remarks
+ * Classifies each {@link NetworkStats} sample into `high`/`medium`/`low` from
+ * packet loss, RTT, and bitrate thresholds. To avoid flapping on transient
+ * blips, quality changes only after a consecutive streak of samples agree —
+ * `downgradeStreak` samples to drop a tier, `upgradeStreak` to raise one. All
+ * thresholds and streak lengths are configurable via
+ * {@link SimpleBandwidthEstimatorOptions}.
+ */
 export class SimpleBandwidthEstimator implements BandwidthEstimator {
     private readonly opts: Required<SimpleBandwidthEstimatorOptions>
     private _streak = 0

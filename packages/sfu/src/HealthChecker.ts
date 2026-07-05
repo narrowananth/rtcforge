@@ -1,10 +1,18 @@
 import type { SfuNode } from './SfuNode.js'
 
+/**
+ * Collaborators a {@link HealthChecker} needs to probe nodes and report results.
+ */
 export interface HealthCheckerDeps {
+    /** Supplies the current set of nodes to probe each sweep. */
     nodes: () => Iterable<SfuNode>
+    /** Guards against acting on a node removed mid-probe. */
     stillRegistered: (nodeId: string) => boolean
+    /** Runs one liveness probe; resolves `true` if the node is healthy. */
     onCheck: (nodeId: string) => Promise<boolean>
+    /** Receives each probe's outcome for a node. */
     onResult: (node: SfuNode, healthy: boolean) => void
+    /** Interval between probe sweeps, in milliseconds. */
     intervalMs: number
     /**
      * Milliseconds a single probe may run before it is treated as a failure.

@@ -5,24 +5,52 @@ import type { Logger, MetricsCollector } from 'rtcforge-core'
 import { AuthPayloadSchema, CloseCode, CloseReason, Metric } from './types.js'
 import type { AuthFunction } from './types.js'
 
+/**
+ * The identity and room a connection resolved to after successful authentication.
+ */
 export interface ResolvedAuth {
+    /** Id of the room the peer is authorized to join. */
     roomId: string
+    /** The peer's id (client-declared or server-assigned). */
     peerId: string
+    /** Role granted to the peer, used for authorization downstream. */
     role: string
+    /** Optional free-form metadata carried alongside the identity. */
     metadata?: Record<string, string>
 }
 
+/**
+ * Outcome of {@link Authenticator.resolve}: either a resolved identity or a close code + reason.
+ */
 export type AuthResult =
     | { ok: true; auth: ResolvedAuth }
     | { ok: false; code: number; reason: string }
 
+/**
+ * Collaborators a {@link Authenticator} depends on.
+ */
 export interface AuthenticatorDeps {
+    /** Application auth callback validating a token; omit to allow anonymous joins. */
     auth?: AuthFunction
+    /** When `true`, the server assigns peer ids instead of trusting the client-declared one. */
     serverAssignedPeerId?: boolean
+    /** Logger for auth diagnostics (real errors logged internally, never sent to clients). */
     logger: Logger
+    /** Metrics sink for auth success/failure counters. */
     metrics: MetricsCollector
 }
 
+/**
+ * Authenticates an incoming connection and resolves the room/identity it may join.
+ *
+ * @remarks
+ * {@link Authenticator.resolve | resolve} extracts a token from the `?token=`
+ * query param or an `Authorization: Bearer` header, runs the optional
+ * {@link AuthFunction}, and validates the result. On failure it logs the real
+ * error internally but returns only a generic close code/reason, never leaking
+ * internal messages to the client. When `serverAssignedPeerId` is set, it mints a
+ * peer id rather than trusting the client's.
+ */
 export class Authenticator {
     constructor(private readonly deps: AuthenticatorDeps) {}
 

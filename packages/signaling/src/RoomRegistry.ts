@@ -12,12 +12,28 @@ type RoomRegistryEvents = {
     [RoomRegistryEvent.PeerKicked]: [roomId: string, peerId: string, reason: string | undefined]
 }
 
+/**
+ * Per-room limits applied to every {@link Room} a {@link RoomRegistry} creates.
+ */
 export interface RoomFactoryOptions {
+    /** Maximum concurrent peers allowed in a room. */
     maxPeers?: number
+    /** Maximum lifetime of a room in milliseconds before it is closed. */
     maxDurationMs?: number
+    /** Milliseconds a room may sit empty before it is closed. */
     idleTimeoutMs?: number
 }
 
+/**
+ * Owns the set of live {@link Room}s on a signaling node and their lifecycle.
+ *
+ * @remarks
+ * Creates rooms on demand with the shared {@link RoomFactoryOptions}, tracks them
+ * by id, and re-emits room-level lifecycle events ({@link RoomRegistryEvent}) such
+ * as a room closing or a peer being kicked, so the server can react centrally.
+ * Also exposes aggregate stats like {@link RoomRegistry.size | size} and
+ * {@link RoomRegistry.totalPeers | totalPeers}.
+ */
 export class RoomRegistry extends EventEmitter<RoomRegistryEvents> {
     private readonly _rooms = new Map<string, Room>()
 

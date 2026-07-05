@@ -2,13 +2,30 @@ import type { Logger } from 'rtcforge-core'
 import type { Room } from './Room.js'
 import { CloseCode, CloseReason } from './types.js'
 
+/**
+ * Collaborators a {@link HeartbeatMonitor} needs to ping peers and evict stale ones.
+ */
 export interface HeartbeatMonitorDeps {
+    /** Supplies the current set of rooms to sweep each tick. */
     rooms: () => Iterable<Room>
+    /** Interval between heartbeat sweeps, in milliseconds. */
     pingIntervalMs: number
+    /** Milliseconds without a pong after which a peer is considered dead. */
     pongTimeoutMs: number
+    /** Logger for timeout/disconnect diagnostics. */
     logger: Logger
 }
 
+/**
+ * Periodically pings peers and disconnects any that stop responding.
+ *
+ * @remarks
+ * On {@link HeartbeatMonitor.start | start} it runs a timer every `pingIntervalMs`;
+ * each tick, any peer not seen within `pongTimeoutMs` is logged and removed
+ * synchronously (iterating a snapshot, so mutating the room mid-loop is safe).
+ * The timer is `unref`'d so it never keeps the process alive. Call
+ * {@link HeartbeatMonitor.stop | stop} to halt.
+ */
 export class HeartbeatMonitor {
     private _timer?: ReturnType<typeof setInterval>
 
