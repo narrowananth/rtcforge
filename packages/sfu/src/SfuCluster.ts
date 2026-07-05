@@ -122,6 +122,11 @@ export class SfuCluster extends EventEmitter<SfuClusterEvents> {
      * @param node - The node to add. Re-adding an existing id replaces its entry.
      */
     addNode(node: SfuNode): void {
+        // If an entry with this id already exists, tear it down first so we don't
+        // double-bind the overload listener (Overloaded would fire twice) or leave
+        // a stale entry whose id shadows the new node in id-keyed trackers
+        // (e.g. NodeFailureTracker dedupes by id, dropping the new node's events).
+        if (this._nodes.has(node.id)) this.removeNode(node.id)
         const overloadListener = () => this._checkAllOverloaded()
         this._nodes.set(node.id, { node, overloadListener })
         node.on(SfuNodeEvent.Overloaded, overloadListener)

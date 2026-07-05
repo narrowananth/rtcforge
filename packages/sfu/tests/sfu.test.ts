@@ -148,6 +148,30 @@ describe('SfuCluster — node management', () => {
         cluster.removeNode('n1')
         expect(cluster.nodes).not.toContain(node)
     })
+
+    it('re-adding the same node object does not double-bind the overload listener', () => {
+        const node = new SfuNode('n1', 'us-east', { capacity: 10 })
+        const overloaded = vi.fn()
+        cluster.on(SfuClusterEvent.Overloaded, overloaded)
+        cluster.addNode(node)
+        cluster.addNode(node) // re-add same object
+        expect(cluster.nodes.filter((n) => n === node)).toHaveLength(1)
+        node.reportLoad(20) // becomes overloaded → cluster _checkAllOverloaded
+        expect(overloaded).toHaveBeenCalledTimes(1)
+    })
+
+    it('re-adding a different node object under the same id tracks the new object', () => {
+        const first = new SfuNode('n1', 'us-east')
+        const second = new SfuNode('n1', 'us-east')
+        const gone = vi.fn()
+        const tracker = new NodeFailureTracker(cluster, gone)
+        cluster.addNode(first)
+        cluster.addNode(second) // replaces first under id n1
+        expect(cluster.nodes).toEqual([second])
+        second.markFailed()
+        expect(gone).toHaveBeenCalledWith(second)
+        tracker.dispose()
+    })
 })
 
 describe('SfuCluster — assignNode', () => {

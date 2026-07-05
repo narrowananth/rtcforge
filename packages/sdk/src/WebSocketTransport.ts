@@ -63,7 +63,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
         this.connectTimeoutMs = options.connectTimeoutMs
         this.logger = options.logger ?? noopLogger
         this.tokenRefresh = options.tokenRefresh
-        this._queue = options.sendQueue ?? new SendQueue(options.maxQueueSize ?? 100)
+        this._queue = options.sendQueue ?? new SendQueue(options.maxQueueSize ?? 100, this.logger)
         this._reconnect =
             options.reconnectStrategy ??
             new ReconnectStrategy(options.maxReconnectDelay ?? 32_000, options.maxReconnectAttempts)
@@ -139,11 +139,15 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                 const connectTimer =
                     connectTimeoutMs !== 0
                         ? setTimeout(() => {
+                              if (settled) return
+                              settled = true
+                              // Mark terminal BEFORE close() so the onclose that
+                              // ws.close() re-enters sees isTerminal and cannot
+                              // schedule a spurious reconnect for a connect that
+                              // already timed out and rejected.
+                              this._exhausted = true
                               ws.close()
-                              if (!settled) {
-                                  settled = true
-                                  onError?.(new Error('WebSocket connect timeout'))
-                              }
+                              onError?.(new Error('WebSocket connect timeout'))
                           }, connectTimeoutMs ?? 10_000)
                         : null
 
@@ -152,6 +156,9 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                     this._reconnect.reset()
                     this.logger.info('WebSocket connected', { url: this._safeUrl })
                     this.emit(TransportEvent.Open)
+                    // Flush any frames buffered while offline, as documented
+                    // ("buffered ... and flushed on reconnect").
+                    this.flush()
                     if (!settled) {
                         settled = true
                         onOpen?.()
@@ -164,7 +171,7 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                     const reason = String(ev.reason ?? '')
                     this.logger.info('WebSocket closed', { code, reason })
                     this.emit(TransportEvent.Close, code, reason)
-                    if (this._closed || !this.shouldReconnect) return
+                    if (this.isTerminal || !this.shouldReconnect) return
                     // A non-retryable close (default: 1008, e.g. rejected/expired
                     // token) would loop forever against the same dead credential.
                     // Terminate instead of reconnecting, and surface it distinctly.
@@ -257,8 +264,28 @@ export class WebSocketTransport extends EventEmitter<TransportEvents> implements
                         this.initSocket()
                     })
                     .catch((err: Error) => {
-                        this.logger.warn('Token refresh failed', { err: err.message })
-                        this.initSocket()
+                        // Do NOT reconnect with the stale (expired) token — the
+                        // server would close 1008 (non-retryable) and terminate
+                        // permanently over a transient token-service blip. Treat
+                        // it as a retryable failure and schedule another attempt.
+                        this.logger.warn(
+                            'Token refresh failed; skipping reconnect with stale token, will retry',
+                            { err: err.message },
+                        )
+                        if (this.isTerminal) return
+                        if (this._reconnect.isExhausted()) {
+                            this.logger.warn('Max reconnect attempts reached', {
+                                attempts: this._reconnect.attempt,
+                            })
+                            this._exhausted = true
+                            this.emit(
+                                TransportEvent.Error,
+                                new Error('Max reconnect attempts reached'),
+                            )
+                            this.emit(TransportEvent.Terminated, 1006, 'Token refresh failed')
+                            return
+                        }
+                        this.scheduleReconnect()
                     })
             } else {
                 this.initSocket()

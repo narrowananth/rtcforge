@@ -295,6 +295,17 @@ describe('SignalingServer — Phase 3: observability & reliability', () => {
         expect(server.getStats().uptime).toBe(0)
     })
 
+    it('resets uptime and port after stop()', async () => {
+        server = new SignalingServer({ port: 0 })
+        await server.start()
+        expect(server.getStats().uptime).toBeGreaterThanOrEqual(0)
+        expect(typeof server.port).toBe('number')
+        await server.stop()
+        expect(server.getStats().uptime).toBe(0)
+        expect(server.port).toBeUndefined()
+        server = undefined as never
+    })
+
     it('start() twice rejects instead of leaking a second server', async () => {
         server = new SignalingServer({ port: 0 })
         await server.start()

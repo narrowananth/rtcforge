@@ -49,4 +49,19 @@ describe('Node file source/sink integration', () => {
         expect(written.byteLength).toBe(data.byteLength)
         expect(await sha256Hex(written)).toBe(await sha256Hex(data))
     })
+
+    it('NodeFileSink.intoDirectory sanitizes a hostile metadata name (no traversal)', async () => {
+        // Regression: a path-traversal file name must be neutralized automatically
+        // so the write stays inside the target directory.
+        const sink = NodeFileSink.intoDirectory(dir)
+        const bytes = randomBytes(64)
+        await sink.open({ name: '../../evil.bin', mimeType: '', size: bytes.byteLength })
+        await sink.write(0, bytes)
+        const result = await sink.close()
+
+        // The file lands at <dir>/evil.bin, never outside dir.
+        expect(result.path).toBe(join(dir, 'evil.bin'))
+        const written = await readFile(join(dir, 'evil.bin'))
+        expect(written.byteLength).toBe(bytes.byteLength)
+    })
 })

@@ -307,6 +307,27 @@ describe('Room', () => {
         })
     })
 
+    describe('disconnectAndRemove', () => {
+        it('disconnects and removes a peer synchronously without a kicked message', () => {
+            const { peer: p1, ws: ws1 } = makePeer('p1')
+            const { peer: p2 } = makePeer('p2')
+            room.addPeer(p1)
+            room.addPeer(p2)
+            const result = room.disconnectAndRemove('p1', 1001, 'Heartbeat timeout')
+            expect(result).toBe(true)
+            expect(ws1.close).toHaveBeenCalledWith(1001, 'Heartbeat timeout')
+            // Gone right away (not lingering until the ws close handshake) and no
+            // `kicked` message was sent.
+            expect(room.getPeerCount()).toBe(1)
+            expect(room.getPeer('p1')).toBeUndefined()
+            expect(ws1.send).not.toHaveBeenCalledWith(expect.stringContaining(MessageType.Kicked))
+        })
+
+        it('returns false when the peer is not present', () => {
+            expect(room.disconnectAndRemove('nope', 1001, 'x')).toBe(false)
+        })
+    })
+
     describe('dispose', () => {
         it('clears peers so a late socket close does not re-emit Closed', () => {
             const { peer: p1 } = makePeer('p1')

@@ -1,3 +1,8 @@
-# Every change requires review from the repo owner.
-# Pair with a ruleset rule: "Require review from Code Owners".
+# Code owners for rtcforge.
+#
+# Auto-requests review from @narrowananth on every PR (routing/visibility).
+# NOT enforced as a required review: branch protection uses 0 required
+# approvals so the sole maintainer can merge their own PRs (GitHub forbids
+# approving your own PR). Add `require_code_owner_reviews` only once a second
+# maintainer exists.
 * @narrowananth

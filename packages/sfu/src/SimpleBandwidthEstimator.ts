@@ -10,6 +10,7 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
     private _streak = 0
     private _pendingDir: -1 | 0 | 1 = 0
     private _lastQuality: BandwidthQuality = 'high'
+    private _hasSample = false
 
     constructor(opts: SimpleBandwidthEstimatorOptions = {}) {
         this.opts = {
@@ -44,6 +45,16 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
             raw = 'high'
         }
 
+        // On the very first sample there is no committed history to hysteresis
+        // against, and the 'high' default would otherwise report an unearned
+        // optimistic 'high' before any data exists. Snap directly to the
+        // computed quality so estimate #1 reflects reality.
+        if (!this._hasSample) {
+            this._hasSample = true
+            this._lastQuality = raw
+            return this._lastQuality
+        }
+
         const names: BandwidthQuality[] = ['low', 'medium', 'high']
         const order = { low: 0, medium: 1, high: 2 }
         const committed = order[this._lastQuality]
@@ -76,5 +87,6 @@ export class SimpleBandwidthEstimator implements BandwidthEstimator {
         this._streak = 0
         this._pendingDir = 0
         this._lastQuality = 'high'
+        this._hasSample = false
     }
 }

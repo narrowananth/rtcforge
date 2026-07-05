@@ -74,6 +74,13 @@ export class SendTransfer extends Transfer {
     private _offerTimer: ReturnType<typeof setTimeout> | null = null
     private _resumeWaiters: Array<() => void> = []
     private _interrupted = false
+    // A Pause that arrived while still in Accepted (before _run flips Accepted→Active
+    // on a later microtask) is recorded here and honoured once _run reaches Active,
+    // so it isn't silently dropped.
+    private _pendingPause = false
+    // Unique chunk seqs actually sent, so progress counters reflect unique chunks and
+    // never exceed the total when a resume resends chunks.
+    private readonly _sentSeqs = new Set<number>()
     // Monotonic run generation. Every `_run` loop captures the current value;
     // workers exit as soon as it changes, so a superseded run (duplicate accept,
     // resume, or terminal) can never send concurrently with the live one.
@@ -125,8 +132,25 @@ export class SendTransfer extends Transfer {
      */
     reoffer(channels: RTCDataChannel[]): void {
         if (this.isTerminal || !this._interrupted) return
+        // Close any channels from the previous set that aren't being reused, so a
+        // partial drop (parallelChannels>1) or a double resumeSend() doesn't leak
+        // still-open survivor channels. Channels that carry over stay open and are
+        // closed exactly once by _onTerminal.
+        const next = new Set(channels)
+        for (const ch of this._channels) {
+            if (next.has(ch)) continue
+            try {
+                ch.close()
+            } catch {
+                // already closing/closed
+            }
+        }
         this._channels = channels
         this._sendOffer()
+        // Don't sit Paused forever if the re-offer is never answered: arm the same
+        // offer-timeout window used by start(). Any control reply clears it (see
+        // handleControl); a successful resume clears _interrupted so a late fire no-ops.
+        this._armOfferTimeout(() => this._interrupted && !this.isTerminal)
     }
 
     private _sendOffer(): void {
@@ -183,24 +207,33 @@ export class SendTransfer extends Transfer {
         // never answers. Fail (and notify) once the offer window elapses.
         // Guard: start() can self-fail via _safeControl above; don't arm a timer
         // on an already-terminal transfer.
-        if (this._offerTimeoutMs > 0 && this._state === TransferState.Offered) {
-            const timer = setTimeout(() => {
-                this._offerTimer = null
-                if (this._state === TransferState.Offered) {
-                    this.fail(
-                        new FileTransferError(
-                            'offer not accepted before timeout',
-                            FileTransferErrorCode.Timeout,
-                            { transferId: this.id },
-                        ),
-                        true,
-                    )
-                }
-            }, this._offerTimeoutMs)
-            // Don't keep the Node event loop alive just for the offer window.
-            ;(timer as { unref?: () => void }).unref?.()
-            this._offerTimer = timer
+        if (this._state === TransferState.Offered) {
+            this._armOfferTimeout(() => this._state === TransferState.Offered)
         }
+    }
+
+    // Arm the offer-accept timeout window. When it elapses and `stillWaiting()` is
+    // still true (offer never answered), fail the transfer and notify the peer.
+    // No-op when the timeout is disabled. Unref'd so it never keeps the loop alive.
+    private _armOfferTimeout(stillWaiting: () => boolean): void {
+        this._clearOfferTimer()
+        if (this._offerTimeoutMs <= 0) return
+        const timer = setTimeout(() => {
+            this._offerTimer = null
+            if (stillWaiting()) {
+                this.fail(
+                    new FileTransferError(
+                        'offer not accepted before timeout',
+                        FileTransferErrorCode.Timeout,
+                        { transferId: this.id },
+                    ),
+                    true,
+                )
+            }
+        }, this._offerTimeoutMs)
+        // Don't keep the Node event loop alive just for the offer window.
+        ;(timer as { unref?: () => void }).unref?.()
+        this._offerTimer = timer
     }
 
     private _clearOfferTimer(): void {
@@ -349,6 +382,13 @@ export class SendTransfer extends Transfer {
         }
         if (this._state !== TransferState.Active) return
 
+        // Honour a Pause that arrived during the Accepted→Active window; the workers
+        // will park at the pause gate instead of streaming past a paused receiver.
+        if (this._pendingPause) {
+            this._pendingPause = false
+            this.transitionTo(TransferState.Paused)
+        }
+
         const digest = this._checksum ? new Sha256Digest() : null
         await Promise.all(
             this._channels.map((ch, i) => this._worker(i, ch, haveChunks, digest, gen)),
@@ -393,18 +433,35 @@ export class SendTransfer extends Transfer {
                 )
             }
             channel.send(encodeFrame(seq, bytes))
-            this._transferredChunks += 1
-            this._transferredBytes += length
+            // Count each unique chunk once so a resume that resends chunks can't push
+            // reported progress past the total.
+            if (!this._sentSeqs.has(seq)) {
+                this._sentSeqs.add(seq)
+                this._transferredChunks += 1
+                this._transferredBytes += length
+            }
             this.emitProgress()
         }
     }
 
     private _applyPause(): boolean {
+        // Accepted→Active happens on a later microtask in _run; record the pause so
+        // it isn't dropped in that window (_run honours the flag when it goes Active).
+        if (this._state === TransferState.Accepted) {
+            this._pendingPause = true
+            return true
+        }
         if (this._state !== TransferState.Active) return false
         return this.transitionTo(TransferState.Paused)
     }
 
     private _applyResume(): boolean {
+        // A resume that arrives in the same Accepted window simply cancels a recorded
+        // pending pause; the transfer keeps heading to Active.
+        if (this._state === TransferState.Accepted && this._pendingPause) {
+            this._pendingPause = false
+            return true
+        }
         if (this._state !== TransferState.Paused) return false
         if (!this.transitionTo(TransferState.Active)) return false
         const waiters = this._resumeWaiters

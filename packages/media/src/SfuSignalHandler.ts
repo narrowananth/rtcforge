@@ -47,7 +47,7 @@ export class SfuSignalHandler {
             case 'sfu-caps':
                 return { type: 'sfu-caps', rtpCapabilities: this.router.rtpCapabilities }
             case 'sfu-create-transport': {
-                const transport = await this.router.createWebRtcTransport(peerId)
+                const transport = await this.router.createWebRtcTransport(peerId, msg.direction)
                 return { type: 'sfu-transport-created', transport }
             }
             case 'sfu-connect-transport':

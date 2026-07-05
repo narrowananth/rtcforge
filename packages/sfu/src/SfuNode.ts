@@ -225,6 +225,7 @@ export class SfuNode extends EventEmitter<SfuNodeEvents> {
             getStats,
             (quality) => this._reportBandwidthQuality(quality),
             intervalMs,
+            this._logger,
         )
         this._statsCollector.start()
     }

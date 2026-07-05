@@ -25,6 +25,7 @@ const DEFAULT_MAX_PAYLOAD_BYTES = 262_144
 const DEFAULT_MAX_CONNECTIONS = 10_000
 const DEFAULT_MAX_ROOMS = 10_000
 const DEFAULT_MAX_MESSAGES_PER_SECOND = 100
+const DEFAULT_MAX_PEERS_PER_ROOM = 100
 
 /**
  * A point-in-time snapshot of server activity, returned by
@@ -101,6 +102,7 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
     private ownServer?: http.Server
     private startedAt = 0
     private _stopped = false
+    private readonly _healthCleanups: Array<() => void> = []
     private _connections = 0
     private readonly maxConnections: number
     private readonly maxRooms: number
@@ -131,7 +133,9 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             rl === undefined ? DEFAULT_MAX_MESSAGES_PER_SECOND : rl > 0 ? rl : undefined
 
         this.registry = new RoomRegistry({
-            maxPeers: opts.maxPeersPerRoom,
+            // Bound rooms out of the box so a single room can't grow to
+            // maxConnections; still configurable/raisable via opts.
+            maxPeers: opts.maxPeersPerRoom ?? DEFAULT_MAX_PEERS_PER_ROOM,
             maxDurationMs: opts.roomMaxDurationMs,
             idleTimeoutMs: opts.roomIdleTimeoutMs,
         })
@@ -281,8 +285,16 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             })
         }
 
+        // Remove any health-endpoint 'request' listeners so a caller-owned HTTP
+        // server that outlives this SignalingServer isn't left with a dangling
+        // handler (and a leaked reference to this instance).
+        for (const cleanup of this._healthCleanups) cleanup()
+        this._healthCleanups.length = 0
+
         this.wss = undefined
         this.ownServer = undefined
+        // Reset started state so uptime/port report a stopped server.
+        this.startedAt = 0
         this.logger.info('SignalingServer stopped')
     }
 
@@ -353,14 +365,17 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
      * ```
      */
     attachHealthEndpoint(server: http.Server, path = '/health'): void {
-        server.on('request', (req, res) => {
+        const handler = (req: http.IncomingMessage, res: http.ServerResponse): void => {
             if (req.method === 'GET' && req.url?.split('?')[0] === path) {
                 const stats = this.getStats()
                 const body = JSON.stringify({ status: 'ok', ...stats })
                 res.writeHead(200, { 'Content-Type': 'application/json' })
                 res.end(body)
             }
-        })
+        }
+        server.on('request', handler)
+        // Track for removal on stop() so the listener doesn't outlive the server.
+        this._healthCleanups.push(() => server.removeListener('request', handler))
     }
 
     private onRoomClosed(roomId: string): void {
@@ -465,6 +480,10 @@ export class SignalingServer extends EventEmitter<SignalingServerEvents> {
             this.registry.rollbackIfEmpty(roomId, isNew)
             return
         }
+
+        // Only now may this peer relay/broadcast; frames received during the
+        // async iceServersHook window above were ignored (see Peer.admit).
+        peer.admit()
 
         this.opts.auditLog?.({ type: 'peer-joined', roomId, peerId, ts: Date.now() })
 

@@ -228,14 +228,12 @@ export class Room extends EventEmitter<RoomEvents> {
     private _refresh(params: RoomRefresh): void {
         this._peers.clear()
         this._peerRoles.clear()
+        this._peerMeta.clear()
         this._seedPeers(params.localPeerId, params.peers)
         if (params.peerRoles) this._initRoles(params.peerRoles)
         if (params.localRole !== undefined) this._localPeerRole = params.localRole
         if (params.iceServers !== undefined) this._iceServers = params.iceServers
-        if (params.peerMetadata !== undefined) {
-            this._peerMeta.clear()
-            this._initMeta(params.peerMetadata)
-        }
+        if (params.peerMetadata !== undefined) this._initMeta(params.peerMetadata)
         this.emit(RoomEvent.Refreshed)
     }
 

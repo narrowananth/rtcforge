@@ -15,52 +15,58 @@
     "sideEffects": false,
     "exports": {
         "./core": {
-            "types": "./dist/core.d.ts",
-            "import": "./dist/core.mjs",
-            "require": "./dist/core.cjs"
+            "import": { "types": "./dist/core.d.mts", "default": "./dist/core.mjs" },
+            "require": { "types": "./dist/core.d.ts", "default": "./dist/core.cjs" }
         },
         "./client": {
-            "types": "./dist/client.d.ts",
-            "import": "./dist/client.mjs",
-            "require": "./dist/client.cjs"
+            "import": { "types": "./dist/client.d.mts", "default": "./dist/client.mjs" },
+            "require": { "types": "./dist/client.d.ts", "default": "./dist/client.cjs" }
         },
         "./server": {
-            "types": "./dist/server.d.ts",
-            "import": "./dist/server.mjs",
-            "require": "./dist/server.cjs"
+            "import": { "types": "./dist/server.d.mts", "default": "./dist/server.mjs" },
+            "require": { "types": "./dist/server.d.ts", "default": "./dist/server.cjs" }
         },
         "./media": {
             "browser": {
-                "types": "./dist/media.browser.d.ts",
-                "import": "./dist/media.browser.mjs",
-                "require": "./dist/media.browser.cjs"
+                "import": {
+                    "types": "./dist/media.browser.d.mts",
+                    "default": "./dist/media.browser.mjs"
+                },
+                "require": {
+                    "types": "./dist/media.browser.d.ts",
+                    "default": "./dist/media.browser.cjs"
+                }
             },
-            "types": "./dist/media.d.ts",
-            "import": "./dist/media.mjs",
-            "require": "./dist/media.cjs"
+            "import": { "types": "./dist/media.d.mts", "default": "./dist/media.mjs" },
+            "require": { "types": "./dist/media.d.ts", "default": "./dist/media.cjs" }
         },
         "./filetransfer": {
-            "types": "./dist/filetransfer.d.ts",
-            "import": "./dist/filetransfer.mjs",
-            "require": "./dist/filetransfer.cjs"
+            "import": {
+                "types": "./dist/filetransfer.d.mts",
+                "default": "./dist/filetransfer.mjs"
+            },
+            "require": { "types": "./dist/filetransfer.d.ts", "default": "./dist/filetransfer.cjs" }
         },
         "./filetransfer/node": {
-            "types": "./dist/filetransfer/node.d.ts",
-            "import": "./dist/filetransfer/node.mjs",
-            "require": "./dist/filetransfer/node.cjs"
+            "import": {
+                "types": "./dist/filetransfer/node.d.mts",
+                "default": "./dist/filetransfer/node.mjs"
+            },
+            "require": {
+                "types": "./dist/filetransfer/node.d.ts",
+                "default": "./dist/filetransfer/node.cjs"
+            }
         },
         "./sfu": {
-            "types": "./dist/sfu.d.ts",
-            "import": "./dist/sfu.mjs",
-            "require": "./dist/sfu.cjs"
+            "import": { "types": "./dist/sfu.d.mts", "default": "./dist/sfu.mjs" },
+            "require": { "types": "./dist/sfu.d.ts", "default": "./dist/sfu.cjs" }
         },
         "./sfu/udp": {
-            "types": "./dist/sfu/udp.d.ts",
-            "import": "./dist/sfu/udp.mjs",
-            "require": "./dist/sfu/udp.cjs"
+            "import": { "types": "./dist/sfu/udp.d.mts", "default": "./dist/sfu/udp.mjs" },
+            "require": { "types": "./dist/sfu/udp.d.ts", "default": "./dist/sfu/udp.cjs" }
         }
     },
-    "files": ["dist", "LICENSE", "README.md"],
+    "files": ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
     "keywords": ["webrtc", "realtime", "sfu", "signaling", "rtcforge"],
     "license": "MIT",
     "engines": {

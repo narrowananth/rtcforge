@@ -35,7 +35,15 @@ export class HeartbeatMonitor {
                     this.deps.logger.warn('Heartbeat timeout, disconnecting peer', {
                         peerId: peer.id,
                     })
-                    peer.disconnect(CloseCode.GoingAway, CloseReason.HeartbeatTimeout)
+                    // Remove synchronously (getPeers() is a snapshot, so mutating
+                    // the room mid-loop is safe). Otherwise the peer lingers in the
+                    // room until its ws close handshake completes and is re-pruned
+                    // on every subsequent tick.
+                    room.disconnectAndRemove(
+                        peer.id,
+                        CloseCode.GoingAway,
+                        CloseReason.HeartbeatTimeout,
+                    )
                 } else {
                     peer.ping()
                 }

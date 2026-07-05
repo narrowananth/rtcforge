@@ -3,6 +3,8 @@ import { ReceiveTransfer } from '../../src/filetransfer/ReceiveTransfer.js'
 import { encodeFrame } from '../../src/filetransfer/framing.js'
 import { type ControlMessage, ControlType } from '../../src/filetransfer/protocol.js'
 import { MemorySink } from '../../src/filetransfer/sink/MemorySink.js'
+import type { SinkResult, StorageSink } from '../../src/filetransfer/sink/StorageSink.js'
+import type { FileMetadata } from '../../src/filetransfer/types.js'
 import { TransferState } from '../../src/filetransfer/types.js'
 import { MockDataChannel, flush, randomBytes } from './helpers.js'
 
@@ -69,6 +71,47 @@ describe('ReceiveTransfer', () => {
         rt.reject('busy')
         expect(rt.state).toBe(TransferState.Cancelled)
         expect(controls[0]?.type).toBe(ControlType.Reject)
+    })
+
+    it('closes a custom sink exactly once when a duplicate Sent races completion', async () => {
+        // Regression: two concurrent _tryComplete (a duplicate Sent) must not both
+        // pass the write-chain gate and double-close the sink.
+        let closes = 0
+        const sink: StorageSink = {
+            async open(_meta: FileMetadata) {},
+            async write(_offset: number, _data: Uint8Array) {},
+            async close(): Promise<SinkResult> {
+                closes += 1
+                // Yield so a second _tryComplete could interleave if unguarded.
+                await Promise.resolve()
+                return {}
+            },
+            async abort() {},
+        }
+        const controls: ControlMessage[] = []
+        const rt = new ReceiveTransfer({
+            id: 't1',
+            peerId: 'A',
+            metadata: { name: 'f.bin', mimeType: 'application/octet-stream', size: 16 },
+            chunkSize: 16,
+            totalChunks: 1,
+            checksum: false,
+            sendControl: (m) => controls.push(m),
+        })
+        rt.accept(sink)
+        await flush()
+        const ch = new MockDataChannel('rtcforge-ft-t1-0')
+        ch.readyState = 'open'
+        rt.attachChannel(ch.asChannel())
+        ch.dispatch('message', { data: encodeFrame(0, randomBytes(16)) })
+        await flush()
+
+        rt.handleControl({ type: ControlType.Sent, transferId: 't1' })
+        rt.handleControl({ type: ControlType.Sent, transferId: 't1' }) // duplicate, races completion
+        await flush()
+
+        expect(closes).toBe(1)
+        expect(rt.state).toBe(TransferState.Completed)
     })
 
     it('fails on an out-of-range frame seq and cancels the peer (no huge alloc)', async () => {

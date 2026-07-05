@@ -249,6 +249,29 @@ export class Room extends EventEmitter<RoomEvents> {
     }
 
     /**
+     * Disconnects a peer and removes it from the room synchronously, without
+     * sending a `kicked` message.
+     *
+     * @remarks
+     * Used by the heartbeat monitor to prune an unresponsive peer. Mirrors
+     * {@link Room.kickPeer}'s synchronous removal so the peer does not linger in
+     * {@link Room.getPeers} (where it would be re-disconnected on every tick) or
+     * keep holding a `maxPeers` slot while its ws close handshake completes.
+     *
+     * @param peerId - Id of the peer to disconnect and remove.
+     * @param code - WebSocket close code.
+     * @param reason - WebSocket close reason.
+     * @returns `true` if the peer was found and removed; `false` otherwise.
+     */
+    disconnectAndRemove(peerId: string, code: number, reason: string): boolean {
+        const peer = this._peers.get(peerId)
+        if (!peer) return false
+        peer.disconnect(code, reason)
+        this.removePeer(peerId)
+        return true
+    }
+
+    /**
      * Relays a directed signal from one peer to another and counts as room
      * activity (resets the idle timer).
      *

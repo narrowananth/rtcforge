@@ -29,7 +29,15 @@ export class Authenticator {
     async resolve(req: IncomingMessage): Promise<AuthResult> {
         const { logger, metrics } = this.deps
         const url = new URL(req.url ?? '/', 'ws://localhost')
-        const token = url.searchParams.get('token') ?? ''
+        // Prefer the `?token=` query param; fall back to an
+        // `Authorization: Bearer <token>` header when it is absent.
+        let token = url.searchParams.get('token') ?? ''
+        if (!token) {
+            const authHeader = req.headers.authorization
+            if (authHeader?.startsWith('Bearer ')) {
+                token = authHeader.slice('Bearer '.length).trim()
+            }
+        }
 
         let roomId: string
         let role: string
@@ -69,8 +77,12 @@ export class Authenticator {
         } else {
             const r = url.searchParams.get('roomId')
             const p = url.searchParams.get('peerId')
-            if (!r || !p) {
-                logger.warn('Auth failed: missing roomId or peerId')
+            // Bound raw query values: in no-auth mode these are attacker-controlled
+            // and otherwise only truthiness-checked, so an oversized id could be
+            // used as a memory-amplification vector (room map keys, metadata, etc.).
+            const MAX_ID_LENGTH = 256
+            if (!r || !p || r.length > MAX_ID_LENGTH || p.length > MAX_ID_LENGTH) {
+                logger.warn('Auth failed: missing or oversized roomId or peerId')
                 metrics.increment(Metric.AuthErrors, { reason: 'missing_params' })
                 return {
                     ok: false,
