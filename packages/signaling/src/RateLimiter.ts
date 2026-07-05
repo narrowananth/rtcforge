@@ -1,6 +1,20 @@
+/**
+ * Sliding-window rate limiter tracking event timestamps.
+ *
+ * @remarks
+ * Retains the timestamps of recent {@link RateLimiter.allow | allow} calls within
+ * a rolling `windowMs` window and rejects once `maxPerWindow` is reached. Expired
+ * timestamps are evicted on each call, so memory stays bounded by the limit. One
+ * instance tracks one subject (e.g. a peer or connection); create separate
+ * limiters per subject.
+ */
 export class RateLimiter {
     private readonly _hits: number[] = []
 
+    /**
+     * @param maxPerWindow - Maximum number of allowed events within the window.
+     * @param windowMs - Rolling window length in milliseconds.
+     */
     constructor(
         private readonly maxPerWindow: number,
         private readonly windowMs = 1000,

@@ -1,10 +1,24 @@
 import type { MediaKind } from 'rtcforge-core'
 
+/**
+ * A local {@link MediaStreamTrack} paired with the {@link MediaStream} it belongs to.
+ */
 export interface LocalTrackEntry {
+    /** The individual audio or video track. */
     track: MediaStreamTrack
+    /** The stream the track was published as part of. */
     stream: MediaStream
 }
 
+/**
+ * Tracks the local media tracks a peer is publishing, each with its owning stream.
+ *
+ * @remarks
+ * Seeded optionally from an initial {@link MediaStream} (its tracks are recorded
+ * against that stream) and exposes an immutable snapshot via
+ * {@link LocalTrackRegistry.entries | entries}, so callers can enumerate what the
+ * local peer is sending without mutating internal state.
+ */
 export class LocalTrackRegistry {
     private readonly _tracks: LocalTrackEntry[] = []
 

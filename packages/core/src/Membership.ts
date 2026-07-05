@@ -54,6 +54,18 @@ interface MembershipEntry {
     expiresAt: number
 }
 
+/**
+ * In-process {@link Membership} backed by a `Map` with TTL-based expiry.
+ *
+ * @remarks
+ * The default implementation for single-node deployments and tests: nodes are
+ * held in memory, each with an expiry derived from the `ttlMs` passed to
+ * {@link MemoryMembership.register | register}. Entries whose TTL has lapsed are
+ * pruned lazily on {@link MemoryMembership.list | list} and, if a
+ * `sweepIntervalMs` is supplied, proactively by a background timer that fires
+ * watchers when a silently-dead node expires. Watchers receive the full live set
+ * on every change. For multi-node clusters use `GossipMembership` instead.
+ */
 export class MemoryMembership implements Membership {
     private readonly _nodes = new Map<string, MembershipEntry>()
     private readonly _watchers = new Set<(nodes: NodeInfo[]) => void>()

@@ -38,6 +38,17 @@ const PIPE_PEER_ID = 'pipe'
 /** Declared role of a WebRTC transport: only sends media, or only receives it. */
 export type TransportDirection = 'send' | 'recv'
 
+/**
+ * Wraps a mediasoup `Router`, owning the producers, consumers, and transports for one room.
+ *
+ * @remarks
+ * A `MediaRouter` is the SFU's per-room media hub: it creates send/recv WebRTC
+ * transports, tracks the {@link Producer}s publishing into the room and the
+ * {@link Consumer}s subscribing to them, and supports piping producers between
+ * routers for cross-worker/cross-node cascading. It emits {@link MediaRouterEvent}s
+ * as producers and consumers come and go, and closes them all on
+ * {@link MediaRouter.close | close}. Created and managed by {@link MediaService}.
+ */
 export class MediaRouter extends EventEmitter<MediaRouterEvents> {
     readonly id: string
     private readonly _router: MsTypes.Router

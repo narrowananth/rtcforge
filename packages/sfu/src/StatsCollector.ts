@@ -2,6 +2,16 @@ import type { NetworkStats } from 'rtcforge-core'
 import { noopLogger } from './types.js'
 import type { BandwidthEstimator, BandwidthQuality, Logger } from './types.js'
 
+/**
+ * Polls network stats on an interval and reports estimated bandwidth quality.
+ *
+ * @remarks
+ * On {@link StatsCollector.start | start} it samples `getStats` every
+ * `intervalMs`, feeds each sample to a {@link BandwidthEstimator}, and invokes
+ * `onQuality` with the resulting {@link BandwidthQuality}. Overlapping collections
+ * are guarded so a slow stats call can't stack, and the timer is `unref`'d so it
+ * never keeps the process alive. Call {@link StatsCollector.stop | stop} to halt.
+ */
 export class StatsCollector {
     private _timer: ReturnType<typeof setInterval> | null = null
     private _collecting = false

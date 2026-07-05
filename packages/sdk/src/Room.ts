@@ -4,44 +4,95 @@ import type { ClientMessage, ServerMessage } from './protocol.js'
 import { RoomEvent } from './types.js'
 import type { BoundCall, IceServerConfig } from './types.js'
 
+/**
+ * Names of the media-related events a {@link Room} emits (distinct from signaling {@link RoomEvent}s).
+ */
 export const RoomMediaEvent = {
+    /** A remote {@link MediaStreamTrack} became available on the bound call. */
     TrackAdded: 'track-added',
+    /** A media or transport error occurred; the payload is an `Error`. */
     Error: 'media-error',
 } as const
 
+/**
+ * Union of the media event names emitted by a {@link Room}.
+ */
 export type RoomMediaEvent = (typeof RoomMediaEvent)[keyof typeof RoomMediaEvent]
 
+/**
+ * Minimal descriptor of a peer present in a {@link Room}.
+ */
 export interface PeerInfo {
+    /** The peer's unique identifier within the room. */
     id: string
 }
 
+/**
+ * Outbound channel a {@link Room} uses to send messages to the server.
+ */
 export interface RoomTransport {
+    /** Sends a client message toward the signaling server. */
     send(msg: ClientMessage): void
 }
 
+/**
+ * Initial state used to construct a {@link Room} via {@link Room.create}.
+ */
 export interface RoomInit {
+    /** The room's identifier. */
     id: string
+    /** The local participant's peer id. */
     localPeerId: string
+    /** Ids of the other peers already present when joining. */
     peers: string[]
+    /** Channel used to send messages to the server. */
     transport: RoomTransport
+    /** The local participant's role, if roles are in use. */
     localRole?: string
+    /** ICE servers to configure on peer connections. */
     iceServers?: IceServerConfig[]
+    /** Role assigned to each remote peer, keyed by peer id. */
     peerRoles?: Record<string, string>
+    /** Free-form metadata for each remote peer, keyed by peer id. */
     peerMetadata?: Record<string, Record<string, string>>
 }
 
+/**
+ * Updated room state applied to an existing {@link Room}, e.g. after a reconnect.
+ *
+ * @remarks
+ * Like {@link RoomInit} minus the immutable `id` and `transport`; the room diffs
+ * this against its current view and emits the appropriate join/leave/role events.
+ */
 export interface RoomRefresh {
+    /** The local participant's peer id (may change across reconnects). */
     localPeerId: string
+    /** The authoritative current set of peers in the room. */
     peers: string[]
+    /** Role assigned to each remote peer, keyed by peer id. */
     peerRoles?: Record<string, string>
+    /** The local participant's role, if roles are in use. */
     localRole?: string
+    /** ICE servers to configure on peer connections. */
     iceServers?: IceServerConfig[]
+    /** Free-form metadata for each remote peer, keyed by peer id. */
     peerMetadata?: Record<string, Record<string, string>>
 }
 
+/**
+ * Privileged control handle returned alongside a {@link Room} from {@link Room.create}.
+ *
+ * @remarks
+ * Keeps the mutating operations (feeding server messages, refreshing state,
+ * closing) off the public {@link Room} surface so consumers get a read/subscribe
+ * view while the owner drives the room's lifecycle.
+ */
 export interface RoomControl {
+    /** Feeds a server message into the room for handling. */
     handleMessage(msg: ServerMessage): void
+    /** Applies updated room state (see {@link RoomRefresh}). */
     refresh(params: RoomRefresh): void
+    /** Closes the room, tearing down any bound call and emitting `Closed`. */
     close(): void
 }
 
@@ -66,6 +117,19 @@ type RoomEvents = {
 
 type RemoteStreamHandler = (peerId: string, stream: MediaStream) => void
 
+/**
+ * Client-side view of a single signaling room and the peers within it.
+ *
+ * @remarks
+ * A `Room` tracks the current peer set, their roles, and metadata, and emits
+ * events as peers join, leave, change role, or send signals/broadcasts. It also
+ * relays application-level messaging ({@link Room.sendSignal | sendSignal},
+ * {@link Room.broadcast | broadcast}) and can host a media call bound via
+ * {@link Room.bindCall | bindCall}, re-emitting remote tracks as
+ * {@link RoomMediaEvent} events. Construct via {@link Room.create}, which also
+ * returns a `RoomControl` for the owner to drive lifecycle and feed server
+ * messages; the `Room` itself is a read-and-subscribe surface.
+ */
 export class Room extends EventEmitter<RoomEvents> {
     readonly id: string
     readonly localPeerId: string

@@ -1,33 +1,80 @@
 import { type Clock, systemClock } from './Clock.js'
 import type { Membership, NodeInfo } from './Membership.js'
 
+/**
+ * A single node's state as carried in a {@link GossipMessage}.
+ *
+ * @remarks
+ * The wire form of {@link NodeInfo} augmented with the two fields the anti-entropy
+ * protocol reconciles on: a monotonic `incarnation` (higher wins) and an `alive`
+ * flag (at equal incarnation, dead beats alive).
+ */
 export interface GossipEntry {
+    /** Unique node identifier. */
     id: string
+    /** Optional network address peers use to reach this node. */
     address?: string
+    /** Optional geographic or logical region the node belongs to. */
     region?: string
+    /** Optional free-form string metadata (e.g. capabilities, version). */
     metadata?: Record<string, string>
+    /** Monotonic version counter; a higher value supersedes an older view of the same node. */
     incarnation: number
+    /** Whether the sender believes this node is currently alive. */
     alive: boolean
 }
 
+/**
+ * A gossip round's payload: the sender's view of the cluster.
+ */
 export interface GossipMessage {
+    /** Address of the node that sent this message. */
     from: string
+    /** The sender's current view of every known node (self included). */
     members: GossipEntry[]
 }
 
+/**
+ * Pluggable message transport a {@link GossipMembership} uses to exchange {@link GossipMessage}s.
+ *
+ * @remarks
+ * Abstracts the wire so gossip can run over anything — UDP, an in-process bus
+ * ({@link InMemoryGossipTransport}), or a custom channel. Implementations must
+ * deliver received messages to the handler registered via {@link GossipTransport.onReceive | onReceive}.
+ */
 export interface GossipTransport {
+    /** This transport's own address, used as {@link GossipMessage.from}. */
     readonly address: string
+    /**
+     * Sends a message to a peer.
+     * @param toAddress - Destination address.
+     * @param msg - The gossip payload to deliver.
+     */
     send(toAddress: string, msg: GossipMessage): void
+    /**
+     * Registers the callback invoked for each inbound message.
+     * @param handler - Receives every message delivered to this address.
+     */
     onReceive(handler: (msg: GossipMessage) => void): void
+    /** Releases any underlying resources; optional. */
     close?(): void
 }
 
+/**
+ * Tuning options for {@link GossipMembership}.
+ */
 export interface GossipMembershipOptions {
+    /** Addresses of well-known peers to gossip with on startup for bootstrap. */
     seeds?: string[]
+    /** Time source used for gossip scheduling and timeout expiry. */
     clock?: Clock
+    /** Interval between gossip rounds, in milliseconds. */
     gossipIntervalMs?: number
+    /** Number of random peers contacted per gossip round. */
     fanout?: number
+    /** Milliseconds without contact after which a node is marked dead. */
     deadTimeoutMs?: number
+    /** Milliseconds a dead node is retained as a tombstone before being GC'd. */
     tombstoneMs?: number
 }
 
@@ -338,6 +385,16 @@ export class GossipMembership implements Membership {
     }
 }
 
+/**
+ * In-memory message fabric that wires many {@link InMemoryGossipTransport}s together.
+ *
+ * @remarks
+ * A test and single-process harness: transports register by address and
+ * {@link GossipNetwork.deliver | deliver} routes a message to the target's
+ * handler. Supports fault injection via {@link GossipNetwork.partition | partition}
+ * and {@link GossipNetwork.heal | heal} to simulate network splits without real
+ * sockets.
+ */
 export class GossipNetwork {
     private readonly _handlers = new Map<string, (msg: GossipMessage) => void>()
     private readonly _partitioned = new Set<string>()
@@ -364,6 +421,14 @@ export class GossipNetwork {
     }
 }
 
+/**
+ * {@link GossipTransport} that sends through an in-process {@link GossipNetwork}.
+ *
+ * @remarks
+ * Pairs with {@link GossipNetwork} to run a whole gossip cluster inside one
+ * process — used by tests and local simulations. Registers its address with the
+ * shared network on construction and unregisters on {@link InMemoryGossipTransport.close | close}.
+ */
 export class InMemoryGossipTransport implements GossipTransport {
     private _handler?: (msg: GossipMessage) => void
 

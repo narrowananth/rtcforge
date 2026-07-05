@@ -1,8 +1,14 @@
 import type { Membership, NodeInfo } from './Membership.js'
 
+/**
+ * Callbacks invoked by {@link MembershipReconciler} for each discrete membership change.
+ */
 export interface MembershipReconcilerHandlers {
+    /** Called when a node not previously seen appears in the live set. */
     onAdd(node: NodeInfo): void
+    /** Called when a previously-tracked node disappears from the live set. */
     onRemove(id: string): void
+    /** Called when an already-tracked node reappears in a later snapshot; optional. */
     onUpdate?(node: NodeInfo): void
 }
 

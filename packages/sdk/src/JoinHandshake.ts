@@ -5,6 +5,17 @@ import { TransportEvent } from './types.js'
 
 type RoomJoinedMessage = Extract<ServerMessage, { type: typeof MessageType.RoomJoined }>
 
+/**
+ * Drives the connect-and-join exchange, resolving once the server confirms the room.
+ *
+ * @remarks
+ * {@link JoinHandshake.run | run} connects the {@link Transport} and waits for a
+ * `RoomJoined` frame, rejecting on an `Error` frame or after `joinTimeoutMs`. The
+ * message listener stays attached after settling and buffers any frames that
+ * arrive in the same batch as `RoomJoined` (the transport can deliver several
+ * synchronously); those are replayed to steady-state handling via
+ * {@link JoinHandshake.drain | drain}.
+ */
 export class JoinHandshake {
     private _settled = false
     private _timer: ReturnType<typeof setTimeout> | null = null
