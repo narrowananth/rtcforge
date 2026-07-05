@@ -20,6 +20,9 @@ export const SfuMessageType = {
     ResumeConsumer: 'sfu-resume-consumer',
 } as const
 
+/**
+ * Union of the SFU control message discriminators (see {@link SfuMessageType} const).
+ */
 export type SfuMessageType = (typeof SfuMessageType)[keyof typeof SfuMessageType]
 
 const opaque = z.record(z.string(), z.unknown())

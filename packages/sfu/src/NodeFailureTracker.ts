@@ -7,6 +7,16 @@ interface NodeListeners {
     recovered: () => void
 }
 
+/**
+ * Watches an {@link SfuCluster} and fires a callback when a node is lost unexpectedly.
+ *
+ * @remarks
+ * Subscribes to each node's failure/recovery signals and to cluster add/remove
+ * events, invoking `onGone` exactly once when a node fails or is removed without
+ * first draining. A node that leaves gracefully (`isDraining`) does not trigger
+ * the callback, and de-duplication prevents repeated fires for the same node.
+ * Used to trigger room migration off dead nodes.
+ */
 export class NodeFailureTracker {
     private readonly _listeners = new Map<string, NodeListeners>()
     private readonly _gone = new Set<string>()

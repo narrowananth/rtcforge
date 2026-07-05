@@ -23,6 +23,16 @@ type MediaServiceEvents = {
     [MediaServiceEvent.WorkerDied]: [pid: number]
 }
 
+/**
+ * Top-level SFU media plane: manages mediasoup workers and per-room {@link MediaRouter}s.
+ *
+ * @remarks
+ * `MediaService` owns a {@link WorkerPool} and creates one {@link MediaRouter} per
+ * room on demand (deduping concurrent creates via a pending map), binding each
+ * router to a `RoomLike` room so it is torn down when the room closes. It
+ * surfaces worker crashes and router lifecycle through {@link MediaServiceEvent}s,
+ * and is the main entry point integrators use to stand up server-side media.
+ */
 export class MediaService extends EventEmitter<MediaServiceEvents> {
     private readonly _pool: WorkerPool
     private readonly _routers = new Map<string, MediaRouter>()

@@ -31,6 +31,18 @@ const LEGAL_TRANSITIONS: Record<ConnectionState, readonly ConnectionState[]> = {
     [ConnectionState.Reconnecting]: [ConnectionState.Connected, ConnectionState.Disconnected],
 }
 
+/**
+ * Top-level SDK entry point: connects to a signaling server and joins rooms.
+ *
+ * @remarks
+ * `RTCForgeClient` owns the {@link Transport} lifecycle and a state machine
+ * ({@link ConnectionState}) governing connect, reconnect, and disconnect, emitting
+ * {@link ClientEvent}s at each transition. {@link RTCForgeClient.joinRoom | joinRoom}
+ * runs the {@link JoinHandshake} and hands back a {@link Room}; the joined room is
+ * also reachable via {@link RTCForgeClient.room | room}. Transport creation is
+ * pluggable through the `transportFactory` option, defaulting to
+ * {@link WebSocketTransport}.
+ */
 export class RTCForgeClient extends EventEmitter<ClientEvents> {
     private readonly opts: RTCForgeClientOptions
     private readonly _transportFactory: TransportFactory

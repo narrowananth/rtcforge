@@ -1,5 +1,14 @@
 import type { ControlMessage } from './protocol.js'
 
+/**
+ * Thin wrapper over an {@link RTCDataChannel} carrying file-transfer control messages.
+ *
+ * @remarks
+ * Serializes {@link ControlMessage}s to JSON and sends them, queuing frames until
+ * the channel opens then flushing them in order. The pre-open backlog is capped
+ * at {@link ControlLink.MAX_QUEUE} messages; when full the oldest is dropped, so a
+ * channel that never opens can't grow memory without bound.
+ */
 export class ControlLink {
     // Cap the pre-open backlog so a channel that never opens can't grow the queue
     // without bound. Control messages are small and few; this is generous headroom.

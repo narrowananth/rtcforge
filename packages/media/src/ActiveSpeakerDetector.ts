@@ -2,6 +2,17 @@ interface StatsSource {
     getStats(): Promise<RTCStatsReport>
 }
 
+/**
+ * Polls per-peer audio levels and reports which peer is currently speaking.
+ *
+ * @remarks
+ * On {@link ActiveSpeakerDetector.start | start} it samples each connection's
+ * `getStats()` every `intervalMs`, reads the inbound audio level, and invokes
+ * `onChange` whenever the loudest peer (or silence, `null`) changes — not on every
+ * tick. Overlapping ticks are guarded and the timer is `unref`'d so it never keeps
+ * the process alive. Call {@link ActiveSpeakerDetector.stop | stop} to halt and
+ * clear the current speaker.
+ */
 export class ActiveSpeakerDetector {
     private _timer: ReturnType<typeof setInterval> | null = null
     private _current: string | null = null

@@ -31,6 +31,7 @@
             "File": "https://developer.mozilla.org/docs/Web/API/File",
             "Blob": "https://developer.mozilla.org/docs/Web/API/Blob",
             "MediaStream": "https://developer.mozilla.org/docs/Web/API/MediaStream",
+            "MediaStreamTrack": "https://developer.mozilla.org/docs/Web/API/MediaStreamTrack",
             "RTCDataChannel": "https://developer.mozilla.org/docs/Web/API/RTCDataChannel",
             "Error": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error"
         }
