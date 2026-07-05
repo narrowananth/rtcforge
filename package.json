@@ -14,7 +14,7 @@
         "clean": "rimraf packages/*/dist",
         "test": "vitest run",
         "test:e2e": "playwright test -c e2e/playwright.config.ts",
-        "docs": "typedoc",
+        "docs": "typedoc --name \"RTCForge API Reference v$(node -p \"require('./packages/rtcforge/package.json').version\")\"",
         "changeset": "changeset",
         "version-packages": "changeset version",
         "release": "npm run build && changeset publish",

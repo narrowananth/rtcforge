@@ -10,12 +10,12 @@
         "packages/sfu"
     ],
     "out": "docs-site",
-    "includeVersion": true,
+    "includeVersion": false,
     "customCss": "docs/typedoc.css",
     "customJs": "docs/typedoc.js",
     "navigationLinks": {
         "GitHub": "https://github.com/narrowananth/rtcforge",
-        "npm": "https://www.npmjs.com/package/rtcforge-signaling"
+        "npm": "https://www.npmjs.com/package/rtcforge"
     },
     "categorizeByGroup": true,
     "sort": ["source-order"],
