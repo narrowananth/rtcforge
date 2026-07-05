@@ -23,8 +23,12 @@ export class Producer extends MediaEntity {
         producer.observer.once('close', () => this.close())
     }
 
-    /** Id of the transport this producer sends on. */
-    get transportId(): string {
-        return this.producer.appData.transportId as string
+    /**
+     * Id of the transport this producer sends on, or `undefined` for a producer
+     * that was piped in from another router via `pipeToRouter` (which has no
+     * client-facing transport of its own).
+     */
+    get transportId(): string | undefined {
+        return this.producer.appData.transportId as string | undefined
     }
 }

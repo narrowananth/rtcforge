@@ -357,9 +357,28 @@ function isStringRecord(v: unknown): v is Record<string, string> {
 }
 
 function parseAddress(address: string): { host: string; port: number | undefined } {
-    const idx = address.lastIndexOf(':')
-    if (idx <= 0) return { host: address, port: undefined }
-    const host = address.slice(0, idx)
-    const port = Number(address.slice(idx + 1))
+    // Bracketed IPv6 form: "[::1]" or "[::1]:4000" — the port (if any) is the
+    // segment after the closing bracket; everything inside the brackets is host.
+    if (address.startsWith('[')) {
+        const close = address.indexOf(']')
+        if (close > 0) {
+            const host = address.slice(1, close)
+            const rest = address.slice(close + 1)
+            if (rest.startsWith(':')) {
+                const port = Number(rest.slice(1))
+                return { host, port: Number.isInteger(port) && port > 0 ? port : undefined }
+            }
+            return { host, port: undefined }
+        }
+    }
+    // For everything else, only treat a colon as a host/port separator when
+    // there is exactly one — a bare (unbracketed) IPv6 host has several colons
+    // and no port, so lastIndexOf(':') would misparse it into host/port.
+    const first = address.indexOf(':')
+    if (first <= 0 || first !== address.lastIndexOf(':')) {
+        return { host: address, port: undefined }
+    }
+    const host = address.slice(0, first)
+    const port = Number(address.slice(first + 1))
     return { host, port: Number.isInteger(port) && port > 0 ? port : undefined }
 }

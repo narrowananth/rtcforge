@@ -46,6 +46,24 @@ interface Holding {
 }
 
 /**
+ * Generates an unguessable fencing token. Prefers the platform Web Crypto
+ * `randomUUID`, falling back to `getRandomValues`, and finally to a
+ * `Math.random`-based token where no crypto is available. Adds no hard
+ * dependency on `node:crypto`, keeping core browser-safe and zero-dep.
+ */
+function randomToken(): string {
+    const c: Crypto | undefined = (globalThis as { crypto?: Crypto }).crypto
+    if (c?.randomUUID) return c.randomUUID()
+    if (c?.getRandomValues) {
+        const bytes = c.getRandomValues(new Uint8Array(16))
+        let hex = ''
+        for (const b of bytes) hex += b.toString(16).padStart(2, '0')
+        return hex
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+}
+
+/**
  * In-process {@link Lock} backed by a `Map`, with TTL expiry evaluated via an injected {@link Clock}.
  *
  * @remarks
@@ -67,7 +85,6 @@ interface Holding {
  */
 export class MemoryLock implements Lock {
     private readonly _held = new Map<string, Holding>()
-    private _seq = 0
 
     /**
      * @param _clock - Clock used to evaluate lock TTL expiry.
@@ -80,7 +97,7 @@ export class MemoryLock implements Lock {
         const now = this._clock.now()
         const current = this._held.get(key)
         if (current !== undefined && current.expiresAt > now) return null
-        const token = `${key}:${++this._seq}`
+        const token = randomToken()
         this._held.set(key, { token, expiresAt: now + ttlMs })
         return token
     }

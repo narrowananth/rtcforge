@@ -1,6 +1,10 @@
 import type { ControlMessage } from './protocol.js'
 
 export class ControlLink {
+    // Cap the pre-open backlog so a channel that never opens can't grow the queue
+    // without bound. Control messages are small and few; this is generous headroom.
+    private static readonly MAX_QUEUE = 1024
+
     private readonly _channel: RTCDataChannel
     private _queue: string[] = []
 
@@ -17,8 +21,14 @@ export class ControlLink {
 
     send(msg: ControlMessage): void {
         const raw = JSON.stringify(msg)
-        if (this._channel.readyState === 'open') this._channel.send(raw)
-        else this._queue.push(raw)
+        if (this._channel.readyState === 'open') {
+            this._channel.send(raw)
+            return
+        }
+        // Drop the oldest queued message when the backlog is full rather than growing
+        // unbounded on a channel that never opens.
+        if (this._queue.length >= ControlLink.MAX_QUEUE) this._queue.shift()
+        this._queue.push(raw)
     }
 
     close(): void {

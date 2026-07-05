@@ -40,6 +40,11 @@ describe('SimpleBandwidthEstimator', () => {
         expect(feed(est, [HIGH, HIGH, HIGH])).not.toBe('high')
     })
 
+    it('snaps to the real quality on the first sample (no unearned optimistic high)', () => {
+        expect(new SimpleBandwidthEstimator().estimate(LOW)).toBe('low')
+        expect(new SimpleBandwidthEstimator().estimate(MEDIUM)).toBe('medium')
+    })
+
     it('reset returns to high', () => {
         const est = new SimpleBandwidthEstimator()
         feed(est, [LOW, LOW, LOW])

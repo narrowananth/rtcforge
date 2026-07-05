@@ -10,6 +10,11 @@ import { FileTransferError, FileTransferErrorCode } from './errors.js'
  *
  * @remarks The result is a digest-of-digests, not the SHA-256 of the whole file.
  * Both sender and receiver must use this class to produce matching values.
+ *
+ * @remarks By design this retains one 32-byte per-chunk digest until {@link finalize},
+ * i.e. O(chunks) memory. This is an intentional space/verification tradeoff — it enables
+ * order-independent, resumable hashing across parallel channels — and is deliberately not
+ * redesigned into a streaming single-pass hash.
  */
 export class Sha256Digest {
     private readonly _digests = new Map<number, Uint8Array>()

@@ -62,6 +62,9 @@ export class ReceiveTransfer extends Transfer {
     private _writeChain: Promise<void> = Promise.resolve()
     private _result: SinkResult | null = null
     private _sinkFinalized = false
+    // Guards against two concurrent _tryComplete calls (e.g. a duplicate Sent racing a
+    // final chunk) both passing the _writeChain gate and double-closing the sink.
+    private _completing = false
 
     /**
      * @param params - Offer-derived parameters; see {@link ReceiveTransferParams}. The transfer
@@ -340,6 +343,11 @@ export class ReceiveTransfer extends Transfer {
         if (this.isTerminal || !this._sink) return
         if (!this._senderDone) return
         if (this._received.size < this.totalChunks) return
+        // Serialize completion: claim it BEFORE the first await so a second concurrent
+        // _tryComplete bails instead of also reaching _sink.close(). Every path past
+        // here is terminal (complete or fail), so the flag never needs resetting.
+        if (this._completing) return
+        this._completing = true
 
         await this._writeChain
         if (this.isTerminal) return

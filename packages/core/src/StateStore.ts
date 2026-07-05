@@ -56,6 +56,8 @@ interface Entry {
  * Suitable for single-process deployments and tests. Expired entries are evicted lazily on
  * access (`get`, `has`, `keys`) rather than by a background timer, using the injected
  * {@link Clock} to determine the current time. State is not shared across processes.
+ * Optionally, a background sweeper (see the constructor's `sweepIntervalMs`) can proactively
+ * purge expired keys so memory is reclaimed even for keys that are never read again.
  *
  * @example
  * ```ts
@@ -66,12 +68,44 @@ interface Entry {
  */
 export class MemoryStateStore implements StateStore {
     private readonly _map = new Map<string, Entry>()
+    private _sweepTimer: ReturnType<typeof setInterval> | null = null
 
     /**
      * @param _clock - Clock used to evaluate TTL expiration.
      * @defaultValue {@link systemClock}
+     * @param sweepIntervalMs - When set (`> 0`), a background timer proactively purges
+     *   expired entries every this-many milliseconds, reclaiming memory for keys that are
+     *   never accessed again. Omit to disable (the default): expiry then stays purely lazy
+     *   via {@link MemoryStateStore.get | get}/{@link MemoryStateStore.has | has}/{@link MemoryStateStore.keys | keys}.
+     *   The timer is unref'd where supported so it never keeps a Node process alive.
      */
-    constructor(private readonly _clock: Clock = systemClock) {}
+    constructor(
+        private readonly _clock: Clock = systemClock,
+        sweepIntervalMs?: number,
+    ) {
+        if (sweepIntervalMs !== undefined && sweepIntervalMs > 0) {
+            this._sweepTimer = setInterval(() => this._purge(), sweepIntervalMs)
+            if (typeof (this._sweepTimer as { unref?: () => void }).unref === 'function') {
+                ;(this._sweepTimer as { unref: () => void }).unref()
+            }
+        }
+    }
+
+    /** Stops the background TTL sweeper (if one was started). Idempotent. */
+    stop(): void {
+        if (this._sweepTimer !== null) {
+            clearInterval(this._sweepTimer)
+            this._sweepTimer = null
+        }
+    }
+
+    /** Removes every entry whose TTL has elapsed. Used by the background sweeper. */
+    private _purge(): void {
+        const now = this._clock.now()
+        for (const [key, e] of this._map) {
+            if (e.expiresAt !== undefined && e.expiresAt <= now) this._map.delete(key)
+        }
+    }
 
     private _live(key: string): Entry | undefined {
         const e = this._map.get(key)

@@ -88,6 +88,16 @@ export class GossipMembership implements Membership {
     start(): void {
         if (this._running) return
         this._running = true
+        // Revive self: a prior stop() marked us dead. Without this a
+        // stop()->start() restart leaves the node dead to itself (excluded from
+        // _aliveInfos) and broadcast as dead.
+        const self = this._members.get(this._self.id)
+        if (self) {
+            self.alive = true
+            self.incarnation += 1
+            self.lastSeen = this._clock.now()
+            this._notify()
+        }
         this._transport.onReceive((msg) => this._onReceive(msg))
         this._scheduleTick()
     }
@@ -203,12 +213,38 @@ export class GossipMembership implements Membership {
     }
 
     private _onReceive(msg: GossipMessage): void {
+        // Tolerate malformed messages from untrusted peers: a non-array
+        // `members` must not throw, it is simply ignored.
+        const members = (msg as { members?: unknown })?.members
+        if (!Array.isArray(members)) return
         let changed = false
-        for (const entry of msg.members) changed = this._merge(entry) || changed
+        for (const entry of members) changed = this._merge(entry) || changed
         if (changed) this._notify()
     }
 
+    /**
+     * Validates an entry coming off the wire before it is trusted. Rejects
+     * malformed shapes and adversarial values (e.g. `incarnation: Infinity`,
+     * which would otherwise permanently freeze a record or, for self, poison
+     * the cluster via `Infinity + 1 === Infinity`).
+     */
+    private _isValidEntry(entry: unknown): entry is GossipEntry {
+        if (typeof entry !== 'object' || entry === null) return false
+        const e = entry as Record<string, unknown>
+        if (typeof e.id !== 'string' || e.id.length === 0) return false
+        if (
+            typeof e.incarnation !== 'number' ||
+            !Number.isFinite(e.incarnation) ||
+            !Number.isInteger(e.incarnation) ||
+            e.incarnation < 0
+        )
+            return false
+        if (typeof e.alive !== 'boolean') return false
+        return true
+    }
+
     private _merge(entry: GossipEntry): boolean {
+        if (!this._isValidEntry(entry)) return false
         if (entry.id === this._self.id) {
             const self = this._members.get(this._self.id)
             if (!self) return false
@@ -282,6 +318,9 @@ export class GossipMembership implements Membership {
                 }
             } else if (now - rec.lastSeen > this._tombstoneMs) {
                 this._members.delete(id)
+                // Prune the seed too, otherwise _seeds grows unbounded and we
+                // keep gossiping to an address whose member we have forgotten.
+                if (rec.address !== undefined) this._seeds.delete(rec.address)
             }
         }
         if (changed) this._notify()

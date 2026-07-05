@@ -237,6 +237,8 @@ export const CloseReason = {
     RoomClosing: 'Room is closing',
     /** The server is at its global connection cap. */
     ServerAtCapacity: 'Server at capacity',
+    /** The peer's outbound send buffer exceeded its cap (slow/stalled consumer). */
+    SendBufferOverflow: 'Send buffer overflow',
     /** In cluster mode, this room is owned by another node; the client should reconnect to the owner. */
     WrongNode: 'Room owned by another node — reconnect to owner',
 } as const
@@ -314,7 +316,11 @@ export interface SignalingServerOptions {
      * See {@link AuthFunction}.
      */
     auth?: AuthFunction
-    /** Hard cap on concurrent peers per room; excess peers are closed with {@link CloseReason.RoomFull}. */
+    /**
+     * Hard cap on concurrent peers per room; excess peers are closed with
+     * {@link CloseReason.RoomFull}. Bounded out of the box; raise it for larger
+     * rooms. @defaultValue `100`
+     */
     maxPeersPerRoom?: number
     /**
      * Maximum inbound WebSocket message size in bytes; larger frames are

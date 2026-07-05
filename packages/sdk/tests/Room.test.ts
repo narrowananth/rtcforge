@@ -102,6 +102,19 @@ describe('Room', () => {
             expect(room.peers).toContain('new-p2')
             expect(room.peers).not.toContain('stale-peer')
         })
+
+        it('clears stale peer metadata even when refresh omits peerMetadata', () => {
+            const { room, control } = Room.create({
+                id: 'r1',
+                localPeerId: 'local',
+                peers: ['p2'],
+                peerMetadata: { p2: { name: 'Bob' } },
+                transport: makeTransport(),
+            })
+            expect(room.getPeerMetadata('p2')).toEqual({ name: 'Bob' })
+            control.refresh({ localPeerId: 'local', peers: [] })
+            expect(room.getPeerMetadata('p2')).toBeUndefined()
+        })
     })
 
     describe('control.close', () => {

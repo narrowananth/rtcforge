@@ -1,3 +1,6 @@
+import { noopLogger } from 'rtcforge-core'
+import type { Logger } from 'rtcforge-core'
+
 /**
  * Buffer for messages produced while a {@link Transport} is offline, flushed in
  * FIFO order once the connection is (re)established. Implement this interface to
@@ -32,8 +35,12 @@ export class SendQueue<T> implements MessageQueue<T> {
 
     /**
      * @param maxSize - Maximum number of messages the queue may hold before {@link SendQueue.enqueue} starts returning `false`.
+     * @param logger - Optional logger; a failed `send` during {@link SendQueue.drain} is reported here instead of propagating.
      */
-    constructor(private readonly maxSize: number) {}
+    constructor(
+        private readonly maxSize: number,
+        private readonly logger: Logger = noopLogger,
+    ) {}
 
     /** Number of messages currently buffered. */
     get size(): number {
@@ -52,14 +59,28 @@ export class SendQueue<T> implements MessageQueue<T> {
     }
 
     /**
-     * Flushes the queue in FIFO order, invoking `send` for each message and
-     * removing it as it is sent.
+     * Flushes the queue in FIFO order, invoking `send` for each message. The
+     * batch is spliced out up front (a single O(n) pass, no O(n²) shifting). If
+     * `send` throws, draining stops and the failed message plus every
+     * not-yet-sent message are re-queued ahead of any newly enqueued items so
+     * FIFO order is preserved; the exception is logged rather than propagated.
      * @param send - Callback that transmits a single message.
      */
     drain(send: (item: T) => void): void {
-        while (this._items.length > 0) {
-            send(this._items[0])
-            this._items.shift()
+        const batch = this._items.splice(0, this._items.length)
+        for (let i = 0; i < batch.length; i++) {
+            try {
+                send(batch[i] as T)
+            } catch (err) {
+                // Re-queue the failed item and the rest, ahead of anything that
+                // may have been enqueued re-entrantly during send.
+                this._items.unshift(...batch.slice(i))
+                this.logger.error('SendQueue drain failed; re-queued unsent messages', {
+                    err: err instanceof Error ? err.message : String(err),
+                    requeued: batch.length - i,
+                })
+                return
+            }
         }
     }
 
