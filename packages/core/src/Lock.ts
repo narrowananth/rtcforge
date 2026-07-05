@@ -52,7 +52,16 @@ interface Holding {
  * dependency on `node:crypto`, keeping core browser-safe and zero-dep.
  */
 function randomToken(): string {
-    const c: Crypto | undefined = (globalThis as { crypto?: Crypto }).crypto
+    // Structural type instead of the DOM `Crypto` lib type so the es2020 dts
+    // build resolves it without pulling in DOM/@types globals.
+    const c = (
+        globalThis as {
+            crypto?: {
+                randomUUID?: () => string
+                getRandomValues?: (array: Uint8Array) => Uint8Array
+            }
+        }
+    ).crypto
     if (c?.randomUUID) return c.randomUUID()
     if (c?.getRandomValues) {
         const bytes = c.getRandomValues(new Uint8Array(16))
