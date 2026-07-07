@@ -1,5 +1,12 @@
 # RTCForge
 
+[![npm version](https://img.shields.io/npm/v/rtcforge.svg)](https://www.npmjs.com/package/rtcforge)
+[![npm downloads](https://img.shields.io/npm/dm/rtcforge.svg)](https://www.npmjs.com/package/rtcforge)
+[![CI](https://github.com/narrowananth/rtcforge/actions/workflows/ci.yml/badge.svg)](https://github.com/narrowananth/rtcforge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
+
 Open-source npm library for building real-time communication systems on top of WebRTC.
 
 Composable packages, pick the layers you need: WebSocket **signaling**, a browser/Node **client SDK**, a **media plane** (P2P mesh `Call` + mediasoup **SFU**), and **shared-nothing multi-node scale-out** (consistent-hash routing + gossip membership — **no Redis/etcd**). It stops at the transport boundary — chat, presence, recording, and whiteboard are built in *your* application layer on the primitives it exposes. See [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md).
@@ -143,6 +150,10 @@ const server = await createSignalingServer({ port: 3001, auth });
 ```
 
 **New here? Which packages for your app + how to wire them → [`docs/BUILDING_APPS.md`](docs/BUILDING_APPS.md)** (chat, video call, live stream, whiteboard, file transfer, 1M-viewer scale).
+
+**Full example apps → [rtcforge_demo_app](https://github.com/narrowananth/rtcforge_demo_app)** — five real-time products on one stack: WhatsApp-style **chat**, **live streaming**, **collaborative** whiteboard, **meet** (P2P mesh + SFU), and **massive** (multi-node cascade cluster). React/Chakra frontends + Node backends.
+
+**Minimal quick-start examples → [`examples/`](examples).** Zero-build: a Node signaling server + a browser client you open directly (chat, video call, file transfer).
 
 **Full class-level API reference (every package) → [narrowananth.github.io/rtcforge](https://narrowananth.github.io/rtcforge/).**
 

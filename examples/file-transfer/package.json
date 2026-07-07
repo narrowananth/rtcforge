@@ -1,0 +1,12 @@
+{
+    "name": "rtcforge-example-file-transfer",
+    "private": true,
+    "type": "module",
+    "description": "RTCForge P2P file transfer example (data channel, no mediasoup)",
+    "scripts": {
+        "start": "node server.mjs"
+    },
+    "dependencies": {
+        "rtcforge": "^1.1.1"
+    }
+}

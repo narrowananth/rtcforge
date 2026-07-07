@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>RTCForge — Video call example</title>
+<style>
+  body { font: 15px system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  #videos { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  video { width: 100%; background: #000; border-radius: 8px; aspect-ratio: 4/3; object-fit: cover; }
+  .label { font-size: 13px; color: #666; margin: .25rem 0 0; }
+  .sys { color: #888; font-style: italic; }
+</style>
+<h1>RTCForge Video Call</h1>
+<p class="sys">Room: <b>room1</b> (P2P mesh, up to 4 peers). Open in a second tab or device.</p>
+<div id="videos">
+  <div>
+    <video id="local" autoplay muted playsinline></video>
+    <p class="label">You</p>
+  </div>
+</div>
+<p id="status" class="sys">Requesting camera…</p>
+
+<script type="module">
+  import { Call, MediaEvent, getUserMedia } from "https://esm.sh/rtcforge/media";
+  import { createClient } from "https://esm.sh/rtcforge/client";
+
+  const status = (t) => (document.getElementById("status").textContent = t);
+  const videos = document.getElementById("videos");
+  const remotes = new Map();
+
+  const addRemote = (peerId, stream) => {
+    let box = remotes.get(peerId);
+    if (!box) {
+      box = document.createElement("div");
+      const v = document.createElement("video");
+      v.autoplay = v.playsInline = true;
+      const label = document.createElement("p");
+      label.className = "label";
+      label.textContent = peerId;
+      box.append(v, label);
+      videos.appendChild(box);
+      remotes.set(peerId, box);
+    }
+    box.querySelector("video").srcObject = stream;
+  };
+
+  const me = "peer-" + Math.random().toString(36).slice(2, 6);
+  const stream = await getUserMedia({ audio: true, video: true });
+  document.getElementById("local").srcObject = stream;
+
+  const client = createClient({ serverUrl: "ws://localhost:3001", token: `${me}:room1` });
+  const room = await client.joinRoom("room1");
+
+  const call = new Call(room, { stream, iceServers: room.iceServers });
+  room.bindCall(call);                 // wire signal relay <-> call
+  call.start();
+  status(`In call as ${me}. Waiting for peers…`);
+
+  call.on(MediaEvent.RemoteStream, (peerId, remote) => {
+    addRemote(peerId, remote);
+    status(`Connected to ${remotes.size} peer(s).`);
+  });
+</script>

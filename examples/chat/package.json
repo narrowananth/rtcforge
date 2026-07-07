@@ -1,0 +1,12 @@
+{
+    "name": "rtcforge-example-chat",
+    "private": true,
+    "type": "module",
+    "description": "RTCForge chat + presence example (signaling only, no media)",
+    "scripts": {
+        "start": "node server.mjs"
+    },
+    "dependencies": {
+        "rtcforge": "^1.1.1"
+    }
+}
