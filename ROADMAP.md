@@ -15,6 +15,8 @@ This is a living document. It reflects current direction, not a commitment to da
 - ✅ **API reference site** — [narrowananth.github.io/rtcforge](https://narrowananth.github.io/rtcforge/).
 
 - ✅ **Example apps** — five full products (chat, live streaming, collaborative, meet, massive) in [rtcforge_demo_app](https://github.com/narrowananth/rtcforge_demo_app), plus minimal zero-build quick-starts in [`examples/`](examples).
+- ✅ **Migration guides** — from [raw WebRTC](docs/migrations/from-raw-webrtc.md), [simple-peer](docs/migrations/from-simple-peer.md), [PeerJS](docs/migrations/from-peerjs.md).
+- ✅ **Feature comparison + benchmark harness** — [docs/COMPARISON.md](docs/COMPARISON.md) and a runnable [signaling-throughput bench](benchmarks) (media-plane benches still open).
 
 ## In progress
 
@@ -24,8 +26,7 @@ This is a living document. It reflects current direction, not a commitment to da
 
 - 📋 **Recording hooks** — server-side seam for capturing SFU streams.
 - 📋 **Simulcast tuning presets** — opinionated layer configs per app type.
-- 📋 **Migration guides** — from raw WebRTC, simple-peer, PeerJS.
-- 📋 **Benchmarks** — against comparable stacks (throughput, latency, cost-per-viewer).
+- 📋 **Media-plane benchmarks** — SFU forwarding CPU, cascade fan-out (needs browser + mediasoup).
 - 📋 **Metrics/telemetry adapters** — Prometheus / OpenTelemetry exporters for `MetricsCollector`.
 
 ## Ideas / exploring

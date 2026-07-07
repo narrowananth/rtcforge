@@ -155,6 +155,8 @@ const server = await createSignalingServer({ port: 3001, auth });
 
 **Minimal quick-start examples → [`examples/`](examples).** Zero-build: a Node signaling server + a browser client you open directly (chat, video call, file transfer).
 
+**Migrating?** Guides from [raw WebRTC](docs/migrations/from-raw-webrtc.md), [simple-peer](docs/migrations/from-simple-peer.md), and [PeerJS](docs/migrations/from-peerjs.md) · [how RTCForge compares](docs/COMPARISON.md) · [benchmark harness](benchmarks).
+
 **Full class-level API reference (every package) → [narrowananth.github.io/rtcforge](https://narrowananth.github.io/rtcforge/).**
 
 **Full install table, server example, publishing, and local testing → [`docs/PUBLISHING.md`](docs/PUBLISHING.md).**
