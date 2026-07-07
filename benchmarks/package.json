@@ -1,0 +1,13 @@
+{
+    "name": "rtcforge-benchmarks",
+    "private": true,
+    "type": "module",
+    "description": "Runnable benchmark harness for the RTCForge signaling plane",
+    "scripts": {
+        "bench": "node signaling-throughput.mjs"
+    },
+    "dependencies": {
+        "rtcforge": "^1.1.1",
+        "ws": "^8.18.0"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "rtcforge-example-video-call",
+    "private": true,
+    "type": "module",
+    "description": "RTCForge P2P mesh video call example (no mediasoup)",
+    "scripts": {
+        "start": "node server.mjs"
+    },
+    "dependencies": {
+        "rtcforge": "^1.1.1"
+    }
+}

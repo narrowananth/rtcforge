@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a defect in RTCForge
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Please fill in the details below so we can reproduce it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Steps or a code snippet that reproduces the issue. A repo link is ideal.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: rtcforge-version
+    attributes:
+      label: rtcforge version
+      placeholder: e.g. 1.1.1
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: e.g. 20.11.0
+    validations:
+      required: true
+  - type: dropdown
+    id: subpath
+    attributes:
+      label: Which subpath?
+      multiple: true
+      options:
+        - rtcforge/server
+        - rtcforge/client
+        - rtcforge/media
+        - rtcforge/filetransfer
+        - rtcforge/sfu
+        - rtcforge/core
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      render: shell
