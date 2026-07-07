@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>RTCForge — File transfer example</title>
+<style>
+  body { font: 15px system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+  .row { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; }
+  progress { flex: 1; height: 18px; }
+  #log { border: 1px solid #ccc; border-radius: 8px; padding: .5rem; min-height: 120px; }
+  #log div { padding: 2px 0; }
+  .sys { color: #888; font-style: italic; }
+  button:disabled { opacity: .5; }
+</style>
+<h1>RTCForge File Transfer</h1>
+<p class="sys">Room: <b>drop</b>. Open a second tab, wait until "peer connected", then send a file.</p>
+
+<div class="row">
+  <input type="file" id="file" disabled />
+  <button id="send" disabled>Send</button>
+</div>
+<div class="row"><progress id="bar" value="0" max="1"></progress><span id="pct">0%</span></div>
+<div id="log"></div>
+
+<script type="module">
+  import { Call, getUserMedia } from "https://esm.sh/rtcforge/media";
+  import { createClient, RoomEvent } from "https://esm.sh/rtcforge/client";
+  import { FileTransferManager, MemorySink, FileTransferEvent } from "https://esm.sh/rtcforge/filetransfer";
+
+  const log = (html, cls = "") => {
+    const el = document.createElement("div");
+    if (cls) el.className = cls;
+    el.innerHTML = html;
+    document.getElementById("log").appendChild(el);
+  };
+  const bar = document.getElementById("bar");
+  const pct = document.getElementById("pct");
+  const setProgress = (r) => { bar.value = r; pct.textContent = Math.round(r * 100) + "%"; };
+
+  const me = "peer-" + Math.random().toString(36).slice(2, 6);
+  const client = createClient({ serverUrl: "ws://localhost:3001", token: `${me}:drop` });
+  const room = await client.joinRoom("drop");
+  log(`Connected as <b>${me}</b>`, "sys");
+
+  // A data-only Call: no media tracks, just the P2P mesh + its data channels.
+  // Call satisfies the DataChannelHub interface (createDataChannel + 'data-channel'),
+  // so it plugs straight into FileTransferManager.
+  const call = new Call(room, { stream: new MediaStream(), iceServers: room.iceServers });
+  room.bindCall(call);
+  call.start();
+
+  const ft = new FileTransferManager(call, { checksum: true });
+  const peers = new Set();
+
+  const enable = () => {
+    const ready = peers.size > 0;
+    document.getElementById("file").disabled = !ready;
+    document.getElementById("send").disabled = !ready;
+  };
+  room.on(RoomEvent.PeerJoined, (peerId) => { peers.add(peerId); log(`${peerId} connected`, "sys"); enable(); });
+  room.on(RoomEvent.PeerLeft, (peerId) => { peers.delete(peerId); enable(); });
+
+  // Receive: an incoming offer surfaces as a not-yet-accepted transfer.
+  ft.on(FileTransferEvent.IncomingOffer, (incoming) => {
+    log(`Incoming file — accepting…`, "sys");
+    incoming.accept(new MemorySink());
+    incoming.on("progress", (p) => setProgress(p.ratio));
+    incoming.on("complete", () => {
+      // The finalized sink output is on transfer.result (a SinkResult).
+      const blob = incoming.result?.blob ?? new Blob([]);
+      const url = URL.createObjectURL(blob);
+      const name = incoming.fileName ?? "received.bin";
+      log(`Received <b>${name}</b> — <a href="${url}" download="${name}">download</a>`);
+      setProgress(1);
+    });
+  });
+
+  // Send: pick the first connected peer.
+  document.getElementById("send").addEventListener("click", () => {
+    const file = document.getElementById("file").files[0];
+    const peerId = [...peers][0];
+    if (!file || !peerId) return;
+    log(`Sending <b>${file.name}</b> to ${peerId}…`, "sys");
+    const transfer = ft.sendFile(peerId, file, { chunkSize: 32 * 1024 });
+    transfer.on("progress", (p) => setProgress(p.ratio));
+    transfer.on("complete", () => { log(`Sent <b>${file.name}</b>`); setProgress(1); });
+  });
+</script>

@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an idea or enhancement for RTCForge
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case or limitation you're hitting.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like RTCForge to do? An API sketch helps.
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which layer?
+      options:
+        - signaling (server)
+        - client (sdk)
+        - media (P2P / SFU)
+        - sfu cluster / scale-out
+        - core primitives
+        - docs / examples

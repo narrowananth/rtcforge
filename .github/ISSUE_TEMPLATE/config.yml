@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/narrowananth/rtcforge/discussions
+    about: Ask questions, share ideas, and get help from the community.
+  - name: API reference
+    url: https://narrowananth.github.io/rtcforge/
+    about: Class-level API docs for every package.
+  - name: Building apps guide
+    url: https://github.com/narrowananth/rtcforge/blob/master/docs/BUILDING_APPS.md
+    about: Which packages to use per app type, with wiring examples.
